@@ -84,6 +84,14 @@ flowchart TD
 
 MIT or Apache 2.0 (to be decided by community).
 
+## MVP Peer-to-Peer Considerations
+
+- **Security & Authentication:** Agents use cryptographic keypairs for identity and sign all messages. Communication is encrypted.
+- **Fault Tolerance:** Agents detect failures and reassign or retry tasks as needed.
+- **Message/Task Format:** All agent messages use a simple JSON structure with type, task_id, payload, sender_id, and signature fields.
+- **Network Bootstrap:** New agents join via a known bootstrap node or multicast discovery, then find more peers.
+- **Monitoring & Logging:** Agents log key events and errors for transparency and debugging.
+
 ---
 
 *Let’s build a greener, open, and decentralized AI future—together!*
