@@ -1,0 +1,123 @@
+# P2P AI Agent Configuration Example
+# Copy this file to agent.yaml and customize for your needs
+
+# Agent Identity and Networking
+agent:
+  # Agent display name (optional)
+  name: "my-p2p-agent"
+  
+  # Agent capabilities - advertise what this agent can do
+  capabilities:
+    - "text_processing"
+    - "chunking"
+    - "vectorization"
+    # - "storage"
+    # - "gpu_processing"
+  
+  # Resource limits for this agent
+  resources:
+    max_concurrent_tasks: 4
+    max_memory_mb: 2048
+    max_cpu_cores: 2
+    storage_limit_gb: 10
+
+# Network Configuration
+network:
+  # Listen addresses for incoming connections
+  listen_addresses:
+    - "/ip4/0.0.0.0/tcp/8000"
+    - "/ip4/0.0.0.0/tcp/8001/ws"
+  
+  # Bootstrap nodes to connect to initially
+  bootstrap_nodes:
+    - "/ip4/bootstrap1.p2p-agent.org/tcp/4001/ipfs/QmBootstrap1..."
+    - "/ip4/bootstrap2.p2p-agent.org/tcp/4001/ipfs/QmBootstrap2..."
+  
+  # Network protocols to enable
+  protocols:
+    libp2p: true
+    websocket: true
+    mdns_discovery: true
+  
+  # Connection limits
+  max_connections: 50
+  connection_timeout: 30
+
+# Storage Configuration
+storage:
+  # Local storage path for agent data
+  data_path: "./data/agent"
+  
+  # Cache configuration
+  cache:
+    type: "redis"  # or "memory", "file"
+    redis_url: "redis://localhost:6379/0"
+    max_size_mb: 512
+  
+  # IPFS integration (optional)
+  ipfs:
+    enabled: false
+    api_url: "http://localhost:5001"
+
+# AI/ML Processing Configuration
+processing:
+  # Text processing settings  
+  text:
+    default_chunk_size: 1000
+    chunk_overlap: 200
+    supported_languages: ["en", "es", "fr", "de"]
+  
+  # Embeddings/Vectorization
+  embeddings:
+    model: "sentence-transformers/all-MiniLM-L6-v2"
+    dimension: 384
+    batch_size: 32
+  
+  # Model caching
+  model_cache_path: "./models"
+  device: "auto"  # "cpu", "cuda", "auto"
+
+# Security Configuration
+security:
+  # Cryptographic key files (generated automatically if not present)
+  private_key_file: "./config/agent.key"
+  
+  # Message signing and verification
+  sign_messages: true
+  verify_signatures: true
+  
+  # Rate limiting
+  rate_limits:
+    messages_per_second: 100
+    tasks_per_minute: 60
+
+# Monitoring and Logging
+logging:
+  level: "INFO"  # DEBUG, INFO, WARNING, ERROR
+  format: "json"  # "json" or "text"
+  file: "./logs/agent.log"
+  max_size_mb: 100
+  backup_count: 5
+
+monitoring:
+  # Enable metrics collection
+  enabled: true
+  port: 8080
+  
+  # Health check endpoint
+  health_check: true
+  
+  # Performance metrics
+  collect_performance: true
+  metrics_interval: 60
+
+# Development Settings
+development:
+  # Enable debug mode
+  debug: false
+  
+  # Hot reload for development
+  auto_reload: false
+  
+  # Mock external services
+  mock_network: false
