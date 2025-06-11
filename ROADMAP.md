@@ -10,11 +10,11 @@ This roadmap now assumes a Rust implementation. All previous references to Pytho
 - [x] Project architecture and documentation
 - [x] Core agent framework design
 - [x] Basic P2P networking research
-- [ ] Minimal agent prototype implementation
+- [x] Minimal agent prototype implementation
   - Task queue system
   - Basic chunking capabilities
   - Local storage integration
-- [ ] Local testing framework
+- [x] Local testing framework
   - Multi-agent simulation environment
   - Basic performance metrics
   - Test coverage reporting
