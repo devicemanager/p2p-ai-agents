@@ -1,0 +1,10 @@
+# Pre-commit config for Rust
+repos:
+  - repo: https://github.com/rust-lang/rustfmt
+    rev: master
+    hooks:
+      - id: rustfmt
+  - repo: https://github.com/rust-lang/rust-clippy
+    rev: master
+    hooks:
+      - id: clippy

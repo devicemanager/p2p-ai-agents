@@ -136,133 +136,123 @@ Large File → Chunking Agent → Storage Peers → Redundant Copies → Retriev
 
 ### Prerequisites
 
-- Python 3.8 or higher
+- Rust 1.70 or later
+- Cargo (Rust's package manager)
 - Git
-- 2GB+ RAM (4GB recommended)
-- Stable internet connection
 
 ### Installation
 
-1. **Clone the repository**
-
+1. Clone the repository:
    ```bash
-   git clone https://github.com/yourusername/p2p-agent.git
-   cd p2p-agent
+   git clone https://github.com/p2p-ai-agents/p2p-ai-agents.git
+   cd p2p-ai-agents
    ```
 
-2. **Set up Python environment**
-
+2. Build the project:
    ```bash
-   python -m venv venv
-   source venv/bin/activate  # On Windows: venv\Scripts\activate
+   cargo build --release
    ```
 
-3. **Install dependencies**
-
+3. Run the tests:
    ```bash
-   pip install -r requirements.txt
+   cargo test
    ```
 
-4. **Configure your agent**
+### Quick Start
 
-   ```bash
-   cp config/agent.example.yaml config/agent.yaml
-   # Edit config/agent.yaml with your preferences
+1. Create a new agent:
+   ```rust
+   use p2p_ai_agents::prelude::*;
+
+   #[tokio::main]
+   async fn main() -> Result<()> {
+       // Create agent configuration
+       let config = AgentConfig {
+           id: AgentId("my-agent".to_string()),
+           network: NetworkConfig::default(),
+           storage: StorageConfig::default(),
+           resource_limits: ResourceLimits {
+               max_cpu: 0.8,
+               max_memory: 1024 * 1024 * 1024, // 1GB
+               max_storage: 10 * 1024 * 1024 * 1024, // 10GB
+               max_bandwidth: 1024 * 1024, // 1MB/s
+           },
+       };
+
+       // Create and start agent
+       let agent = DefaultAgent::new(config).await?;
+       agent.start().await?;
+
+       // Keep agent running
+       tokio::signal::ctrl_c().await?;
+       agent.stop().await?;
+       Ok(())
+   }
    ```
 
-5. **Launch your agent**
+2. Submit a task:
+   ```rust
+   // Create task
+   let task = Task::new(
+       TaskPriority::Normal,
+       TaskPayload {
+           task_type: TaskType::TextProcessing,
+           data: serde_json::json!({"text": "Hello, world!"}),
+           parameters: HashMap::new(),
+       },
+   );
 
-   ```bash
-   python run_agent.py --config config/agent.yaml
+   // Submit task
+   let task_id = agent.submit_task(task).await?;
+
+   // Get task status
+   let status = agent.task_status(&task_id).await?;
+   println!("Task status: {:?}", status);
    ```
 
-6. **Verify connection**
-   
-   Your agent will automatically join the network and start collaborating! Check the logs for successful peer connections.
+## Documentation
 
-### Docker Setup (Alternative)
+- [Architecture Overview](docs/architecture/system-overview.md)
+- [Agent Protocol](AGENT_PROTOCOL.md)
+- [API Reference](docs/api/README.md)
+- [Contributing Guide](CONTRIBUTING.md)
 
-```bash
-docker build -t p2p-agent .
-docker run -d --name my-agent -p 8080:8080 p2p-agent
+## Project Structure
+
+```
+p2p-ai-agents/
+├── src/
+│   ├── agent/          # Agent implementation
+│   ├── network/        # P2P networking
+│   ├── storage/        # Storage management
+│   └── cli/            # Command-line interface
+├── examples/           # Example usage
+├── tests/              # Integration tests
+└── docs/              # Documentation
 ```
 
-### First Steps
+## Development Status
 
-- **Monitor your agent**: Visit `http://localhost:8080/dashboard` for the web UI
-- **Check network status**: Use `python cli.py status` to see connected peers
-- **Submit a test task**: Try `python cli.py submit --task "hello world"`
-- **View logs**: Check `logs/agent.log` for detailed activity
-
-## Project Status and Roadmap
-
-For detailed information about the project's development status, upcoming features, and long-term vision, please see our [Roadmap](ROADMAP.md).
-
-## FAQ
-
-### General Questions
-
-**Q: What hardware do I need to run an agent?**
-A: Any device with Python 3.8+, 2GB RAM, and internet connection. Raspberry Pi 4, laptops, desktops, and servers all work great.
-
-**Q: Is my data safe and private?**
-A: Yes! Data processing uses encryption, federated approaches, and agents never store raw data unnecessarily. You control what data your agent processes.
-
-**Q: How do I earn rewards for contributing compute?**
-A: The reputation system tracks your contributions. Future versions will integrate with blockchain-based incentive mechanisms.
-
-**Q: Can I run multiple agents?**
-A: Absolutely! You can run different types of agents (processing, storage, etc.) on the same machine or across multiple devices.
-
-### Technical Questions
-
-**Q: What AI tasks are supported?**
-A: Currently: text chunking, embeddings, similarity search, and basic NLP. We're adding image processing, speech recognition, and more.
-
-**Q: How does the P2P network handle failures?**
-A: Agents use heartbeat monitoring, automatic failover, and task redistribution. The network is designed to be resilient to node failures.
-
-**Q: Can I develop custom agents?**
-A: Yes! The plugin architecture allows custom agent types. See the [Developer Guide](docs/DEVELOPER_GUIDE.md) for details.
-
-**Q: What about network security?**
-A: All communications use encryption, agents authenticate with cryptographic signatures, and we implement reputation-based trust.
+The project is currently in active development. See [ROADMAP.md](ROADMAP.md) for details on planned features and milestones.
 
 ## Contributing
 
-We welcome contributions from developers, researchers, and enthusiasts! Here are ways you can help:
+We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
-### 🛠 **Development**
-- Core agent development (Python, networking, AI/ML)
-- Frontend/dashboard development (React, Vue, or similar)
-- Mobile app development for agent management
-- Documentation and tutorials
+## License
 
-### 🧪 **Testing & Research**
-- Beta testing on different hardware configurations
-- Performance benchmarking and optimization
-- Security research and auditing
-- Academic research and paper writing
+This project is licensed under either of:
 
-### 🎨 **Design & UX**
-- User interface design for agent dashboard
-- Logo, branding, and visual identity
-- User experience research and testing
-- Documentation design and formatting
+- Apache License, Version 2.0 ([LICENSE-APACHE](LICENSE-APACHE) or http://www.apache.org/licenses/LICENSE-2.0)
+- MIT License ([LICENSE-MIT](LICENSE-MIT) or http://opensource.org/licenses/MIT)
 
-### 📚 **Documentation**
-- Code documentation and API references
-- User guides and tutorials
-- Video tutorials and demos
-- Translation to other languages
+at your option.
 
-### 🌍 **Community**
-- Discord/Slack community management
-- Social media and outreach
-- Conference talks and presentations
-- Workshop and hackathon organization
+## Acknowledgments
 
-**Get Started**: Check out our [Contributing Guide](CONTRIBUTING.md) and [Good First Issues](https://github.com/yourusername/p2p-agent/labels/good%20first%20issue)
+- [libp2p](https://libp2p.io/) for the networking foundation
+- [tokio](https://tokio.rs/) for the async runtime
+- [ed25519-dalek](https://github.com/dalek-cryptography/ed25519-dalek) for cryptographic primitives
 
 ## Community & Support
 
