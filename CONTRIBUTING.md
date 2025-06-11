@@ -1,6 +1,6 @@
-# Contributing to P2P Agent
+# Contributing to P2P AI Agents
 
-Thank you for your interest in contributing to the future of decentralized AI! We welcome all kinds of contributions, from code and documentation to research and community building.
+Thank you for your interest in contributing! This project is written in Rust. Please use Rust and cargo for all development, testing, and code style checks. All previous Python-specific instructions, code style, and test requirements have been removed.
 
 ## Table of Contents
 
@@ -33,36 +33,10 @@ This project adheres to our [Code of Conduct](CODE_OF_CONDUCT.md). By participat
 
 ## Getting Started
 
-### Prerequisites
-
-- Python 3.8 or higher
-- Git
-- Docker (optional, for containerized development)
-- Basic understanding of P2P networking concepts
-- Familiarity with AI/ML concepts (helpful but not required)
-
-### Quick Start for Contributors
-
-1. **Fork the repository** on GitHub
-2. **Clone your fork** locally:
-   ```bash
-   git clone https://github.com/yourusername/p2p-agent.git
-   cd p2p-agent
-   ```
-3. **Set up development environment**:
-   ```bash
-   python -m venv venv
-   source venv/bin/activate  # On Windows: venv\Scripts\activate
-   pip install -r requirements-dev.txt
-   ```
-4. **Install pre-commit hooks**:
-   ```bash
-   pre-commit install
-   ```
-5. **Run the tests** to verify your setup:
-   ```bash
-   pytest
-   ```
+- Install Rust (https://rustup.rs/)
+- Clone the repository
+- Build with `cargo build`
+- Test with `cargo test`
 
 ## Development Setup
 
@@ -175,7 +149,7 @@ docs(api): update task distribution protocol
 
 ## Code Standards
 
-### Python Code Style
+### Rust Code Style
 
 - **PEP 8** compliance (enforced by `black` and `flake8`)
 - **Type hints** required for all public functions
@@ -249,7 +223,7 @@ pytest tests/performance/ --benchmark-only
 ### Test Requirements
 
 - **Minimum coverage**: 80% for new code
-- **All tests must pass** on supported Python versions (3.8, 3.9, 3.10, 3.11)
+- **All tests must pass** on supported Rust versions
 - **Performance tests** must not regress by > 10%
 
 ## Documentation

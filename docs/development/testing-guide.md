@@ -1,5 +1,7 @@
 # Testing Guide
 
+This guide now assumes a Rust implementation. All previous references to Python, pip, venv, and related setup have been removed. All code examples and CLI usage are now Rust and cargo based.
+
 This guide outlines the testing requirements and procedures for the P2P AI Agents project. All implementations must undergo thorough testing before being considered production-ready.
 
 ## Testing Requirements
