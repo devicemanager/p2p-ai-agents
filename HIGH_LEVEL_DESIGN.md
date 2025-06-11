@@ -1,69 +1,248 @@
 # High Level Design: Distributed Peer-to-Peer AI Agents
 
 ## 1. Overview
-This document outlines the architecture, design options, and key components for building a distributed, peer-to-peer (P2P) network of lightweight AI agents. The goal is to enable collaborative AI processing using underutilized hardware, with a focus on sustainability, privacy, and resilience.
 
-## 2. Core Components
-- **Agent Core:** Manages local tasks, communication, and resource monitoring. Agents may be general-purpose or specialized for specific tasks (e.g., NLP, vectorization, storage, aggregation).
-- **Specialized Agents:** Some agents are optimized for particular functions (e.g., chunking, vector search, federated learning, or data storage). These agents can advertise their capabilities and may be distributed for high availability and load balancing. Specialized agents can earn reputation or 'karma' for reliable contributions, incentivizing participation and quality.
-- **Agent Discovery & Capability Registry:** The network supports discovery of agents and their advertised capabilities using the agent protocol. A distributed database (e.g., DHT or gossip-based registry) maintains metadata about available agents, their specializations, and reputation scores. This enables dynamic routing of tasks to the most suitable agents and supports redundancy for critical services.
-- **P2P Networking Layer:** Handles peer discovery, secure communication, and task distribution.
-- **Task Queue & Scheduler:** Organizes incoming/outgoing tasks and schedules them based on resource availability and agent specialization.
-- **Chunking/NLP Module:** Splits data into manageable pieces and performs initial processing.
-- **Vectorization/Embedding Module:** Converts data chunks into vector representations for efficient retrieval.
-- **Result Aggregation:** Collects and combines results from local and remote agents.
-- **Storage Layer:** Manages local and shared storage of data chunks and metadata.
+This document outlines the comprehensive architecture, design decisions, and implementation strategy for building a distributed, peer-to-peer (P2P) network of lightweight AI agents. The system enables collaborative AI processing using underutilized hardware resources while prioritizing sustainability, privacy, and resilience.
 
-## 3. Design Options
-### A. Networking & Communication
-- **Option 1: libp2p (Python/Go/JS)**
-  - Pros: Mature, cross-platform, supports NAT traversal, encryption, peer discovery.
-  - Cons: Adds dependency, learning curve.
-- **Option 2: Custom WebSocket/HTTP**
-  - Pros: Simpler, easier to debug, fewer dependencies.
-  - Cons: Less robust, harder to scale, NAT/firewall issues.
-- **Option 3: IPFS PubSub**
-  - Pros: Decentralized, content-addressed, integrates with IPFS storage.
-  - Cons: Overhead, dependency on IPFS.
+### 1.1 Design Principles
 
-### B. Task Distribution & Scheduling
-- **Option 1: Centralized Coordinator (Bootstrap Phase Only)**
-  - Pros: Easier to implement, good for MVP.
-  - Cons: Single point of failure, not fully decentralized.
-- **Option 2: Fully Decentralized (Gossip, DHT, or PubSub)**
-  - Pros: No single point of failure, scalable.
-  - Cons: More complex, requires robust protocol.
+- **Decentralization**: No single point of failure or control
+- **Privacy-First**: Data processing without compromising user privacy
+- **Energy Efficiency**: Optimal use of existing hardware resources
+- **Scalability**: Network grows stronger with more participants
+- **Interoperability**: Compatible with existing AI/ML ecosystems
+- **Security**: Cryptographic protection for all communications
+- **File Size Constraints**: Maximum 500 lines per file for AI model compatibility
 
-### C. Data Storage
-- **Option 1: Local Filesystem**
-  - Pros: Simple, fast, no extra dependencies.
-  - Cons: No sharing between peers, limited redundancy.
-- **Option 2: IPFS or Similar Distributed Storage**
-  - Pros: Decentralized, content-addressed, easy sharing.
-  - Cons: Overhead, dependency on IPFS.
+### 1.2 Target Deployment Scenarios
 
-### D. AI Processing
-- **Option 1: Use Existing Python Libraries (spaCy, NLTK, transformers, etc.)**
-  - Pros: Fast to prototype, well-supported.
-  - Cons: May require more resources, dependency management.
-- **Option 2: Custom Lightweight Models**
-  - Pros: Optimized for edge devices, lower resource usage.
-  - Cons: More development effort.
+- **Home/Office Networks**: Multiple devices collaborating locally
+- **Edge Computing**: IoT devices and edge servers
+- **Academic Institutions**: Research lab clusters
+- **Community Networks**: Neighborhood mesh networks
+- **Global Internet**: Worldwide distributed processing
 
-## 4. Recommended MVP Path
-- Use Python for agent core and processing modules.
-- Use libp2p (via py-libp2p or go-libp2p with Python bindings) for networking.
-- Start with local filesystem for storage, add IPFS later.
-- Use spaCy or similar for NLP/chunking, sentence-transformers for vectorization.
-- Implement a simple decentralized task queue using libp2p PubSub.
+---
 
-## 5. Next Steps
-1. Define agent core API and interfaces.
-2. Prototype P2P networking (libp2p or fallback to WebSocket).
-3. Implement local task queue and chunking module.
-4. Add basic vectorization and result aggregation.
-5. Test with two or more agents on a local network.
-6. Expand to distributed storage and more advanced scheduling.
+## 📖 Related Documentation
+
+- **[Documentation Index](docs/INDEX.md)** - Complete documentation overview
+- **[README](README.md)** - Project overview and getting started
+- **[Quick Reference](docs/QUICK_REFERENCE.md)** - Commands and configuration
+- **[Agent Protocol](AGENT_PROTOCOL.md)** - Communication protocol specification
+- **[Contributing Guide](CONTRIBUTING.md)** - Development guidelines
+
+---
+
+## 2. System Architecture
+
+### 2.1 Core Components
+
+#### Agent Core
+The central orchestrator managing local operations, peer communications, and resource monitoring. Each agent maintains:
+
+- **Identity Management**: Cryptographic keypair for authentication
+- **Resource Monitor**: CPU, memory, storage, and network usage tracking
+- **Task Scheduler**: Priority-based task queuing and execution
+- **Communication Handler**: Secure P2P messaging and protocol handling
+- **Health Monitor**: Self-monitoring and peer health checking
+
+#### Specialized Agent Types
+
+**Processing Agents**
+- Handle data chunking, NLP, and transformation tasks
+- Optimized for CPU-intensive workloads
+- Support multiple AI/ML frameworks (transformers, spaCy, scikit-learn)
+
+**Vector Agents**
+- Specialized in embedding generation and similarity search
+- GPU acceleration support for efficient vectorization
+- Integration with vector databases (Faiss, Pinecone, Weaviate)
+
+**Storage Agents**
+- Provide distributed data storage and retrieval
+- Support multiple storage backends (filesystem, S3, IPFS)
+- Implement data redundancy and consistency protocols
+
+**Coordinator Agents**
+- Manage complex multi-step workflows
+- Handle task orchestration and dependency management
+- Provide result aggregation and consensus mechanisms
+
+**Gateway Agents**
+- Bridge between P2P network and external services
+- API endpoint provisioning and rate limiting
+- Protocol translation and data format conversion
+
+### 2.2 Network Architecture
+
+#### Three-Layer Network Design
+
+**Application Layer**
+- Task definition and workflow management
+- Result processing and user interfaces
+- AI model hosting and inference APIs
+
+**P2P Protocol Layer**
+- Peer discovery and routing
+- Secure messaging and data transfer
+- Consensus and coordination protocols
+
+**Transport Layer**
+- Multi-transport support (TCP, WebRTC, QUIC)
+- NAT traversal and firewall penetration
+- Network topology optimization
+
+### 2.3 Data Flow Architecture
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant LocalAgent
+    participant NetworkDiscovery
+    participant PeerAgents
+    participant Storage
+    
+    User->>LocalAgent: Submit Task
+    LocalAgent->>NetworkDiscovery: Find Suitable Peers
+    NetworkDiscovery-->>LocalAgent: Return Peer List
+    LocalAgent->>PeerAgents: Distribute Subtasks
+    PeerAgents->>Storage: Process & Store Results
+    PeerAgents-->>LocalAgent: Return Results
+    LocalAgent->>LocalAgent: Aggregate Results
+    LocalAgent-->>User: Return Final Result
+```
+
+## 3. Security Architecture
+
+### 3.1 Identity and Authentication
+
+**Cryptographic Identity**
+- Each agent generates Ed25519 keypair for identity
+- Public key serves as permanent agent identifier
+- Private key for message signing and authentication
+
+**Multi-Factor Authentication**
+- Primary: Cryptographic signatures
+- Secondary: Reputation scores and peer vouching
+- Optional: Hardware security modules (HSM) for high-value agents
+
+### 3.2 Communication Security
+
+**Transport Layer Security**
+- All communications encrypted using TLS 1.3 or libp2p security
+- Perfect forward secrecy with ephemeral key exchange
+- Certificate pinning for known peers
+
+**Message Authentication**
+- Every message signed with sender's private key
+- Replay attack prevention using timestamps and nonces
+- Message integrity verification using HMAC
+
+### 3.3 Network Security
+
+**DDoS Protection**
+- Rate limiting on message processing
+- Reputation-based filtering of suspicious peers
+- Distributed load balancing across network
+
+**Sybil Attack Prevention**
+- Proof-of-work requirements for new agent registration
+- Social verification through existing peer networks
+- Resource commitment validation
+
+### 3.4 Data Protection
+
+**Privacy-Preserving Processing**
+- Differential privacy for sensitive data operations
+- Homomorphic encryption for computation on encrypted data
+- Secure multi-party computation for collaborative learning
+
+**Data Minimization**
+- Process only necessary data portions
+- Automatic data deletion after task completion
+- User-controlled data retention policies
+
+## 4. Performance and Scalability
+
+### 4.1 Network Performance
+
+**Latency Optimization**
+- Geographic peer selection for reduced latency
+- Caching of frequently accessed data
+- Predictive task pre-positioning
+
+**Bandwidth Management**
+- Adaptive compression based on connection quality
+- Traffic shaping to prioritize critical tasks
+- Multi-path routing for redundancy
+
+### 4.2 Computational Efficiency
+
+**Resource Optimization**
+- Dynamic task sizing based on peer capabilities
+- GPU acceleration where available
+- Energy-aware scheduling for battery-powered devices
+
+**Load Balancing**
+- Heterogeneous workload distribution
+- Failover mechanisms for peer unavailability
+- Adaptive task partitioning
+
+### 4.3 Scalability Metrics
+
+**Network Growth**
+- Target: 10,000+ concurrent agents
+- Logarithmic routing complexity
+- Hierarchical network organization
+
+**Throughput Goals**
+- 1M+ tasks per hour network-wide
+- Sub-second task completion for simple operations
+- Parallel processing of independent tasks
+
+## 5. Deployment and Operations
+
+### 5.1 Installation Methods
+
+**Container Deployment**
+- Docker images for quick setup
+- Kubernetes manifests for orchestrated deployment
+- Helm charts for complex configurations
+
+**Native Installation**
+- Python package with pip installation
+- Binary distributions for major platforms
+- Source compilation for specialized hardware
+
+### 5.2 Configuration Management
+
+**Environment-Based Config**
+- Development, staging, production environments
+- Secrets management integration
+- Dynamic configuration updates
+
+**Hardware Profiles**
+- Raspberry Pi optimized builds
+- GPU-accelerated configurations
+- Low-power edge device settings
+
+### 5.3 Monitoring and Observability
+
+**Metrics Collection**
+- Performance metrics (latency, throughput, error rates)
+- Resource utilization (CPU, memory, network, storage)
+- Business metrics (tasks completed, peer count)
+
+**Logging and Tracing**
+- Structured logging with correlation IDs
+- Distributed tracing for multi-peer operations
+- Real-time log aggregation and analysis
+
+**Health Monitoring**
+- Peer health scoring and reporting
+- Automated alerting for critical issues
+- Self-healing capabilities where possible
 
 ## 6. Open Questions
 - How to incentivize participation?
@@ -119,3 +298,5 @@ Establishing trust in a decentralized, peer-to-peer network is a major challenge
 
 ---
 This document is a starting point. Please discuss and select options before implementation.
+
+*Note: This design document is continuously updated. Check the [documentation](https://p2p-agent.readthedocs.io/) for the latest architecture details.*
