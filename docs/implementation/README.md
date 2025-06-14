@@ -1,15 +1,21 @@
 # Implementation Documentation
 
+## Version Information
+
+- Current Version: 0.1.0
+- Last Updated: 2025-06-14
+- Status: In Development
+
 This directory contains detailed implementation guides for the P2P AI Agents system. All implementations are in Rust, focusing on performance, safety, and maintainability.
 
 ## 📚 Implementation Structure
 
 ### Core Components
+
 - [Agent Implementation](agent.md) - Core agent types and behaviors
-- [Task Processing](task-processing.md) - Task management and execution
-- [Network Protocol](network.md) - P2P networking and communication
+- [Task Processing](task.md) - Task management and execution
+- [Network Protocol](network/README.md) - P2P networking and communication
 - [Storage Layer](storage.md) - Data storage and management
-- [Security](security.md) - Cryptographic operations and security
 
 ### Specialized Components
 - [Processing Agents](processing-agents.md) - Data processing implementations

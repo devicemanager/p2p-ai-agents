@@ -2,7 +2,7 @@
 
 ## Version Information
 - Current Version: 0.1.0
-- Last Updated: 2024-03-19
+- Last Updated: 2025-06-14
 - Status: In Development
 - Minimum Rust Version: 1.75.0
 - Dependencies:
