@@ -1,7 +1,6 @@
 //! Integration test for basic usage examples from the documentation.
 use p2p_ai_agents::network::{NetworkConfig, ProtocolConfig, ResourceLimits, SecurityConfig, NetworkManager, PeerInfo, PeerId, Multiaddr, PeerCapabilities, ConnectionStatus, NetworkMessage, NetworkError};
 use chrono::Utc;
-use std::sync::Arc;
 
 #[tokio::test]
 async fn test_network_initialization_and_message() {
@@ -17,11 +16,11 @@ async fn test_network_initialization_and_message() {
         },
         security_config: SecurityConfig {},
     };
-    let mut manager = NetworkManager::new(config);
+    let manager = NetworkManager::new(config);
     // manager.initialize().await.unwrap(); // Uncomment if implemented
     // manager.start().await.unwrap();
 
-    let peer = PeerInfo {
+    let _peer = PeerInfo {
         peer_id: PeerId("QmPeer...".to_string()),
         addresses: vec![Multiaddr("/ip4/127.0.0.1/tcp/8080".to_string())],
         last_seen: Utc::now(),

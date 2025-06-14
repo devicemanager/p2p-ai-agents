@@ -11,12 +11,12 @@ enum ProtocolState {
 
 #[tokio::test]
 async fn test_protocol_state_transitions() {
-    let mut state = ProtocolState::Init;
+    let _state = ProtocolState::Init;
     // Transition to Active
-    state = ProtocolState::Active;
+    let state = ProtocolState::Active;
     assert_eq!(state, ProtocolState::Active);
     // Transition to Closed
-    state = ProtocolState::Closed;
+    let state = ProtocolState::Closed;
     assert_eq!(state, ProtocolState::Closed);
 }
 
