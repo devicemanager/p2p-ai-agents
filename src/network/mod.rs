@@ -5,6 +5,7 @@ use std::net::SocketAddr;
 use std::sync::Arc;
 use tokio::sync::Mutex;
 use thiserror::Error;
+use serde::{Serialize, Deserialize};
 
 /// Discovery submodule for peer discovery and management.
 pub mod discovery;
@@ -37,15 +38,87 @@ pub enum NetworkError {
 /// Result type for network operations.
 pub type NetworkResult<T> = std::result::Result<T, NetworkError>;
 
-/// Network configuration for a peer-to-peer agent.
-#[derive(Debug, Clone)]
+/// Unique identifier for a peer (stub, replace with real type as needed)
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct PeerId(pub String);
+
+/// Multi-address for peer connections (stub, replace with real type as needed)
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct Multiaddr(pub String);
+
+/// Protocol-specific configuration (stub)
+#[derive(Debug, Clone, Serialize, Deserialize)]
+/// Configuration for network protocols.
+pub struct ProtocolConfig {
+    // Add protocol-specific fields here
+}
+
+/// Resource usage limits and thresholds (stub)
+#[derive(Debug, Clone, Serialize, Deserialize)]
+/// Resource usage limits for the network.
+pub struct ResourceLimits {
+    /// Maximum bandwidth in bytes per second
+    pub max_bandwidth: u64,
+    /// Maximum memory usage in bytes
+    pub max_memory: u64,
+    /// Maximum number of connections
+    pub max_connections: usize,
+}
+
+/// Security configuration (stub)
+#[derive(Debug, Clone, Serialize, Deserialize)]
+/// Security-related configuration for the network.
+pub struct SecurityConfig {
+    // Add security-related fields here
+}
+
+/// Capabilities supported by a peer (stub)
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PeerCapabilities;
+
+/// Connection status of a peer (stub)
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum ConnectionStatus {
+    /// Peer is connected
+    Connected,
+    /// Peer is disconnected
+    Disconnected,
+}
+
+/// Information about a network peer
+#[derive(Debug, Clone, Serialize, Deserialize)]
+/// Contains identity, addresses, and status of a peer.
+pub struct PeerInfo {
+    /// Unique peer identifier
+    pub peer_id: PeerId,
+    /// Known network addresses
+    pub addresses: Vec<Multiaddr>,
+    /// Last seen timestamp
+    pub last_seen: chrono::DateTime<chrono::Utc>,
+    /// Peer reputation score
+    pub reputation: i32,
+    /// Peer capabilities
+    pub capabilities: PeerCapabilities,
+    /// Connection status
+    pub status: ConnectionStatus,
+}
+
+/// Network configuration for the P2P system
+#[derive(Debug, Clone, Serialize, Deserialize)]
+/// Defines core configuration parameters for the network implementation.
 pub struct NetworkConfig {
-    /// Address to listen on
-    pub listen_addr: SocketAddr,
-    /// Bootstrap nodes for peer discovery
-    pub bootstrap_nodes: Vec<SocketAddr>,
-    /// Agent type identifier
-    pub agent_type: String,
+    /// Network address to listen on
+    pub listen_addr: std::net::SocketAddr,
+    /// List of bootstrap peers for initial connection
+    pub bootstrap_peers: Vec<PeerInfo>,
+    /// Maximum number of connected peers
+    pub max_peers: usize,
+    /// Protocol-specific configuration
+    pub protocol_config: ProtocolConfig,
+    /// Resource limits and thresholds
+    pub resource_limits: ResourceLimits,
+    /// Security configuration
+    pub security_config: SecurityConfig,
 }
 
 /// Message structure for network communication.
@@ -246,8 +319,15 @@ mod tests {
     fn test_network_manager_builder_new_and_with_config() {
         let config = NetworkConfig {
             listen_addr: "127.0.0.1:0".parse().unwrap(),
-            bootstrap_nodes: vec![],
-            agent_type: "test".to_string(),
+            bootstrap_peers: vec![],
+            max_peers: 10,
+            protocol_config: ProtocolConfig {},
+            resource_limits: ResourceLimits {
+                max_bandwidth: 1024,
+                max_memory: 2048,
+                max_connections: 100,
+            },
+            security_config: SecurityConfig {},
         };
         let _ = NetworkManagerBuilder::new().with_config(config);
     }
