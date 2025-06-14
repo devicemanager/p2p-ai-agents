@@ -39,15 +39,15 @@ This checklist tracks the progress of documentation improvements for the network
   - [x] Add documentation style guide
 
 ## Phase 2: Core Types and Definitions
-- [ ] Update network-types.md
-  - [ ] Add missing imports
-  - [ ] Add missing type definitions
-  - [ ] Create type relationship diagrams
-  - [ ] Add type usage examples
-  - [ ] Add type validation rules
-  - [ ] Add type conversion rules
-  - [ ] Add type constraints
-  - [ ] Add type documentation
+- [x] Update network-types.md
+  - [x] Add missing imports
+  - [x] Add missing type definitions
+  - [x] Create type relationship diagrams
+  - [x] Add type usage examples
+  - [x] Add type validation rules
+  - [x] Add type conversion rules
+  - [x] Add type constraints
+  - [x] Add type documentation
 
 - [ ] Create Type Documentation (docs/implementation/network/types/)
   - [ ] core-types.md
@@ -268,4 +268,4 @@ This checklist tracks the progress of documentation improvements for the network
 - Documentation should be kept in sync with code changes
 - All links should be verified regularly
 - Examples should be kept up to date
-- Security considerations should be reviewed regularly 
+- Security considerations should be reviewed regularly

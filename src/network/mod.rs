@@ -132,6 +132,45 @@ pub struct NetworkMessage {
     pub content: Vec<u8>,
 }
 
+/// Represents a message related to task execution or management.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TaskMessage {
+    /// Sender identifier
+    pub from: String,
+    /// Receiver identifier
+    pub to: String,
+    /// Task-specific content (could be JSON, binary, etc.)
+    pub content: Vec<u8>,
+    /// Task type or action
+    pub task_type: String,
+}
+
+/// Represents a message related to resource usage or limits.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ResourceMessage {
+    /// Sender identifier
+    pub from: String,
+    /// Receiver identifier
+    pub to: String,
+    /// Resource-specific content
+    pub content: Vec<u8>,
+    /// Resource type or action
+    pub resource_type: String,
+}
+
+/// Represents a message related to health checks or status.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct HealthMessage {
+    /// Sender identifier
+    pub from: String,
+    /// Receiver identifier
+    pub to: String,
+    /// Health-specific content
+    pub content: Vec<u8>,
+    /// Health check type or status
+    pub health_type: String,
+}
+
 /// Manages the network state and operations.
 pub struct NetworkManager {
     /// Network configuration
