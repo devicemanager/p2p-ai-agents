@@ -7,7 +7,7 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use async_trait::async_trait;
 use serde::{Serialize, Deserialize};
-use tokio::sync::RwLock;
+use tokio::sync::Mutex;
 use thiserror::Error;
 use uuid::Uuid;
 use std::fmt;
@@ -214,97 +214,50 @@ impl Task {
     }
 }
 
-/// Task executor trait
-#[async_trait]
+/// Result type for task operations
+pub type Result<T> = std::result::Result<T, TaskError>;
+
+#[async_trait::async_trait]
 pub trait TaskExecutor: Send + Sync {
-    /// Execute a task
     async fn execute(&self, _task: &Task) -> Result<TaskResult>;
 }
 
-/// Task manager for handling task execution
 pub struct TaskManager {
-    tasks: Arc<RwLock<HashMap<TaskId, Task>>>,
     executor: Arc<dyn TaskExecutor>,
+    tasks: Arc<Mutex<HashMap<TaskId, Task>>>,
 }
 
 impl TaskManager {
-    /// Create a new task manager
     pub fn new(executor: Arc<dyn TaskExecutor>) -> Self {
-        Self {
-            tasks: Arc::new(RwLock::new(HashMap::new())),
+        TaskManager {
             executor,
+            tasks: Arc::new(Mutex::new(HashMap::new())),
         }
     }
-
-    /// Submit a task
     pub async fn submit_task(&self, task: Task) -> Result<TaskId> {
-        let task_id = task.id().clone();
-        let mut tasks = self.tasks.write().await;
-        
-        if tasks.contains_key(&task_id) {
-            return Err(TaskError::AlreadyExists(task_id));
-        }
-
-        tasks.insert(task_id.clone(), task);
-        Ok(task_id)
+        let mut tasks = self.tasks.lock().await;
+        let id = TaskId::new();
+        tasks.insert(id.clone(), task);
+        Ok(id)
     }
-
-    /// Get a task by ID
     pub async fn get_task(&self, task_id: &TaskId) -> Result<Task> {
-        let tasks = self.tasks.read().await;
-        tasks.get(task_id)
-            .cloned()
-            .ok_or_else(|| TaskError::NotFound(task_id.clone()))
+        let tasks = self.tasks.lock().await;
+        tasks.get(task_id).cloned().ok_or(TaskError::NotFound(task_id.clone()))
     }
-
-    /// Execute a task
     pub async fn execute_task(&self, task_id: &TaskId) -> Result<TaskResult> {
-        let mut tasks = self.tasks.write().await;
-        let task = tasks.get_mut(task_id)
-            .ok_or_else(|| TaskError::NotFound(task_id.clone()))?;
-
-        if !matches!(task.status, TaskStatus::Pending) {
-            return Err(TaskError::InvalidState(format!(
-                "Task {} is not pending (status: {:?})",
-                task_id.as_str(),
-                task.status
-            )));
-        }
-
-        task.set_status(TaskStatus::Running);
+        let mut tasks = self.tasks.lock().await;
+        let task = tasks.get_mut(task_id).ok_or(TaskError::NotFound(task_id.clone()))?;
         let result = self.executor.execute(task).await?;
         task.set_result(result.clone());
-
         Ok(result)
     }
-
-    /// Cancel a task
     pub async fn cancel_task(&self, task_id: &TaskId) -> Result<()> {
-        let mut tasks = self.tasks.write().await;
-        let task = tasks.get_mut(task_id)
-            .ok_or_else(|| TaskError::NotFound(task_id.clone()))?;
-
-        if matches!(task.status, TaskStatus::Completed | TaskStatus::Failed(_) | TaskStatus::Cancelled) {
-            return Err(TaskError::InvalidState(format!(
-                "Task {} is already finished (status: {:?})",
-                task_id.as_str(),
-                task.status
-            )));
-        }
-
+        let mut tasks = self.tasks.lock().await;
+        let task = tasks.get_mut(task_id).ok_or(TaskError::NotFound(task_id.clone()))?;
         task.set_status(TaskStatus::Cancelled);
         Ok(())
     }
-
-    /// List all tasks
-    pub async fn list_tasks(&self) -> Vec<Task> {
-        let tasks = self.tasks.read().await;
-        tasks.values().cloned().collect()
-    }
 }
-
-/// Result type for task operations
-pub type Result<T> = std::result::Result<T, TaskError>;
 
 #[cfg(test)]
 mod tests {
@@ -379,4 +332,4 @@ mod tests {
         let task = manager.get_task(&task_id).await.unwrap();
         assert!(matches!(task.status, TaskStatus::Cancelled));
     }
-} 
+}
