@@ -4,10 +4,7 @@
 //! executing tasks in the agent network.
 
 use std::collections::HashMap;
-use std::sync::Arc;
-use async_trait::async_trait;
 use serde::{Serialize, Deserialize};
-use tokio::sync::Mutex;
 use thiserror::Error;
 use uuid::Uuid;
 use std::fmt;
@@ -149,6 +146,55 @@ pub enum TaskError {
     Internal(String),
 }
 
+/// Result type for task operations
+#[allow(dead_code)]
+pub type TaskResultType<T> = std::result::Result<T, TaskError>;
+
+#[allow(dead_code)]
+#[async_trait::async_trait]
+pub trait TaskExecutor: Send + Sync {
+    async fn execute(&self, _task: &Task) -> TaskResultType<TaskResult>;
+}
+
+#[allow(dead_code)]
+pub struct TaskManager<E: TaskExecutor> {
+    executor: std::sync::Arc<E>,
+    tasks: tokio::sync::Mutex<std::collections::HashMap<TaskId, Task>>,
+}
+
+#[allow(dead_code)]
+impl<E: TaskExecutor> TaskManager<E> {
+    pub fn new(executor: std::sync::Arc<E>) -> Self {
+        TaskManager {
+            executor,
+            tasks: tokio::sync::Mutex::new(std::collections::HashMap::new()),
+        }
+    }
+    pub async fn submit_task(&self, task: Task) -> TaskResultType<TaskId> {
+        let mut tasks = self.tasks.lock().await;
+        let id = TaskId::new();
+        tasks.insert(id.clone(), task);
+        Ok(id)
+    }
+    pub async fn get_task(&self, task_id: &TaskId) -> TaskResultType<Task> {
+        let tasks = self.tasks.lock().await;
+        tasks.get(task_id).cloned().ok_or(TaskError::NotFound(task_id.clone()))
+    }
+    pub async fn execute_task(&self, task_id: &TaskId) -> TaskResultType<TaskResult> {
+        let mut tasks = self.tasks.lock().await;
+        let task = tasks.get_mut(task_id).ok_or(TaskError::NotFound(task_id.clone()))?;
+        let result = self.executor.execute(task).await?;
+        task.set_result(result.clone());
+        Ok(result)
+    }
+    pub async fn cancel_task(&self, task_id: &TaskId) -> TaskResultType<()> {
+        let mut tasks = self.tasks.lock().await;
+        let task = tasks.get_mut(task_id).ok_or(TaskError::NotFound(task_id.clone()))?;
+        task.set_status(TaskStatus::Cancelled);
+        Ok(())
+    }
+}
+
 impl Task {
     /// Create a new task
     pub fn new(priority: TaskPriority, payload: TaskPayload) -> Self {
@@ -214,67 +260,22 @@ impl Task {
     }
 }
 
-/// Result type for task operations
-pub type Result<T> = std::result::Result<T, TaskError>;
-
-#[async_trait::async_trait]
-pub trait TaskExecutor: Send + Sync {
-    async fn execute(&self, _task: &Task) -> Result<TaskResult>;
-}
-
-pub struct TaskManager {
-    executor: Arc<dyn TaskExecutor>,
-    tasks: Arc<Mutex<HashMap<TaskId, Task>>>,
-}
-
-impl TaskManager {
-    pub fn new(executor: Arc<dyn TaskExecutor>) -> Self {
-        TaskManager {
-            executor,
-            tasks: Arc::new(Mutex::new(HashMap::new())),
-        }
-    }
-    pub async fn submit_task(&self, task: Task) -> Result<TaskId> {
-        let mut tasks = self.tasks.lock().await;
-        let id = TaskId::new();
-        tasks.insert(id.clone(), task);
-        Ok(id)
-    }
-    pub async fn get_task(&self, task_id: &TaskId) -> Result<Task> {
-        let tasks = self.tasks.lock().await;
-        tasks.get(task_id).cloned().ok_or(TaskError::NotFound(task_id.clone()))
-    }
-    pub async fn execute_task(&self, task_id: &TaskId) -> Result<TaskResult> {
-        let mut tasks = self.tasks.lock().await;
-        let task = tasks.get_mut(task_id).ok_or(TaskError::NotFound(task_id.clone()))?;
-        let result = self.executor.execute(task).await?;
-        task.set_result(result.clone());
-        Ok(result)
-    }
-    pub async fn cancel_task(&self, task_id: &TaskId) -> Result<()> {
-        let mut tasks = self.tasks.lock().await;
-        let task = tasks.get_mut(task_id).ok_or(TaskError::NotFound(task_id.clone()))?;
-        task.set_status(TaskStatus::Cancelled);
-        Ok(())
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::sync::Arc;
     use tokio::time::Duration;
 
     struct MockExecutor;
 
-    #[async_trait]
+    #[async_trait::async_trait]
     impl TaskExecutor for MockExecutor {
-        async fn execute(&self, _task: &Task) -> Result<TaskResult> {
+        async fn execute(&self, _task: &Task) -> TaskResultType<TaskResult> {
             // Simulate some work
             tokio::time::sleep(Duration::from_millis(100)).await;
-            
             Ok(TaskResult {
                 output: serde_json::json!({"result": "success"}),
-                metadata: HashMap::new(),
+                metadata: std::collections::HashMap::new(),
             })
         }
     }

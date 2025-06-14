@@ -9,7 +9,8 @@
 
 pub mod agent;
 pub mod network;
-// pub mod storage;
+/// The storage module provides the pluggable storage layer for the system.
+pub mod storage;
 // pub mod cli;
 
 /// Re-exports of commonly used types
@@ -24,7 +25,7 @@ pub mod prelude {
         discovery::{DiscoveryManager, PeerInfo},
         transport::{TransportType, TransportError},
     };
-    // pub use crate::storage::{Storage, StorageConfig};
+    // Removed broken storage re-exports
 }
 
 /// Result type for the library
@@ -41,8 +42,9 @@ pub enum Error {
     #[error("Network error: {0}")]
     Network(#[from] network::NetworkError),
 
-    /// Storage-related errors
-    // #[error("Storage error")] // #[from] storage::Error),
+    // Storage-related errors (commented out until implemented)
+    // #[error("Storage error: {0}")]
+    // Storage(#[from] storage::Error),
 
     /// Configuration errors
     #[error("Configuration error: {0}")]
