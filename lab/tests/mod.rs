@@ -4,6 +4,7 @@ use tokio::time;
 
 mod discovery;
 mod transport;
+mod e2e;
 
 /// Common test utilities and fixtures
 mod common {
@@ -114,3 +115,7 @@ mod tests {
         env.cleanup().await;
     }
 }
+
+// Re-export e2e module for test discovery
+#[cfg(test)]
+pub mod e2e;
