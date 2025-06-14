@@ -61,6 +61,14 @@ pub enum ResourceError {
     #[error("Memory limit exceeded")]
     MemoryLimitExceeded,
 
+    /// Storage limit exceeded
+    #[error("Storage limit exceeded")]
+    StorageLimitExceeded,
+
+    /// Bandwidth limit exceeded
+    #[error("Bandwidth limit exceeded")]
+    BandwidthLimitExceeded,
+
     /// Process not found
     #[error("Process not found")]
     ProcessNotFound,
@@ -152,8 +160,6 @@ mod tests {
         let usage = monitor.current_usage().await.unwrap();
         assert!(usage.cpu >= 0.0 && usage.cpu <= 1.0);
         assert!(usage.memory > 0);
-        assert!(usage.storage >= 0);
-        assert!(usage.bandwidth >= 0);
     }
 
     #[tokio::test]
@@ -178,4 +184,4 @@ mod tests {
             assert!(matches!(err, ResourceError::CpuLimitExceeded | ResourceError::MemoryLimitExceeded));
         }
     }
-} 
+}

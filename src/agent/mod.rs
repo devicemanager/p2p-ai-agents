@@ -26,10 +26,6 @@ pub struct AgentId(String);
 pub struct AgentConfig {
     /// Agent identifier
     pub id: AgentId,
-    /// Network configuration
-    // pub network: crate::network::NetworkConfig,
-    /// Storage configuration
-    // pub storage: crate::storage::StorageConfig,
     /// Resource limits
     pub resource_limits: ResourceLimits,
 }
@@ -127,7 +123,6 @@ pub enum Error {
 pub struct DefaultAgent {
     id: AgentId,
     config: AgentConfig,
-    identity: Arc<Identity>,
     resource_monitor: Arc<ResourceMonitor>,
     // TODO: Add other fields as needed
 }
@@ -135,13 +130,11 @@ pub struct DefaultAgent {
 impl DefaultAgent {
     /// Create a new agent with the given configuration
     pub async fn new(config: AgentConfig) -> Result<Self> {
-        let identity = Identity::new()?;
         let resource_monitor = ResourceMonitor::new(&config.resource_limits)?;
 
         Ok(Self {
             id: config.id.clone(),
             config,
-            identity: Arc::new(identity),
             resource_monitor: Arc::new(resource_monitor),
         })
     }
@@ -199,8 +192,6 @@ mod tests {
     async fn test_agent_creation() {
         let config = AgentConfig {
             id: AgentId("test-agent".to_string()),
-            // network: crate::network::NetworkConfig::default(),
-            // storage: crate::storage::StorageConfig::default(),
             resource_limits: ResourceLimits {
                 max_cpu: 0.8,
                 max_memory: 1024 * 1024 * 1024, // 1GB
@@ -212,4 +203,4 @@ mod tests {
         let agent = DefaultAgent::new(config).await.unwrap();
         assert_eq!(agent.id().0, "test-agent");
     }
-} 
+}
