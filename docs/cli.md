@@ -1,6 +1,6 @@
 # P2P AI Agents CLI Documentation
 
-The P2P AI Agents CLI provides a command-line interface for managing P2P AI agents, including starting agents, monitoring their status, managing authentication, and interacting with the P2P network.
+The P2P AI Agents CLI provides a command-line interface for managing P2P AI Agents, including starting agents, monitoring their status, managing authentication, and interacting with the P2P network.
 
 # CLI Reference
 

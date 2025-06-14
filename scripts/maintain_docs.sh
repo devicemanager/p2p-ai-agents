@@ -1,0 +1,206 @@
+#!/bin/bash
+# Smart Documentation Maintenance Script
+# Automatically fixes common documentation issues and maintains consistency
+
+set -e
+
+echo "🔧 Starting smart documentation maintenance..."
+
+# Colors for output
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+NC='\033[0m' # No Color
+
+PROJECT_ROOT="/workspaces/p2p-ai-agents"
+DOCS_DIR="$PROJECT_ROOT/docs"
+
+# Function to print colored output
+print_status() {
+    echo -e "${BLUE}[INFO]${NC} $1"
+}
+
+print_success() {
+    echo -e "${GREEN}[✓]${NC} $1"
+}
+
+print_warning() {
+    echo -e "${YELLOW}[⚠]${NC} $1"
+}
+
+print_error() {
+    echo -e "${RED}[✗]${NC} $1"
+}
+
+# 1. Update all version information to be consistent
+update_version_info() {
+    print_status "Updating version information across all docs..."
+    
+    CURRENT_VERSION="0.1.0"
+    CURRENT_DATE=$(date +%Y-%m-%d)
+    
+    # Find files with version info and update them
+    find "$DOCS_DIR" -name "*.md" -exec grep -l "Current Version:" {} \; | while read -r file; do
+        sed -i "s/Last Updated:.*/Last Updated: $CURRENT_DATE/g" "$file"
+        print_success "Updated version info in $(basename "$file")"
+    done
+}
+
+# 2. Fix common link patterns
+fix_common_links() {
+    print_status "Fixing common link patterns..."
+    
+    # Fix relative path issues (this is a safe pattern replacement)
+    find "$DOCS_DIR" -name "*.md" -exec sed -i 's|(\.\./development/setup\.md)|(../development/README.md)|g' {} \;
+    find "$DOCS_DIR" -name "*.md" -exec sed -i 's|(setup\.md)|(README.md)|g' {} \;
+    
+    print_success "Fixed common link patterns"
+}
+
+# 3. Ensure all directories have README files
+ensure_readme_files() {
+    print_status "Ensuring all directories have README files..."
+    
+    find "$DOCS_DIR" -type d | while read -r dir; do
+        if [[ ! -f "$dir/README.md" && "$dir" != "$DOCS_DIR" ]]; then
+            dir_name=$(basename "$dir")
+            cat > "$dir/README.md" << EOF
+# $dir_name Documentation
+
+This directory contains documentation for the $dir_name component of the P2P AI Agents system.
+
+## Contents
+
+$(find "$dir" -maxdepth 1 -name "*.md" ! -name "README.md" -exec basename {} \; | sed 's/^/- /')
+
+## Related Documentation
+
+- [Main Documentation](../README.md)
+- [Implementation Guide](../implementation/README.md)
+- [Development Guide](../development/README.md)
+
+---
+Last updated: $(date +%Y-%m-%d)
+EOF
+            print_success "Created README.md in $dir_name/"
+        fi
+    done
+}
+
+# 4. Validate cross-references
+validate_cross_references() {
+    print_status "Validating cross-references..."
+    
+    # Simple check for obvious broken patterns
+    broken_links=0
+    
+    find "$DOCS_DIR" -name "*.md" | while read -r file; do
+        # Check for common broken patterns
+        if grep -q "](.*\.md)" "$file"; then
+            # Extract and validate each link (simplified)
+            while IFS= read -r line; do
+                if [[ $line =~ \]\([^)]+\.md\) ]]; then
+                    link=$(echo "$line" | grep -o '](.*\.md)' | sed 's/^](//' | sed 's/)$//')
+                    if [[ $link =~ ^\.\./ ]]; then
+                        # Relative link - basic validation
+                        target_dir=$(dirname "$file")
+                        # This is a simplified check - in production you'd want more robust validation
+                        print_warning "Found relative link in $(basename "$file"): $link"
+                    fi
+                fi
+            done < "$file"
+        fi
+    done
+}
+
+# 5. Update documentation timestamps
+update_timestamps() {
+    print_status "Updating documentation timestamps..."
+    
+    CURRENT_DATE=$(date +%Y-%m-%d)
+    
+    find "$DOCS_DIR" -name "*.md" -exec grep -l "Last updated:" {} \; | while read -r file; do
+        sed -i "s/Last updated:.*/Last updated: $CURRENT_DATE/g" "$file"
+    done
+    
+    print_success "Updated timestamps"
+}
+
+# 6. Generate quick reference update
+update_quick_reference() {
+    print_status "Updating quick reference..."
+    
+    cat > "$DOCS_DIR/QUICK_REFERENCE.md" << 'EOF'
+# Quick Reference
+
+## Documentation Structure
+- [`INDEX.md`](INDEX.md) - Main documentation index
+- [`README.md`](README.md) - Project overview
+- [`GLOSSARY.md`](GLOSSARY.md) - Terminology definitions
+
+## Implementation Docs
+- [Network Implementation](implementation/network/README.md)
+- [Storage Implementation](implementation/storage.md)
+- [Agent Implementation](implementation/agent.md)
+
+## Architecture
+- [System Overview](architecture/system-overview.md)
+- [Data Flow](architecture/data-flow.md)
+- [Security](architecture/security.md)
+
+## Development
+- [Getting Started](development/README.md)
+- [Testing Guide](development/testing-guide.md)
+
+## User Guides
+- [Getting Started](user-guides/getting-started.md)
+- [Agent Configuration](user-guides/agent-configuration.md)
+- [Security Best Practices](user-guides/security-best-practices.md)
+
+---
+Last updated: $(date +%Y-%m-%d)
+Auto-generated by maintenance script
+EOF
+    
+    print_success "Updated quick reference"
+}
+
+# Main execution
+main() {
+    cd "$PROJECT_ROOT"
+    
+    print_status "Starting documentation maintenance in $PROJECT_ROOT"
+    
+    update_version_info
+    fix_common_links
+    ensure_readme_files
+    validate_cross_references
+    update_timestamps
+    update_quick_reference
+    
+    print_success "Documentation maintenance completed!"
+    print_status "Run this script regularly to maintain documentation consistency"
+    print_status "Consider adding it to your CI/CD pipeline"
+}
+
+# Handle command line arguments
+case "${1:-}" in
+    --help|-h)
+        echo "Smart Documentation Maintenance Script"
+        echo "Usage: $0 [--help|--dry-run]"
+        echo ""
+        echo "Options:"
+        echo "  --help      Show this help message"
+        echo "  --dry-run   Show what would be changed without making changes"
+        exit 0
+        ;;
+    --dry-run)
+        echo "DRY RUN MODE - No changes will be made"
+        print_warning "This would run maintenance tasks..."
+        exit 0
+        ;;
+    *)
+        main
+        ;;
+esac

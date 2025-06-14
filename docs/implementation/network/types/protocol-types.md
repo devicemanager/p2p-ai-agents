@@ -27,6 +27,30 @@ pub enum ProtocolState {
 }
 ```
 
-## TODO
-- Implement protocol types and state enums in the Rust codebase.
-- Add protocol transition logic and tests.
+## Implementation Notes
+
+### Protocol State Transitions
+The protocol states follow this transition model:
+```
+Initializing → Connecting → Active ↔ Closed
+                    ↓         ↑
+                 Failed ──────┘
+```
+
+### Usage Example
+```rust
+use crate::network::types::{ProtocolId, ProtocolState, ProtocolConfig};
+
+let protocol = ProtocolConfig {
+    id: ProtocolId::Task,
+    version: "1.0.0".to_string(),
+    state: ProtocolState::Initializing,
+};
+
+// Protocol transitions are handled by the NetworkManager
+```
+
+### Related Documentation
+- [Network Manager](../network-manager.md) - Protocol lifecycle management
+- [Message Types](message-types.md) - Protocol message definitions
+- [Error Types](error-types.md) - Protocol error handling

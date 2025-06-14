@@ -2,7 +2,7 @@
 
 ## Version Information
 - Current Version: 0.1.0
-- Last Updated: 2024-03-19
+- Last Updated: 2025-06-14
 - Status: In Development
 
 ## Table of Contents
@@ -108,8 +108,8 @@
 1. **Version Information**
    ```markdown
    ## Version Information
-   - Current Version: [semver]
-   - Last Updated: [date]
+   - Current Version: 0.1.0[semver]
+   - Last Updated: 2025-06-14[date]
    - Status: [In Development/Stable/Deprecated]
    - Minimum Rust Version: [version]
    - Dependencies: [list]

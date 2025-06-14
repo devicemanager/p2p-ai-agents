@@ -290,7 +290,7 @@ pytest
 pre-commit run --all-files
 ```
 
-See the [Development Guide](../development/setup.md) for more details.
+See the [Development Guide](../development/README.md) for more details.
 
 ---
 

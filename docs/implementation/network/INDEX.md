@@ -17,35 +17,15 @@
 - [types/error-types.md](types/error-types.md) - Error definitions
 
 ### Examples
+
 - [examples/basic-usage.md](examples/basic-usage.md) - Basic network usage
 - [examples/protocol-usage.md](examples/protocol-usage.md) - Protocol examples
-- [examples/metrics-usage.md](examples/metrics-usage.md) - Metrics examples
-- [examples/error-handling.md](examples/error-handling.md) - Error handling
-- [examples/performance-tuning.md](examples/performance-tuning.md) - Performance tuning
 
-### Testing
-- [testing/unit-testing.md](testing/unit-testing.md) - Unit testing
-- [testing/integration-testing.md](testing/integration-testing.md) - Integration testing
-- [testing/performance-testing.md](testing/performance-testing.md) - Performance testing
-- [testing/security-testing.md](testing/security-testing.md) - Security testing
+*Note: Additional examples (metrics, error handling, performance tuning) are planned for future releases.*
 
-### Security
-- [security/authentication.md](security/authentication.md) - Authentication
-- [security/encryption.md](security/encryption.md) - Encryption
-- [security/access-control.md](security/access-control.md) - Access control
-- [security/security-best-practices.md](security/security-best-practices.md) - Security best practices
+### Testing, Security, Performance, and Maintenance
 
-### Performance
-- [performance/optimization.md](performance/optimization.md) - Optimization
-- [performance/benchmarking.md](performance/benchmarking.md) - Benchmarking
-- [performance/profiling.md](performance/profiling.md) - Profiling
-- [performance/resource-management.md](performance/resource-management.md) - Resource management
-
-### Maintenance
-- [maintenance/updating.md](maintenance/updating.md) - Update procedures
-- [maintenance/troubleshooting.md](maintenance/troubleshooting.md) - Troubleshooting
-- [maintenance/deprecation.md](maintenance/deprecation.md) - Deprecation
-- [maintenance/migration.md](maintenance/migration.md) - Migration
+*Comprehensive documentation for testing, security, performance optimization, and maintenance procedures is planned for future releases. For current testing information, see the main [Testing Guide](../../development/testing-guide.md).*
 
 ## Component Dependency Graph
 ```
@@ -128,9 +108,9 @@ NetworkManager
 
 ## Related Documentation
 - [Agent Implementation](../agent.md)
-- [Task Processing Implementation](../task-processing.md)
-- [Storage Layer Implementation](../storage/README.md)
-- [Security Implementation](../security/README.md)
+- [Task Processing Implementation](../task.md)
+- [Storage Layer Implementation](../storage.md)
+- [Security Architecture](../../architecture/security.md)
 
 ## Navigation Structure
 1. Start with [README.md](README.md) for overview
@@ -146,7 +126,7 @@ NetworkManager
 
 ## Version Information
 - Current Version: 0.1.0
-- Last Updated: 2024-03-19
+- Last Updated: 2025-06-14
 - Documentation Status: In Progress
 - Minimum Rust Version: 1.75.0
 

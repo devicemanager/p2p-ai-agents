@@ -2,7 +2,7 @@
 
 ## Version Information
 - Current Version: 0.1.0
-- Last Updated: 2024-03-19
+- Last Updated: 2025-06-14
 - Status: In Development
 - Minimum Rust Version: 1.75.0
 
@@ -153,9 +153,9 @@ docs/implementation/network/
 
 ## Related Documentation
 - [Agent Implementation](../agent.md)
-- [Task Processing Implementation](../task-processing.md)
-- [Storage Layer Implementation](../storage/README.md)
-- [Security Implementation](../security/README.md)
+- [Task Processing Implementation](../task.md)
+- [Storage Layer Implementation](../storage.md)
+- [Security Architecture](../../architecture/security.md)
 
 ## Troubleshooting
 Common issues and their solutions:

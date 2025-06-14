@@ -1,6 +1,6 @@
 # Task Processing Implementation
 
-This document details the implementation of the task processing system in Rust, including task management, execution, and scheduling.
+This document details the implementation of the task processing system in Rust, including Task Processing, execution, and scheduling.
 
 ## Task Types and Definitions
 
