@@ -64,9 +64,55 @@ This project aims to democratize AI by building a distributed, peer-to-peer (P2P
 - 🐛 [Report Issues](https://github.com/p2p-ai-agents/p2p-ai-agents/issues)
 - 📧 [Email Support](mailto:support@p2p-ai-agents.org)
 
+## Development
+
+### Getting Started with Development
+
+1. **Prerequisites**
+   ```bash
+   # Install Rust (latest stable)
+   curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+   
+   # Install development tools
+   make install-tools
+   ```
+
+2. **Quick Development Commands**
+   ```bash
+   # Check compilation
+   make check
+   
+   # Run tests
+   make test
+   
+   # Format code
+   make fmt
+   
+   # Run all CI checks locally
+   make ci-check
+   
+   # Generate coverage report
+   make coverage
+   ```
+
+3. **CI/CD Status**
+   - ✅ **Rust CI**: Automated building, testing, and linting
+   - ✅ **Documentation**: Automated quality checks and maintenance
+   - ✅ **Code Coverage**: Automated coverage reporting via Codecov
+   - ✅ **Issue Tracking**: Automated GitHub issue creation from implementation checklists
+
+### Project Structure
+
+See [development documentation](docs/development.md) for detailed information about:
+- Code organization
+- Testing strategies
+- Contributing guidelines
+- Implementation tracking
+
 ## License
 
 This project is licensed under either of:
+
 - Apache License, Version 2.0 ([LICENSE-APACHE](LICENSE-APACHE))
 - MIT License ([LICENSE-MIT](LICENSE-MIT))
 
@@ -78,4 +124,4 @@ This project is licensed under either of:
 
 ---
 
-*Let's build a greener, open, and decentralized AI future—together!* 
+*Let's build a greener, open, and decentralized AI future—together!*

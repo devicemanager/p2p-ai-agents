@@ -1,0 +1,40 @@
+# Codecov configuration for p2p-ai-agents
+
+coverage:
+  status:
+    project:
+      default:
+        target: auto
+        threshold: 1%
+        base: auto
+        if_ci_failed: success
+    patch:
+      default:
+        target: auto
+        threshold: 1%
+        base: auto
+        if_ci_failed: success
+
+comment:
+  layout: "diff, flags, files"
+  behavior: default
+  require_changes: false
+  require_base: false
+  require_head: false
+
+ignore:
+  - "tests/"
+  - "examples/"
+  - "benches/"
+  - "**/*.md"
+
+github_checks:
+  annotations: true
+
+flags:
+  unittests:
+    paths:
+      - src/
+  integration:
+    paths:
+      - tests/

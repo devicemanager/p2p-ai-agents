@@ -1,0 +1,20 @@
+[build]
+# Enable all features by default for development
+# This helps catch compilation issues early
+# all-features = true
+
+[target.'cfg(all())']
+# Use faster linker on Linux
+rustflags = ["-C", "link-arg=-fuse-ld=lld"]
+
+[alias]
+# Useful cargo aliases
+check-all = "check --all-targets --all-features"
+test-all = "test --all-features --workspace"
+build-all = "build --all-targets --all-features"
+fmt-check = "fmt --all -- --check"
+clippy-all = "clippy --all-targets --all-features -- -D warnings"
+
+# Coverage aliases
+cov = "llvm-cov --all-features --workspace --lcov --output-path lcov.info"
+cov-html = "llvm-cov --all-features --workspace --html"
