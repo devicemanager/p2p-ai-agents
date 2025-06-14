@@ -4,7 +4,7 @@ The P2P AI Agents CLI provides a command-line interface for managing P2P AI agen
 
 # CLI Reference
 
-This document now assumes a Rust implementation. All previous references to Python, pip, venv, and related setup have been removed. All code examples and CLI usage are now Rust and cargo based.
+This document assumes a Rust implementation.
 
 ## Global Options
 

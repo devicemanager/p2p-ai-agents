@@ -15,7 +15,7 @@ use thiserror::Error;
 
 pub use identity::{Identity, IdentityError};
 pub use task::{Task, TaskId, TaskStatus, TaskError};
-pub use resource::{ResourceMonitor, ResourceError};
+pub use resource::{ResourceMonitor, ResourceError, ResourceUsage};
 
 /// Agent identifier type
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -27,9 +27,9 @@ pub struct AgentConfig {
     /// Agent identifier
     pub id: AgentId,
     /// Network configuration
-    pub network: crate::network::NetworkConfig,
+    // pub network: crate::network::NetworkConfig,
     /// Storage configuration
-    pub storage: crate::storage::StorageConfig,
+    // pub storage: crate::storage::StorageConfig,
     /// Resource limits
     pub resource_limits: ResourceLimits,
 }
@@ -69,7 +69,7 @@ pub trait Agent: Send + Sync {
     async fn submit_task(&self, task: Task) -> Result<TaskId>;
 
     /// Get the status of a task
-    async fn task_status(&self, task_id: &TaskId) -> Result<TaskStatus>;
+    async fn task_status(&self, _task_id: &TaskId) -> Result<TaskStatus>;
 
     /// Get the agent's resource usage
     async fn resource_usage(&self) -> Result<ResourceUsage>;
@@ -86,19 +86,6 @@ pub struct AgentStatus {
     pub resource_usage: ResourceUsage,
     /// Uptime in seconds
     pub uptime: u64,
-}
-
-/// Resource usage information
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ResourceUsage {
-    /// CPU usage (0.0 to 1.0)
-    pub cpu: f32,
-    /// Memory usage in bytes
-    pub memory: u64,
-    /// Storage usage in bytes
-    pub storage: u64,
-    /// Network bandwidth usage in bytes per second
-    pub bandwidth: u64,
 }
 
 /// Result type for agent operations
@@ -181,7 +168,6 @@ impl Agent for DefaultAgent {
     }
 
     async fn status(&self) -> Result<AgentStatus> {
-        // TODO: Implement status reporting
         Ok(AgentStatus {
             is_running: true,
             active_tasks: 0,
@@ -195,13 +181,13 @@ impl Agent for DefaultAgent {
         Ok(task.id().clone())
     }
 
-    async fn task_status(&self, task_id: &TaskId) -> Result<TaskStatus> {
+    async fn task_status(&self, _task_id: &TaskId) -> Result<TaskStatus> {
         // TODO: Implement task status check
         Ok(TaskStatus::Pending)
     }
 
     async fn resource_usage(&self) -> Result<ResourceUsage> {
-        self.resource_monitor.current_usage().await
+        self.resource_monitor.current_usage().await.map_err(Error::Resource)
     }
 }
 
@@ -213,8 +199,8 @@ mod tests {
     async fn test_agent_creation() {
         let config = AgentConfig {
             id: AgentId("test-agent".to_string()),
-            network: crate::network::NetworkConfig::default(),
-            storage: crate::storage::StorageConfig::default(),
+            // network: crate::network::NetworkConfig::default(),
+            // storage: crate::storage::StorageConfig::default(),
             resource_limits: ResourceLimits {
                 max_cpu: 0.8,
                 max_memory: 1024 * 1024 * 1024, // 1GB

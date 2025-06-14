@@ -297,3 +297,28 @@ See the [Development Guide](../development/setup.md) for more details.
 *Note: This is a basic getting started guide. For advanced usage, see the [Advanced Guides](advanced-guides.md).*
 
 *Last updated: [Current Date]* 
+
+# Getting Started (Installation Guide)
+
+This guide assumes a Rust implementation.
+
+## Setup
+
+- Install Rust (https://rustup.rs) and cargo.
+- Clone the repository.
+- Run “cargo build” (or “cargo test”) to build (or run tests) the project.
+
+## Running Tests
+
+- To run all tests (including integration tests), use “cargo test”.
+- To run a specific test (for example, the local test stub), use “cargo test --test local_test -- --nocapture”.
+- (Simulated) “Local testing” (stub) is performed via “cargo test --test local_test” (see src/tests/local_test.rs).
+
+## Code Style and Linting
+
+- Use “cargo fmt” for formatting.
+- Use “cargo clippy” for linting.
+
+## (Simulated) “Local Testing” (Stub)
+
+A stub (simulated) “local test” (src/tests/local_test.rs) is provided. It simulates a minimal multi-agent environment (for example, a dummy sleep) and “reports” (prints) simulated performance metrics and “test coverage” (stub). To run it, use “cargo test --test local_test -- --nocapture”. 

@@ -1,6 +1,6 @@
 # Contributing to P2P AI Agents
 
-Thank you for your interest in contributing! This project is written in Rust. Please use Rust and cargo for all development, testing, and code style checks. All previous Python-specific instructions, code style, and test requirements have been removed.
+Thank you for your interest in contributing! This project is written in Rust. Please use Rust (cargo) for all development, testing, and code style checks.
 
 ## Table of Contents
 

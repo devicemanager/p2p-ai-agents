@@ -5,7 +5,7 @@
 //! signing, and verification.
 
 use std::path::Path;
-use ed25519_dalek::{SigningKey, VerifyingKey, Signer, Verifier};
+use ed25519_dalek::{SigningKey, VerifyingKey, Signer, Signature};
 use rand::rngs::OsRng;
 use serde::{Serialize, Deserialize};
 use thiserror::Error;
@@ -27,7 +27,7 @@ pub enum IdentityError {
     Io(#[from] std::io::Error),
 
     /// Invalid key format
-    #[error("Invalid key format: {0}")]
+    #[error("Invalid key: {0}")]
     InvalidKey(String),
 
     /// Invalid signature
@@ -41,24 +41,24 @@ pub enum IdentityError {
 
 impl Identity {
     /// Create a new identity with a randomly generated keypair
-    pub fn new() -> Result<Self, IdentityError> {
-        let mut rng = OsRng;
-        let signing_key = SigningKey::generate(&mut rng);
-        let verifying_key = signing_key.verifying_key();
-
+    pub fn new() -> Result<Self> {
+        let signing_key = SigningKey::generate(&mut OsRng);
         Ok(Self {
+            verifying_key: signing_key.verifying_key(),
             signing_key,
-            verifying_key,
         })
     }
 
     /// Load an identity from a file
-    pub fn load(path: impl AsRef<Path>) -> Result<Self, IdentityError> {
+    pub fn load(path: impl AsRef<Path>) -> Result<Self> {
         let data = std::fs::read(path)?;
-        let signing_key = SigningKey::from_bytes(&data)
-            .map_err(|e| IdentityError::InvalidKey(e.to_string()))?;
+        if data.len() != 32 {
+            return Err(IdentityError::InvalidKey("Invalid key length".into()));
+        }
+        let mut key_bytes = [0u8; 32];
+        key_bytes.copy_from_slice(&data);
+        let signing_key = SigningKey::from_bytes(&key_bytes);
         let verifying_key = signing_key.verifying_key();
-
         Ok(Self {
             signing_key,
             verifying_key,
@@ -66,9 +66,8 @@ impl Identity {
     }
 
     /// Save the identity to a file
-    pub fn save(&self, path: impl AsRef<Path>) -> Result<(), IdentityError> {
-        let data = self.signing_key.to_bytes();
-        std::fs::write(path, data)?;
+    pub fn save(&self, path: impl AsRef<Path>) -> Result<()> {
+        std::fs::write(path, self.signing_key.to_bytes())?;
         Ok(())
     }
 
@@ -78,17 +77,25 @@ impl Identity {
     }
 
     /// Sign a message
-    pub fn sign(&self, message: &[u8]) -> Vec<u8> {
-        self.signing_key.sign(message).to_bytes().to_vec()
+    pub fn sign(&self, message: &[u8]) -> Result<Vec<u8>> {
+        Ok(self.signing_key.sign(message).to_bytes().to_vec())
     }
 
     /// Verify a signature
-    pub fn verify(&self, message: &[u8], signature: &[u8]) -> Result<(), IdentityError> {
-        let signature = ed25519_dalek::Signature::from_bytes(signature)
+    pub fn verify(&self, message: &[u8], signature: &[u8]) -> Result<()> {
+        if signature.len() != 64 {
+            return Err(IdentityError::InvalidSignature("Invalid signature length".into()));
+        }
+        let mut sig_bytes = [0u8; 64];
+        sig_bytes.copy_from_slice(signature);
+        let signature = Signature::from_bytes(&sig_bytes);
+        self.verifying_key.verify_strict(message, &signature)
             .map_err(|e| IdentityError::InvalidSignature(e.to_string()))?;
-        
-        self.verifying_key.verify(message, &signature)
-            .map_err(|e| IdentityError::InvalidSignature(e.to_string()))
+        Ok(())
+    }
+
+    pub fn verifying_key(&self) -> &VerifyingKey {
+        &self.verifying_key
     }
 }
 
@@ -110,7 +117,7 @@ mod tests {
     fn test_identity_signing() {
         let identity = Identity::new().unwrap();
         let message = b"Hello, world!";
-        let signature = identity.sign(message);
+        let signature = identity.sign(message).unwrap();
         
         assert!(identity.verify(message, &signature).is_ok());
         assert!(identity.verify(b"Wrong message", &signature).is_err());
@@ -129,7 +136,7 @@ mod tests {
         
         // Verify it's the same identity
         let message = b"Test message";
-        let signature = identity.sign(message);
+        let signature = identity.sign(message).unwrap();
         assert!(loaded.verify(message, &signature).is_ok());
     }
 } 

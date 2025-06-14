@@ -301,4 +301,4 @@ This document is a starting point. Please discuss and select options before impl
 
 *Note: This design document is continuously updated. Check the [documentation](https://p2p-agent.readthedocs.io/) for the latest architecture details.*
 
-This document now assumes a Rust implementation. All previous references to Python, pip, or venv have been removed. Please refer to the README for Rust setup instructions.
+This document assumes a Rust implementation.

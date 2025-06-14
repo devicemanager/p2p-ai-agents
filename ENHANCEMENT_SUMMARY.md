@@ -1,6 +1,6 @@
 # Enhancement Summary
 
-This document now assumes a Rust implementation. All previous references to Python, pip, requirements.txt, pyproject.toml, and related setup have been removed. Please refer to the README for Rust setup instructions.
+This document assumes a Rust implementation.
 
 This document summarizes the comprehensive enhancements made to the P2P AI Agents project.
 

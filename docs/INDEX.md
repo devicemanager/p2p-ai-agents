@@ -83,4 +83,4 @@ Documentation is licensed under the same [MIT License](../LICENSE) as the softwa
 
 # Documentation Index
 
-This documentation now assumes a Rust implementation. All previous references to Python have been removed. All language-specific notes are now Rust-based.
+This documentation assumes a Rust implementation.
