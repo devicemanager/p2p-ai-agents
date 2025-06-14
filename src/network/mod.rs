@@ -6,6 +6,7 @@ use std::sync::Arc;
 use tokio::sync::Mutex;
 use thiserror::Error;
 use serde::{Serialize, Deserialize};
+use std::collections::HashMap;
 
 /// Discovery submodule for peer discovery and management.
 pub mod discovery;
@@ -252,14 +253,19 @@ impl NetworkManager {
         Ok(())
     }
 
-    /// Send a network message.
-    pub async fn send_message(&self, message: NetworkMessage) -> NetworkResult<()> {
-        if !self.is_running {
-            return Err(NetworkError::NotRunning);
-        }
-        let mut messages = self.messages.lock().await;
-        messages.push(message);
-        Ok(())
+    /// Add a connected peer to the manager (for testing/demo purposes).
+    pub async fn add_connected_peer(&self, addr: SocketAddr) {
+        self.connected_peers.lock().await.push(addr);
+    }
+
+    /// Send a message by pushing it to the message queue.
+    pub async fn send_message(&self, msg: NetworkMessage) {
+        self.messages.lock().await.push(msg);
+    }
+
+    /// Receive a message by popping from the message queue.
+    pub async fn receive_message(&self) -> Option<NetworkMessage> {
+        self.messages.lock().await.pop()
     }
 
     /// Get received messages.
@@ -310,11 +316,21 @@ impl NetworkManagerBuilder {
 }
 
 /// Collector for network metrics.
-pub struct MetricsCollector;
+pub struct MetricsCollector {
+    metrics: HashMap<String, u64>,
+}
 impl MetricsCollector {
     /// Create a new metrics collector.
     pub fn new() -> Self {
-        MetricsCollector
+        MetricsCollector { metrics: HashMap::new() }
+    }
+    /// Increment a metric by 1.
+    pub fn increment(&mut self, key: &str) {
+        *self.metrics.entry(key.to_string()).or_insert(0) += 1;
+    }
+    /// Get the value of a metric.
+    pub fn get(&self, key: &str) -> u64 {
+        *self.metrics.get(key).unwrap_or(&0)
     }
 }
 

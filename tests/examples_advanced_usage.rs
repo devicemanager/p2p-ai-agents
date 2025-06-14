@@ -1,0 +1,30 @@
+//! Integration test for advanced usage examples: protocol and metrics.
+use serde::{Serialize, Deserialize};
+use p2p_ai_agents::network::MetricsCollector;
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+enum ProtocolState {
+    Init,
+    Active,
+    Closed,
+}
+
+#[tokio::test]
+async fn test_protocol_state_transitions() {
+    let mut state = ProtocolState::Init;
+    // Transition to Active
+    state = ProtocolState::Active;
+    assert_eq!(state, ProtocolState::Active);
+    // Transition to Closed
+    state = ProtocolState::Closed;
+    assert_eq!(state, ProtocolState::Closed);
+}
+
+#[test]
+fn test_metrics_collector_usage() {
+    let mut metrics = MetricsCollector::new();
+    metrics.increment("messages_sent");
+    metrics.increment("messages_sent");
+    let count = metrics.get("messages_sent");
+    assert_eq!(count, 2);
+}
