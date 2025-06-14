@@ -1,6 +1,6 @@
 # 500 Line Limit Policy
 
-This policy now assumes a Rust implementation. All previous references to Python have been removed. All language-specific notes are now Rust-based.
+This policy assumes a Rust implementation.
 
 ## Overview
 

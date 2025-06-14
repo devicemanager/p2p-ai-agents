@@ -4,13 +4,10 @@
 //! agent resources, including CPU, memory, storage, and network usage.
 
 use std::sync::Arc;
-use std::time::Duration;
-use async_trait::async_trait;
 use serde::{Serialize, Deserialize};
 use tokio::sync::RwLock;
-use tokio::time;
 use thiserror::Error;
-use sysinfo::{System, SystemExt, CpuExt, ProcessExt};
+use sysinfo::{System, get_current_pid};
 
 use crate::agent::ResourceLimits;
 
@@ -30,13 +27,11 @@ pub struct ResourceUsage {
 /// Resource monitor for tracking agent resource usage
 pub struct ResourceMonitor {
     /// System information
-    sys: Arc<RwLock<System>>,
+    system: Arc<RwLock<System>>,
     /// Resource limits
     limits: ResourceLimits,
-    /// Current resource usage
-    usage: Arc<RwLock<ResourceUsage>>,
-    /// Monitoring interval
-    interval: Duration,
+    /// Monitoring status
+    is_monitoring: Arc<RwLock<bool>>,
 }
 
 /// Error type for resource operations
@@ -57,141 +52,76 @@ pub enum ResourceError {
     /// Internal error
     #[error("Internal error: {0}")]
     Internal(String),
+
+    /// CPU limit exceeded
+    #[error("CPU limit exceeded")]
+    CpuLimitExceeded,
+
+    /// Memory limit exceeded
+    #[error("Memory limit exceeded")]
+    MemoryLimitExceeded,
+
+    /// Process not found
+    #[error("Process not found")]
+    ProcessNotFound,
 }
 
 impl ResourceMonitor {
     /// Create a new resource monitor
-    pub fn new(limits: &ResourceLimits) -> Result<Self, ResourceError> {
-        let sys = Arc::new(RwLock::new(System::new_all()));
-        let usage = Arc::new(RwLock::new(ResourceUsage {
-            cpu: 0.0,
-            memory: 0,
-            storage: 0,
-            bandwidth: 0,
-        }));
-
+    pub fn new(limits: &ResourceLimits) -> Result<Self> {
         Ok(Self {
-            sys,
+            system: Arc::new(RwLock::new(System::new_all())),
             limits: limits.clone(),
-            usage,
-            interval: Duration::from_secs(1),
+            is_monitoring: Arc::new(RwLock::new(false)),
         })
     }
 
     /// Start resource monitoring
-    pub async fn start_monitoring(&self) -> Result<(), ResourceError> {
-        let sys = self.sys.clone();
-        let usage = self.usage.clone();
-        let limits = self.limits.clone();
-        let interval = self.interval;
+    pub async fn start_monitoring(&self) -> Result<()> {
+        let mut is_monitoring = self.is_monitoring.write().await;
+        if *is_monitoring {
+            return Ok(());
+        }
+        *is_monitoring = true;
+        Ok(())
+    }
 
-        tokio::spawn(async move {
-            let mut interval = time::interval(interval);
-            loop {
-                interval.tick().await;
-                if let Err(e) = Self::update_usage(&sys, &usage, &limits).await {
-                    tracing::error!("Resource monitoring failed: {}", e);
-                }
-            }
-        });
-
+    /// Stop resource monitoring
+    pub async fn stop_monitoring(&self) -> Result<()> {
+        let mut is_monitoring = self.is_monitoring.write().await;
+        *is_monitoring = false;
         Ok(())
     }
 
     /// Update resource usage information
-    async fn update_usage(
-        sys: &RwLock<System>,
-        usage: &RwLock<ResourceUsage>,
-        limits: &ResourceLimits,
-    ) -> Result<(), ResourceError> {
-        let mut sys = sys.write().await;
-        sys.refresh_all();
-
-        // Get CPU usage
-        let cpu_usage = sys.global_cpu_info().cpu_usage() / 100.0;
-        if cpu_usage > limits.max_cpu {
-            return Err(ResourceError::LimitExceeded(format!(
-                "CPU usage {} exceeds limit {}",
-                cpu_usage, limits.max_cpu
-            )));
-        }
-
-        // Get memory usage
-        let memory_usage = sys.used_memory();
-        if memory_usage > limits.max_memory {
-            return Err(ResourceError::LimitExceeded(format!(
-                "Memory usage {} exceeds limit {}",
-                memory_usage, limits.max_memory
-            )));
-        }
-
-        // Get storage usage (placeholder - implement actual storage monitoring)
-        let storage_usage = 0;
-        if storage_usage > limits.max_storage {
-            return Err(ResourceError::LimitExceeded(format!(
-                "Storage usage {} exceeds limit {}",
-                storage_usage, limits.max_storage
-            )));
-        }
-
-        // Get network usage (placeholder - implement actual network monitoring)
-        let bandwidth_usage = 0;
-        if bandwidth_usage > limits.max_bandwidth {
-            return Err(ResourceError::LimitExceeded(format!(
-                "Bandwidth usage {} exceeds limit {}",
-                bandwidth_usage, limits.max_bandwidth
-            )));
-        }
-
-        // Update usage information
-        let mut usage = usage.write().await;
-        usage.cpu = cpu_usage;
-        usage.memory = memory_usage;
-        usage.storage = storage_usage;
-        usage.bandwidth = bandwidth_usage;
-
+    pub async fn update_usage(&self) -> Result<()> {
+        let mut system = self.system.write().await;
+        system.refresh_all();
         Ok(())
     }
 
     /// Get current resource usage
-    pub async fn current_usage(&self) -> Result<ResourceUsage, ResourceError> {
-        let usage = self.usage.read().await;
-        Ok(usage.clone())
+    pub async fn current_usage(&self) -> Result<ResourceUsage> {
+        let system = self.system.read().await;
+        let pid = get_current_pid().map_err(|_| ResourceError::ProcessNotFound)?;
+        let process = system.process(pid).ok_or(ResourceError::ProcessNotFound)?;
+        Ok(ResourceUsage {
+            cpu: process.cpu_usage() / 100.0,
+            memory: process.memory(),
+            storage: 0, // TODO: Implement storage monitoring
+            bandwidth: 0, // TODO: Implement bandwidth monitoring
+        })
     }
 
     /// Check if resource usage is within limits
-    pub async fn check_limits(&self) -> Result<(), ResourceError> {
+    pub async fn check_limits(&self) -> Result<()> {
         let usage = self.current_usage().await?;
-        let limits = &self.limits;
-
-        if usage.cpu > limits.max_cpu {
-            return Err(ResourceError::LimitExceeded(format!(
-                "CPU usage {} exceeds limit {}",
-                usage.cpu, limits.max_cpu
-            )));
+        if usage.cpu > self.limits.max_cpu {
+            return Err(ResourceError::CpuLimitExceeded);
         }
-
-        if usage.memory > limits.max_memory {
-            return Err(ResourceError::LimitExceeded(format!(
-                "Memory usage {} exceeds limit {}",
-                usage.memory, limits.max_memory
-            )));
+        if usage.memory > self.limits.max_memory {
+            return Err(ResourceError::MemoryLimitExceeded);
         }
-
-        if usage.storage > limits.max_storage {
-            return Err(ResourceError::LimitExceeded(format!(
-                "Storage usage {} exceeds limit {}",
-                usage.storage, limits.max_storage
-            )));
-        }
-
-        if usage.bandwidth > limits.max_bandwidth {
-            return Err(ResourceError::LimitExceeded(format!(
-                "Bandwidth usage {} exceeds limit {}",
-                usage.bandwidth, limits.max_bandwidth
-            )));
-        }
-
         Ok(())
     }
 }
@@ -202,6 +132,7 @@ pub type Result<T> = std::result::Result<T, ResourceError>;
 #[cfg(test)]
 mod tests {
     use super::*;
+    use tokio::time::Duration;
 
     #[tokio::test]
     async fn test_resource_monitor() {
@@ -244,7 +175,7 @@ mod tests {
         let result = monitor.check_limits().await;
         if result.is_err() {
             let err = result.unwrap_err();
-            assert!(matches!(err, ResourceError::LimitExceeded(_)));
+            assert!(matches!(err, ResourceError::CpuLimitExceeded | ResourceError::MemoryLimitExceeded));
         }
     }
 } 

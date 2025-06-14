@@ -44,6 +44,11 @@ chrono = { version = "0.4", features = ["serde"] }
 criterion = "0.5"
 mockall = "0.12"
 
+# Network
+libp2p = { version = "0.53", features = ["tokio", "tcp", "dns", "websocket", "noise", "yamux", "ping", "identify", "kad", "mdns"], optional = true }
+futures = { version = "0.3", optional = true }
+bytes = { version = "1.5", optional = true }
+
 [dev-dependencies]
 tokio-test = "0.4"
 tempfile = "3.10"
@@ -63,14 +68,9 @@ debug = true
 opt-level = 0
 debug = true
 
-[workspace]
-members = [
-    "crates/*"
-]
-
 [features]
 default = []
 full = ["network", "storage", "cli"]
-network = []
+network = ["libp2p", "futures", "bytes"]
 storage = []
 cli = []

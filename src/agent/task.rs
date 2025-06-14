@@ -10,6 +10,7 @@ use serde::{Serialize, Deserialize};
 use tokio::sync::RwLock;
 use thiserror::Error;
 use uuid::Uuid;
+use std::fmt;
 
 /// Task identifier
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -29,6 +30,12 @@ impl TaskId {
     /// Get the task ID as a string
     pub fn as_str(&self) -> &str {
         &self.0
+    }
+}
+
+impl fmt::Display for TaskId {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.0)
     }
 }
 
@@ -193,7 +200,7 @@ impl Task {
 
     /// Set the task status
     pub fn set_status(&mut self, status: TaskStatus) {
-        self.status = status;
+        self.status = status.clone();
         if matches!(status, TaskStatus::Completed | TaskStatus::Failed(_) | TaskStatus::Cancelled) {
             self.completed_at = Some(chrono::Utc::now());
         }
@@ -211,7 +218,7 @@ impl Task {
 #[async_trait]
 pub trait TaskExecutor: Send + Sync {
     /// Execute a task
-    async fn execute(&self, task: &Task) -> Result<TaskResult, TaskError>;
+    async fn execute(&self, _task: &Task) -> Result<TaskResult>;
 }
 
 /// Task manager for handling task execution
@@ -230,7 +237,7 @@ impl TaskManager {
     }
 
     /// Submit a task
-    pub async fn submit_task(&self, task: Task) -> Result<TaskId, TaskError> {
+    pub async fn submit_task(&self, task: Task) -> Result<TaskId> {
         let task_id = task.id().clone();
         let mut tasks = self.tasks.write().await;
         
@@ -243,7 +250,7 @@ impl TaskManager {
     }
 
     /// Get a task by ID
-    pub async fn get_task(&self, task_id: &TaskId) -> Result<Task, TaskError> {
+    pub async fn get_task(&self, task_id: &TaskId) -> Result<Task> {
         let tasks = self.tasks.read().await;
         tasks.get(task_id)
             .cloned()
@@ -251,7 +258,7 @@ impl TaskManager {
     }
 
     /// Execute a task
-    pub async fn execute_task(&self, task_id: &TaskId) -> Result<TaskResult, TaskError> {
+    pub async fn execute_task(&self, task_id: &TaskId) -> Result<TaskResult> {
         let mut tasks = self.tasks.write().await;
         let task = tasks.get_mut(task_id)
             .ok_or_else(|| TaskError::NotFound(task_id.clone()))?;
@@ -272,7 +279,7 @@ impl TaskManager {
     }
 
     /// Cancel a task
-    pub async fn cancel_task(&self, task_id: &TaskId) -> Result<(), TaskError> {
+    pub async fn cancel_task(&self, task_id: &TaskId) -> Result<()> {
         let mut tasks = self.tasks.write().await;
         let task = tasks.get_mut(task_id)
             .ok_or_else(|| TaskError::NotFound(task_id.clone()))?;
@@ -302,13 +309,13 @@ pub type Result<T> = std::result::Result<T, TaskError>;
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::time::Duration;
+    use tokio::time::Duration;
 
     struct MockExecutor;
 
     #[async_trait]
     impl TaskExecutor for MockExecutor {
-        async fn execute(&self, task: &Task) -> Result<TaskResult, TaskError> {
+        async fn execute(&self, _task: &Task) -> Result<TaskResult> {
             // Simulate some work
             tokio::time::sleep(Duration::from_millis(100)).await;
             

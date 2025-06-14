@@ -1,6 +1,6 @@
 # Changelog
 
-This changelog now assumes a Rust implementation. All previous references to Python, pip, requirements.txt, pyproject.toml, and related setup have been removed. Please refer to the README for Rust setup instructions.
+This changelog assumes a Rust implementation.
 
 All notable changes to this project will be documented in this file.
 

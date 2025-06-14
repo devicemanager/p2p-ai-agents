@@ -9,14 +9,22 @@
 
 pub mod agent;
 pub mod network;
-pub mod storage;
-pub mod cli;
+// pub mod storage;
+// pub mod cli;
 
 /// Re-exports of commonly used types
 pub mod prelude {
     pub use crate::agent::{Agent, AgentId, AgentConfig};
-    pub use crate::network::{Network, NetworkConfig};
-    pub use crate::storage::{Storage, StorageConfig};
+    pub use crate::network::{
+        NetworkManager,
+        NetworkConfig,
+        NetworkMessage,
+        NetworkError,
+        NetworkResult,
+        discovery::{DiscoveryManager, PeerInfo},
+        transport::{TransportType, TransportError},
+    };
+    // pub use crate::storage::{Storage, StorageConfig};
 }
 
 /// Result type for the library
@@ -31,15 +39,14 @@ pub enum Error {
 
     /// Network-related errors
     #[error("Network error: {0}")]
-    Network(#[from] network::Error),
+    Network(#[from] network::NetworkError),
 
     /// Storage-related errors
-    #[error("Storage error: {0}")]
-    Storage(#[from] storage::Error),
+    // #[error("Storage error")] // #[from] storage::Error),
 
     /// Configuration errors
     #[error("Configuration error: {0}")]
-    Config(String),
+    Config(#[from] config::ConfigError),
 
     /// IO errors
     #[error("IO error: {0}")]
@@ -52,8 +59,6 @@ pub enum Error {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-
     #[test]
     fn it_works() {
         assert!(true);

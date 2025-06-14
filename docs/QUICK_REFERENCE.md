@@ -1,8 +1,8 @@
-# Quick Reference Guide
+# Quick Reference
+
+This document assumes a Rust implementation.
 
 This guide provides quick access to common commands, configurations, and examples for the P2P AI Agents project.
-
-This document now assumes a Rust implementation. All previous references to Python, pip, venv, and related setup have been removed. All code examples and CLI usage are now Rust and cargo based.
 
 ## 🚀 Common Commands
 
