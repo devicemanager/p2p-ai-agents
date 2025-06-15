@@ -8,7 +8,7 @@ use p2p_ai_agents::prelude::*;
 #[test]
 fn test_library_compiles() {
     // Basic smoke test to ensure the library compiles
-    assert!(true);
+    assert_eq!(1 + 1, 2);
 }
 
 #[test]
@@ -16,12 +16,14 @@ fn test_error_types() {
     // Test that error types can be created and matched
     use p2p_ai_agents::Error;
 
-    let io_error = std::io::Error::new(std::io::ErrorKind::Other, "test");
+    let io_error = std::io::Error::other("test");
     let lib_error = Error::Io(io_error);
 
     match lib_error {
-        Error::Io(_) => assert!(true),
-        _ => assert!(false, "Expected IO error"),
+        Error::Io(_) => {
+            // Expected path - IO error was created successfully
+        }
+        _ => panic!("Expected IO error"),
     }
 }
 
@@ -29,7 +31,7 @@ fn test_error_types() {
 fn test_agent_id_creation() {
     // Test basic AgentId functionality if available
     let _agent_id = AgentId::new();
-    assert!(true);
+    // Test passes if AgentId can be created without panicking
 }
 
 #[cfg(feature = "network")]
@@ -52,12 +54,12 @@ fn test_network_config_creation() {
         security_config: SecurityConfig {},
     };
 
-    assert!(true);
+    // Test passes if NetworkConfig can be created without panicking
 }
 
 #[tokio::test]
 async fn test_async_functionality() {
     // Basic async test to ensure tokio integration works
     tokio::time::sleep(tokio::time::Duration::from_millis(1)).await;
-    assert!(true);
+    // Test passes if async functionality works
 }

@@ -298,6 +298,12 @@ impl EventChannels {
     }
 }
 
+impl Default for EventChannels {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 /// Builder for configuring and constructing a NetworkManager.
 pub struct NetworkManagerBuilder {
     config: Option<NetworkConfig>,
@@ -308,10 +314,17 @@ impl NetworkManagerBuilder {
     pub fn new() -> Self {
         NetworkManagerBuilder { config: None }
     }
+
     /// Set the network configuration.
     pub fn with_config(mut self, config: NetworkConfig) -> Self {
         self.config = Some(config);
         self
+    }
+}
+
+impl Default for NetworkManagerBuilder {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
@@ -336,12 +349,24 @@ impl MetricsCollector {
     }
 }
 
+impl Default for MetricsCollector {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 /// Manages network resources.
 pub struct ResourceManager;
 impl ResourceManager {
     /// Create a new resource manager.
     pub fn new() -> Self {
         ResourceManager
+    }
+}
+
+impl Default for ResourceManager {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
@@ -354,12 +379,24 @@ impl HealthMonitor {
     }
 }
 
+impl Default for HealthMonitor {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 /// Handles network security.
 pub struct SecurityManager;
 impl SecurityManager {
     /// Create a new security manager.
     pub fn new() -> Self {
         SecurityManager
+    }
+}
+
+impl Default for SecurityManager {
+    fn default() -> Self {
+        Self::new()
     }
 }
 

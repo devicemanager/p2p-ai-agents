@@ -58,6 +58,7 @@ pub enum Error {
 mod tests {
     #[test]
     fn it_works() {
-        assert!(true);
+        // Basic test to ensure the library compiles and loads correctly
+        assert_eq!(2 + 2, 4);
     }
 }
