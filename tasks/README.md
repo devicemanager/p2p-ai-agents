@@ -1,6 +1,6 @@
 # Task Management Index
 
-*Last updated: 2025-06-15 15:23:49*
+*Last updated: 2025-06-15 15:25:59*
 
 ## Overview
 
@@ -9,19 +9,19 @@ This directory contains all implementation tasks for the P2P AI Agents project, 
 ## Task Statistics
 
 - **Total Tasks**: 361
-- **Completed**: 8 (2.2%)
+- **Completed**: 10 (2.8%)
 - **In Progress**: 0
-- **TODO**: 353
+- **TODO**: 351
 
 ## Task Directories
 
-### 📋 [TODO Tasks](./todo/) (353 tasks)
+### 📋 [TODO Tasks](./todo/) (351 tasks)
 Tasks that are planned but not yet started.
 
 ### 🚧 [In Progress Tasks](./in-progress/) (0 tasks)
 Tasks that are currently being worked on.
 
-### ✅ [Completed Tasks](./completed/) (8 tasks)
+### ✅ [Completed Tasks](./completed/) (10 tasks)
 Tasks that have been finished and verified.
 
 ## Task Management
@@ -416,8 +416,6 @@ Each task follows a standardized Markdown format with:
 - [Visualization setup](./todo/network-network-visualization-setup.md)
 - [Vulnerability testing](./todo/network-network-vulnerability-testing.md)
 - [Implement Critical Security Authentication System](./todo/security-auth-critical-system.md)
-- [Test Auto-Commit Feature](./todo/test-auto-commit-feature.md)
-- [Test No Auto-Commit Feature](./todo/test-no-auto-commit-feature.md)
 
 ### In Progress Tasks
 
@@ -432,6 +430,8 @@ No tasks in this category.
 - [Update Example Comment in Test File](./completed/docs-update-example-comment.md)
 - [Create API Reference Documentation](./completed/documentation-api-reference-guide.md)
 - [Performance and Benchmarking Guide](./completed/documentation-performance-benchmarking-guide.md)
+- [Test Auto-Commit Feature](./completed/test-auto-commit-feature.md)
+- [Test No Auto-Commit Feature](./completed/test-no-auto-commit-feature.md)
 - [Test Documentation Validation](./completed/test-validation-task.md)
 
 ---

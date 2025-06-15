@@ -1,8 +1,6 @@
 //! Basic integration tests that should always pass
 //! These tests ensure the library compiles and basic functionality works
 
-use p2p_ai_agents::network::ResourceLimits;
-use p2p_ai_agents::network::{ProtocolConfig, SecurityConfig};
 use p2p_ai_agents::prelude::*;
 
 #[test]

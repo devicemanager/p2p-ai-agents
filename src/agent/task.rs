@@ -279,7 +279,7 @@ impl Task {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::sync::Arc;
+    use std::collections::HashMap;
     use tokio::time::Duration;
 
     // TaskId specific tests
@@ -287,50 +287,50 @@ mod tests {
     fn test_task_id_new() {
         let id1 = TaskId::new();
         let id2 = TaskId::new();
-        
+
         // Each ID should be unique
         assert_ne!(id1, id2);
         assert_ne!(id1.as_str(), id2.as_str());
-        
+
         // Should be valid UUID format
         assert!(uuid::Uuid::parse_str(id1.as_str()).is_ok());
         assert!(uuid::Uuid::parse_str(id2.as_str()).is_ok());
     }
-    
+
     #[test]
     fn test_task_id_from_string() {
         let test_id = "test-task-id-123";
         let task_id = TaskId::from_string(test_id.to_string());
-        
+
         assert_eq!(task_id.as_str(), test_id);
         assert_eq!(task_id.to_string(), test_id);
     }
-    
+
     #[test]
     fn test_task_id_default() {
         let id1 = TaskId::default();
         let id2 = TaskId::default();
-        
+
         // Default should create unique IDs
         assert_ne!(id1, id2);
         assert!(uuid::Uuid::parse_str(id1.as_str()).is_ok());
     }
-    
+
     #[test]
     fn test_task_id_display() {
         let test_str = "display-test-id";
         let task_id = TaskId::from_string(test_str.to_string());
-        
+
         assert_eq!(format!("{}", task_id), test_str);
     }
-    
+
     // TaskPriority tests
     #[test]
     fn test_task_priority_ordering() {
         assert!(TaskPriority::Critical > TaskPriority::High);
         assert!(TaskPriority::High > TaskPriority::Normal);
         assert!(TaskPriority::Normal > TaskPriority::Low);
-        
+
         let mut priorities = vec![
             TaskPriority::Low,
             TaskPriority::Critical,
@@ -338,39 +338,42 @@ mod tests {
             TaskPriority::High,
         ];
         priorities.sort();
-        
-        assert_eq!(priorities, vec![
-            TaskPriority::Low,
-            TaskPriority::Normal,
-            TaskPriority::High,
-            TaskPriority::Critical,
-        ]);
+
+        assert_eq!(
+            priorities,
+            vec![
+                TaskPriority::Low,
+                TaskPriority::Normal,
+                TaskPriority::High,
+                TaskPriority::Critical,
+            ]
+        );
     }
-    
+
     // TaskStatus tests
     #[test]
     fn test_task_status_failed_with_message() {
         let error_msg = "Something went wrong";
         let status = TaskStatus::Failed(error_msg.to_string());
-        
+
         match status {
             TaskStatus::Failed(msg) => assert_eq!(msg, error_msg),
             _ => panic!("Expected Failed status"),
         }
     }
-    
+
     // TaskType tests
     #[test]
     fn test_task_type_custom() {
         let custom_type = "CustomProcessing";
         let task_type = TaskType::Custom(custom_type.to_string());
-        
+
         match task_type {
             TaskType::Custom(name) => assert_eq!(name, custom_type),
             _ => panic!("Expected Custom task type"),
         }
     }
-    
+
     // Task creation and methods tests
     #[test]
     fn test_task_creation_and_getters() {
@@ -380,22 +383,22 @@ mod tests {
             data: serde_json::json!({"input": "test data"}),
             parameters: HashMap::new(),
         };
-        
+
         let task = Task::new(priority, payload.clone());
-        
+
         // Test getters
         assert_eq!(task.priority(), priority);
         assert_eq!(task.payload().task_type, payload.task_type);
         assert_eq!(task.payload().data, payload.data);
         assert!(matches!(task.status(), TaskStatus::Pending));
         assert!(task.result().is_none());
-        
+
         // Created at should be recent
         let now = chrono::Utc::now();
         let created = task.created_at();
         assert!(now.signed_duration_since(created).num_seconds() < 1);
     }
-    
+
     #[test]
     fn test_task_set_result() {
         let priority = TaskPriority::Normal;
@@ -404,25 +407,25 @@ mod tests {
             data: serde_json::json!({"vectors": [1, 2, 3]}),
             parameters: HashMap::new(),
         };
-        
+
         let mut task = Task::new(priority, payload);
-        
+
         // Initially no result
         assert!(task.result().is_none());
         assert!(matches!(task.status(), TaskStatus::Pending));
-        
+
         // Set result
         let result = TaskResult {
             output: serde_json::json!({"computed": "result"}),
             metadata: HashMap::new(),
         };
         task.set_result(result.clone());
-        
+
         // Check result is set and status updated
         assert!(task.result().is_some());
         assert_eq!(task.result().unwrap().output, result.output);
         assert!(matches!(task.status(), TaskStatus::Completed));
-        
+
         // Completed at should be set
         let now = chrono::Utc::now();
         let completed = task.completed_at.unwrap();
@@ -442,6 +445,23 @@ mod tests {
                 metadata: std::collections::HashMap::new(),
             })
         }
+    }
+
+    #[tokio::test]
+    async fn test_task_executor() {
+        let executor = MockExecutor;
+        let payload = TaskPayload {
+            task_type: TaskType::TextProcessing,
+            data: serde_json::json!({"text": "test"}),
+            parameters: HashMap::new(),
+        };
+        let task = Task::new(TaskPriority::Normal, payload);
+
+        let result = executor.execute(&task).await;
+        assert!(result.is_ok());
+
+        let task_result = result.unwrap();
+        assert_eq!(task_result.output["result"], "success");
     }
 
     // ...existing code...
