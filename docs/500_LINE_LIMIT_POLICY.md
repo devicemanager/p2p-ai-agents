@@ -129,9 +129,9 @@ feature_config.rs         # Configuration handling
 ```markdown
 # main-topic.md (Table of Contents)
 1. [Introduction](README.md)
-2. [Architecture](architecture/)
-3. [Implementation](user-guides/)
-4. [Examples](implementation/)
+2. [Architecture](architecture/README.md)
+3. [Implementation](user-guides/README.md)
+4. [Examples](implementation/README.md)
 ```
 
 ### Code Module Split Example

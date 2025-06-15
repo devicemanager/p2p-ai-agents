@@ -368,8 +368,8 @@ advanced:
 
 - [Getting Started Guide](getting-started.md)
 - [Security Best Practices](security-best-practices.md)
-- [Performance Tuning](README.md)
-- [Monitoring Guide](README.md)
+- [Performance Tuning](../README.md)
+- [Monitoring Guide](../README.md)
 
 ---
 

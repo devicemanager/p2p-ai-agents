@@ -803,8 +803,8 @@ let message = NetworkMessage::ResourceUpdate {
 - [Network Manager Implementation](network-manager.md)
 - [Protocol Implementation](protocols.md)
 - [Metrics Collection](metrics.md)
-- [Security Implementation](../security/README.md)
-- [Performance Guide](../performance/README.md)
+- [Security Implementation](security/README.md)
+- [Performance Guide](performance/README.md)
 
 ## Contributing
 Please refer to the main project documentation for contribution guidelines.
