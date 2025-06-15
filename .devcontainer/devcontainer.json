@@ -1,29 +1,30 @@
 {
-    "name": "P2P AI Agents Rust Project",
-    "dockerfile": "Dockerfile",
-    "context": "..",
-    "features": {
-        "ghcr.io/devcontainers/features/rust:1": {
-            "version": "latest",
-            "profile": "default"
-        },
-        "ghcr.io/devcontainers/features/git:1": {}
+  "name": "Rust Development",
+  "image": "mcr.microsoft.com/devcontainers/rust:1-1-bullseye",
+  "features": {
+    "ghcr.io/devcontainers/features/common-utils:2": {
+      "installZsh": true,
+      "configureZshAsDefaultShell": true,
+      "installOhMyZsh": true
     },
-    "customizations": {
-        "vscode": {
-            "extensions": [
-                "rust-lang.rust-analyzer",
-                "vadimcn.vscode-lldb",
-                "serayuzgur.crates",
-                "tamasfe.even-better-toml"
-            ],
-            "settings": {
-                "rust-analyzer.cargo.loadOutDirsFromCheck": true,
-                "rust-analyzer.checkOnSave.command": "clippy"
-            }
-        }
-    },
-    "forwardPorts": [8080, 3000],
-    "postCreateCommand": "cargo --version && rustc --version",
-    "remoteUser": "vscode"
+    "ghcr.io/devcontainers/features/git:1": {},
+    "ghcr.io/devcontainers/features/github-cli:1": {}
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "rust-lang.rust-analyzer",
+        "vadimcn.vscode-lldb",
+        "serayuzgur.crates",
+        "tamasfe.even-better-toml"
+      ],
+      "settings": {
+        "rust-analyzer.check.command": "clippy",
+        "rust-analyzer.cargo.features": "all"
+      }
+    }
+  },
+  "forwardPorts": [3000, 8080],
+  "postCreateCommand": "rustc --version && cargo --version",
+  "remoteUser": "vscode"
 }
