@@ -56,6 +56,19 @@ check_dependencies() {
         exit 1
     fi
     
+    # Check Docker if using local mode
+    if [[ "${USE_LOCAL:-}" == "true" ]]; then
+        if ! command -v docker &> /dev/null; then
+            log_error "Docker is not installed. Please install Docker for local Supabase."
+            exit 1
+        fi
+        
+        if ! docker info &> /dev/null; then
+            log_error "Docker daemon is not running. Please start Docker."
+            exit 1
+        fi
+    fi
+    
     log_success "Dependencies check passed"
 }
 
@@ -64,12 +77,18 @@ show_help() {
     echo ""
     echo "Options:"
     echo "  --mock         Run with mock Supabase configuration (default)"
+    echo "  --local        Run with local Supabase instance (Docker)"
     echo "  --real         Run with real Supabase instance (requires env vars)"
     echo "  --setup        Show setup instructions for real Supabase instance"
     echo "  --quick        Run quick performance test (100 ops)"
     echo "  --full         Run full performance test (1000 ops)"
     echo "  --stress       Run stress test (10000 ops)"
     echo "  --help         Show this help message"
+    echo ""
+    echo "Local Supabase (--local mode):"
+    echo "  Automatically starts and configures a local Supabase instance"
+    echo "  Uses Docker containers for PostgreSQL and PostgREST"
+    echo "  Perfect for development and testing"
     echo ""
     echo "Environment Variables (for --real mode):"
     echo "  SUPABASE_URL           Supabase project URL"
@@ -120,6 +139,33 @@ setup_mock_environment() {
     log_warning "Using mock Supabase configuration"
     log_warning "Tests will demonstrate the framework but won't hit a real database"
     log_info "To test against real Supabase, use --real flag and set up environment variables"
+    echo ""
+}
+
+setup_local_environment() {
+    log_info "Setting up local Supabase environment..."
+    
+    # Start local Supabase if not already running
+    local_script="$LAB_DIR/scripts/local_supabase.sh"
+    
+    log_info "Checking local Supabase status..."
+    if ! curl -s http://localhost:3000/ &> /dev/null; then
+        log_info "Starting local Supabase instance..."
+        "$local_script" start
+    else
+        log_success "Local Supabase instance already running"
+    fi
+    
+    # Set local environment variables
+    export SUPABASE_URL="http://localhost:3000"
+    export SUPABASE_ANON_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0"
+    export SUPABASE_SERVICE_ROLE_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTk4MzgxMjk5Nn0.EGIM96RAZx35lJzdJsyH-qQwv8Hdp7fsn3W0YpN81IU"
+    export SUPABASE_SCHEMA="public"
+    export SUPABASE_TABLE_NAME="storage_perf_test"
+    
+    log_success "Local Supabase environment configured"
+    log_info "URL: $SUPABASE_URL"
+    log_info "Testing against real local database with network operations"
     echo ""
 }
 
@@ -304,16 +350,24 @@ main() {
     
     # Parse command line arguments
     USE_REAL=false
+    USE_LOCAL=false
     TEST_MODE="quick"
     
     while [[ $# -gt 0 ]]; do
         case $1 in
             --mock)
                 USE_REAL=false
+                USE_LOCAL=false
+                shift
+                ;;
+            --local)
+                USE_LOCAL=true
+                USE_REAL=false
                 shift
                 ;;
             --real)
                 USE_REAL=true
+                USE_LOCAL=false
                 shift
                 ;;
             --setup)
@@ -350,6 +404,8 @@ main() {
     # Set up environment
     if [[ "$USE_REAL" == "true" ]]; then
         check_real_environment
+    elif [[ "$USE_LOCAL" == "true" ]]; then
+        setup_local_environment
     else
         setup_mock_environment
     fi
@@ -377,16 +433,15 @@ main() {
     log_success "Supabase Storage Performance Lab completed!"
     echo ""
     echo "Summary:"
-    echo "  Mode: ${USE_REAL:-mock}"
+    echo "  Mode: ${USE_REAL:-false}${USE_LOCAL:+local}"
     echo "  Test: $TEST_MODE"
     echo "  Status: completed"
     
-    if [[ "$USE_REAL" != "true" ]]; then
+    if [[ "$USE_REAL" != "true" && "$USE_LOCAL" != "true" ]]; then
         echo ""
-        log_info "To test against real Supabase:"
-        echo "  1. Run: $0 --setup"
-        echo "  2. Configure your environment"
-        echo "  3. Run: $0 --real --full"
+        log_info "To test against real database:"
+        echo "  Local:  $0 --local --full"
+        echo "  Remote: $0 --real --full (after setup)"
     fi
 }
 
