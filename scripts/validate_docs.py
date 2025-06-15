@@ -48,44 +48,57 @@ class DocumentationValidator:
                 if link_url.startswith(('http', 'https', 'mailto')):
                     continue
                     
-                # Skip anchors
+                # Skip anchors only
                 if link_url.startswith('#'):
                     continue
                 
-                # Convert relative path to absolute
-                if link_url.startswith('../'):
-                    # Handle relative paths - check in parent directory too
-                    current_dir = file_path.parent.relative_to(self.docs_dir)
-                    target_path = current_dir / link_url
-                    
-                    # Try to resolve the path relative to docs directory
-                    try:
-                        normalized_path = target_path.resolve()
-                        # Check if it's a file in the docs directory
-                        if normalized_path.is_relative_to(self.docs_dir):
-                            relative_to_docs = normalized_path.relative_to(self.docs_dir)
-                            if relative_to_docs not in existing_files:
-                                relative_file = file_path.relative_to(self.docs_dir)
-                                self.issues.append(f"❌ Broken link in {relative_file}: {link_url}")
-                        else:
-                            # Check if it exists in the parent directory (project root)
-                            root_target = self.root_dir / link_url.replace('../', '')
-                            if not root_target.exists():
-                                relative_file = file_path.relative_to(self.docs_dir)
-                                self.issues.append(f"❌ Broken link in {relative_file}: {link_url}")
-                    except (ValueError, OSError):
-                        # If path resolution fails, mark as broken
-                        relative_file = file_path.relative_to(self.docs_dir)
-                        self.issues.append(f"❌ Broken link in {relative_file}: {link_url}")
-                else:
-                    # Handle same-directory paths
-                    current_dir = file_path.parent.relative_to(self.docs_dir)
-                    normalized_path = current_dir / link_url
-                    
-                    # Check if target file exists
-                    if normalized_path not in existing_files:
-                        relative_file = file_path.relative_to(self.docs_dir)
-                        self.issues.append(f"❌ Broken link in {relative_file}: {link_url}")
+                # Remove any anchor fragment from the link
+                link_path = link_url.split('#')[0]
+                if not link_path:  # Skip if it was just an anchor
+                    continue
+                
+                # Check if the link target exists
+                target_file = self._resolve_link_path(file_path, link_path)
+                
+                if target_file is None:
+                    relative_file = file_path.relative_to(self.docs_dir)
+                    self.issues.append(f"❌ Broken link in {relative_file}: {link_url}")
+    
+    def _resolve_link_path(self, source_file: Path, link_path: str) -> Path:
+        """Resolve a link path relative to the source file and check if it exists"""
+        try:
+            # Get the directory containing the source file
+            source_dir = source_file.parent
+            
+            # Resolve the target path relative to the source file
+            if link_path.startswith('../'):
+                # Handle relative paths going up directories
+                target_path = (source_dir / link_path).resolve()
+            elif link_path.startswith('./'):
+                # Handle relative paths in current directory
+                target_path = (source_dir / link_path[2:]).resolve()
+            elif '/' in link_path and not link_path.startswith('/'):
+                # Handle relative paths with subdirectories
+                target_path = (source_dir / link_path).resolve()
+            else:
+                # Handle simple filenames in the same directory
+                target_path = (source_dir / link_path).resolve()
+            
+            # Check if the target file exists
+            if target_path.exists():
+                return target_path
+            
+            # Also check if it exists in the project root (for links like ../../README.md)
+            if link_path.startswith('../'):
+                root_target = self.root_dir / link_path.replace('../', '')
+                if root_target.exists():
+                    return root_target
+            
+            return None
+            
+        except (ValueError, OSError, RuntimeError):
+            # Path resolution failed
+            return None
                     
     def check_version_consistency(self):
         """Check version information consistency"""
