@@ -225,59 +225,59 @@ mod tests {
     fn test_agent_id_new() {
         let id1 = AgentId::new();
         let id2 = AgentId::new();
-        
+
         // Each ID should be unique
         assert_ne!(id1, id2);
         assert_ne!(id1.as_str(), id2.as_str());
-        
+
         // Should be valid UUID format
         assert!(uuid::Uuid::parse_str(id1.as_str()).is_ok());
         assert!(uuid::Uuid::parse_str(id2.as_str()).is_ok());
     }
-    
+
     #[test]
     fn test_agent_id_from_string() {
         let test_id = "test-agent-id-456";
         let agent_id = AgentId::from_string(test_id.to_string());
-        
+
         assert_eq!(agent_id.as_str(), test_id);
         assert_eq!(agent_id.to_string(), test_id);
     }
-    
+
     #[test]
     fn test_agent_id_default() {
         let id1 = AgentId::default();
         let id2 = AgentId::default();
-        
+
         // Default should create unique IDs
         assert_ne!(id1, id2);
         assert!(uuid::Uuid::parse_str(id1.as_str()).is_ok());
     }
-    
+
     #[test]
     fn test_agent_id_display() {
         let test_str = "display-agent-test";
         let agent_id = AgentId::from_string(test_str.to_string());
-        
+
         assert_eq!(format!("{}", agent_id), test_str);
     }
-    
+
     // AgentConfig tests
     #[test]
     fn test_agent_config_creation() {
         let agent_id = AgentId::from_string("config-test-agent".to_string());
         let limits = ResourceLimits {
             max_cpu: 0.5,
-            max_memory: 512 * 1024 * 1024, // 512MB
+            max_memory: 512 * 1024 * 1024,       // 512MB
             max_storage: 5 * 1024 * 1024 * 1024, // 5GB
-            max_bandwidth: 512 * 1024, // 512KB/s
+            max_bandwidth: 512 * 1024,           // 512KB/s
         };
-        
+
         let config = AgentConfig {
             id: agent_id.clone(),
             resource_limits: limits.clone(),
         };
-        
+
         assert_eq!(config.id, agent_id);
         assert_eq!(config.resource_limits.max_cpu, limits.max_cpu);
         assert_eq!(config.resource_limits.max_memory, limits.max_memory);

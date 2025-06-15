@@ -12,6 +12,239 @@ from pathlib import Path
 from datetime import datetime
 from typing import Dict, List, Tuple
 import subprocess
+import tempfile
+from typing import List, Dict, Set, Tuple, Optional
+import time
+import signal
+
+class ValidationRunner:
+    """Handles validation checks for YOLO mode task execution"""
+    
+    def __init__(self, project_root: Path):
+        self.project_root = project_root
+        self.validation_cache = {}
+        
+    def run_all_validations(self, strict_mode: bool = False) -> Dict:
+        """Run all validation checks and return results"""
+        print("🔍 Running comprehensive validation checks...")
+        
+        results = {
+            'success': True,
+            'errors': [],
+            'warnings': [],
+            'checks_run': [],
+            'duration': 0
+        }
+        
+        start_time = time.time()
+        
+        # Run Rust compilation check
+        cargo_result = self.run_rust_check()
+        results['checks_run'].append('cargo_check')
+        if not cargo_result['success']:
+            results['success'] = False
+            results['errors'].extend(cargo_result['errors'])
+        if cargo_result['warnings']:
+            results['warnings'].extend(cargo_result['warnings'])
+            if strict_mode:
+                results['success'] = False
+                results['errors'].extend([f"Warning (strict mode): {w}" for w in cargo_result['warnings']])
+        
+        # Run Rust linting check
+        clippy_result = self.run_clippy_check()
+        results['checks_run'].append('clippy')
+        if not clippy_result['success']:
+            results['success'] = False
+            results['errors'].extend(clippy_result['errors'])
+        if clippy_result['warnings']:
+            results['warnings'].extend(clippy_result['warnings'])
+            if strict_mode:
+                results['success'] = False
+                results['errors'].extend([f"Clippy warning (strict mode): {w}" for w in clippy_result['warnings']])
+        
+        # Run documentation validation
+        doc_result = self.run_doc_validation()
+        results['checks_run'].append('doc_validation')
+        if not doc_result['success']:
+            results['success'] = False
+            results['errors'].extend(doc_result['errors'])
+        if doc_result['warnings']:
+            results['warnings'].extend(doc_result['warnings'])
+        
+        # Run code formatting check
+        format_result = self.run_format_check()
+        results['checks_run'].append('format_check')
+        if not format_result['success']:
+            results['success'] = False
+            results['errors'].extend(format_result['errors'])
+        
+        results['duration'] = time.time() - start_time
+        
+        return results
+    
+    def run_rust_check(self) -> Dict:
+        """Run cargo check for Rust compilation validation"""
+        try:
+            print("   📦 Running cargo check...")
+            result = subprocess.run(
+                ['cargo', 'check', '--all-targets'],
+                cwd=self.project_root,
+                capture_output=True,
+                text=True,
+                timeout=120  # 2 minute timeout
+            )
+            
+            if result.returncode == 0:
+                return {
+                    'success': True,
+                    'errors': [],
+                    'warnings': []
+                }
+            else:
+                # Parse stderr for errors and warnings
+                errors = []
+                warnings = []
+                for line in result.stderr.split('\n'):
+                    if 'error:' in line.lower():
+                        errors.append(line.strip())
+                    elif 'warning:' in line.lower():
+                        warnings.append(line.strip())
+                
+                return {
+                    'success': False,
+                    'errors': errors if errors else [result.stderr.strip()],
+                    'warnings': warnings
+                }
+                
+        except subprocess.TimeoutExpired:
+            return {
+                'success': False,
+                'errors': ['Cargo check timed out after 2 minutes'],
+                'warnings': []
+            }
+        except Exception as e:
+            return {
+                'success': False,
+                'errors': [f'Cargo check failed: {str(e)}'],
+                'warnings': []
+            }
+    
+    def run_clippy_check(self) -> Dict:
+        """Run cargo clippy for Rust linting"""
+        try:
+            print("   📎 Running cargo clippy...")
+            result = subprocess.run(
+                ['cargo', 'clippy', '--all-targets', '--', '-D', 'warnings'],
+                cwd=self.project_root,
+                capture_output=True,
+                text=True,
+                timeout=120  # 2 minute timeout
+            )
+            
+            warnings = []
+            errors = []
+            
+            # Parse output for warnings and errors
+            for line in result.stderr.split('\n'):
+                if 'warning:' in line.lower():
+                    warnings.append(line.strip())
+                elif 'error:' in line.lower():
+                    errors.append(line.strip())
+            
+            return {
+                'success': result.returncode == 0,
+                'errors': errors,
+                'warnings': warnings
+            }
+                
+        except subprocess.TimeoutExpired:
+            return {
+                'success': False,
+                'errors': ['Cargo clippy timed out after 2 minutes'],
+                'warnings': []
+            }
+        except Exception as e:
+            return {
+                'success': False,
+                'errors': [f'Cargo clippy failed: {str(e)}'],
+                'warnings': []
+            }
+    
+    def run_doc_validation(self) -> Dict:
+        """Run documentation validation script"""
+        try:
+            print("   📝 Running documentation validation...")
+            result = subprocess.run(
+                ['python3', 'scripts/validate_docs.py'],
+                cwd=self.project_root,
+                capture_output=True,
+                text=True,
+                timeout=60  # 1 minute timeout
+            )
+            
+            if result.returncode == 0:
+                return {
+                    'success': True,
+                    'errors': [],
+                    'warnings': []
+                }
+            else:
+                return {
+                    'success': False,
+                    'errors': [result.stderr.strip() if result.stderr else result.stdout.strip()],
+                    'warnings': []
+                }
+                
+        except subprocess.TimeoutExpired:
+            return {
+                'success': False,
+                'errors': ['Documentation validation timed out after 1 minute'],
+                'warnings': []
+            }
+        except Exception as e:
+            return {
+                'success': False,
+                'errors': [f'Documentation validation failed: {str(e)}'],
+                'warnings': []
+            }
+    
+    def run_format_check(self) -> Dict:
+        """Run code formatting check"""
+        try:
+            print("   🎨 Running format check...")
+            result = subprocess.run(
+                ['cargo', 'fmt', '--check'],
+                cwd=self.project_root,
+                capture_output=True,
+                text=True,
+                timeout=30  # 30 second timeout
+            )
+            
+            if result.returncode == 0:
+                return {
+                    'success': True,
+                    'errors': [],
+                    'warnings': []
+                }
+            else:
+                return {
+                    'success': False,
+                    'errors': ['Code formatting issues found. Run `cargo fmt` to fix.'],
+                    'warnings': []
+                }
+                
+        except subprocess.TimeoutExpired:
+            return {
+                'success': False,
+                'errors': ['Format check timed out after 30 seconds'],
+                'warnings': []
+            }
+        except Exception as e:
+            return {
+                'success': False,
+                'errors': [f'Format check failed: {str(e)}'],
+                'warnings': []
+            }
 
 class TaskManager:
     def __init__(self, root_dir: str):
@@ -24,6 +257,9 @@ class TaskManager:
         # Ensure directories exist
         for dir_path in [self.tasks_dir, self.todo_dir, self.in_progress_dir, self.completed_dir]:
             dir_path.mkdir(exist_ok=True)
+        
+        # Initialize validation runner
+        self.validator = ValidationRunner(self.root_dir)
     
     def sanitize_filename(self, text: str) -> str:
         """Convert text to a safe filename"""
@@ -397,9 +633,10 @@ python scripts/manage_tasks.py index
         print(f"✅ Updated task index: {index_file}")
 
     def yolo_mode(self, max_tasks: int = 1, component_filter: str = None, 
-                  dry_run: bool = False, timeout: int = 300, max_files: int = 10) -> Dict:
+                  dry_run: bool = False, timeout: int = 300, max_files: int = 10, 
+                  strict_validation: bool = False, skip_validation: bool = False) -> Dict:
         """
-        YOLO Mode: Automated task execution with safety mechanisms
+        YOLO Mode: Automated task execution with safety mechanisms and validation
         
         Args:
             max_tasks: Maximum number of tasks to process
@@ -407,13 +644,12 @@ python scripts/manage_tasks.py index
             dry_run: Show what would be done without executing
             timeout: Maximum execution time in seconds
             max_files: Maximum files to modify per task
+            strict_validation: Treat warnings as errors
+            skip_validation: Skip validation checks (emergency override)
             
         Returns:
             Dict with execution results and statistics
         """
-        import time
-        import signal
-        
         start_time = time.time()
         results = {
             'started': start_time,
@@ -423,7 +659,10 @@ python scripts/manage_tasks.py index
             'total_files_modified': 0,
             'errors': [],
             'completed_tasks': [],
-            'dry_run': dry_run
+            'dry_run': dry_run,
+            'validation_results': [],
+            'strict_validation': strict_validation,
+            'skip_validation': skip_validation
         }
         
         # Setup timeout handler
@@ -440,6 +679,38 @@ python scripts/manage_tasks.py index
             print(f"   Timeout: {timeout}s")
             print(f"   Max files per task: {max_files}")
             print(f"   Dry run: {dry_run}")
+            print(f"   Strict validation: {strict_validation}")
+            print(f"   Skip validation: {skip_validation}")
+            print("")
+            
+            # Run pre-task validation if not skipped
+            if not skip_validation:
+                print("🔍 Running pre-task validation checks...")
+                pre_validation = self.validator.run_all_validations(strict_validation)
+                results['validation_results'].append({
+                    'stage': 'pre-task',
+                    'result': pre_validation
+                })
+                
+                if not pre_validation['success']:
+                    print("❌ Pre-task validation failed. Cannot proceed with YOLO mode.")
+                    print("   Errors:")
+                    for error in pre_validation['errors']:
+                        print(f"     - {error}")
+                    if pre_validation['warnings']:
+                        print("   Warnings:")
+                        for warning in pre_validation['warnings']:
+                            print(f"     - {warning}")
+                    results['errors'].extend(pre_validation['errors'])
+                    return results
+                else:
+                    print("✅ Pre-task validation passed")
+                    if pre_validation['warnings']:
+                        print("   Warnings:")
+                        for warning in pre_validation['warnings']:
+                            print(f"     - {warning}")
+            else:
+                print("⚠️ Validation checks skipped (emergency override mode)")
             print("")
             
             # Find suitable tasks
@@ -465,13 +736,22 @@ python scripts/manage_tasks.py index
                     continue
                 
                 # Execute task with safety checks
-                task_result = self._execute_task_safely(task_file, max_files)
+                task_result = self._execute_task_safely(task_file, max_files, strict_validation, skip_validation)
                 
                 if task_result['success']:
                     results['tasks_completed'] += 1
                     results['completed_tasks'].append(task_file.name)
                     results['total_files_modified'] += task_result.get('files_modified', 0)
+                    
+                    # Add task validation results
+                    if 'validation_results' in task_result:
+                        results['validation_results'].extend(task_result['validation_results'])
+                    
                     print(f"   ✅ Task completed successfully")
+                    if task_result.get('validation_warnings'):
+                        print("   Validation warnings:")
+                        for warning in task_result['validation_warnings']:
+                            print(f"     - {warning}")
                 else:
                     results['tasks_failed'] += 1
                     results['errors'].append({
@@ -506,11 +786,19 @@ python scripts/manage_tasks.py index
         print(f"   Tasks completed: {results['tasks_completed']}")
         print(f"   Tasks failed: {results['tasks_failed']}")
         print(f"   Files modified: {results['total_files_modified']}")
+        print(f"   Validation checks run: {len(results['validation_results'])}")
+        
+        if results['validation_results']:
+            validation_success = all(v['result']['success'] for v in results['validation_results'])
+            print(f"   Validation status: {'✅ All passed' if validation_success else '❌ Some failed'}")
         
         if results['errors']:
             print(f"   Errors: {len(results['errors'])}")
             for error in results['errors']:
-                print(f"     - {error}")
+                if isinstance(error, dict):
+                    print(f"     - Task {error['task']}: {error['error']}")
+                else:
+                    print(f"     - {error}")
         
         return results
     
@@ -586,12 +874,14 @@ python scripts/manage_tasks.py index
         
         return False
     
-    def _execute_task_safely(self, task_file: Path, max_files: int) -> Dict:
-        """Execute a single task with safety checks"""
+    def _execute_task_safely(self, task_file: Path, max_files: int, strict_validation: bool = False, skip_validation: bool = False) -> Dict:
+        """Execute a single task with safety checks and validation"""
         result = {
             'success': False,
             'files_modified': 0,
-            'error': None
+            'error': None,
+            'validation_results': [],
+            'validation_warnings': []
         }
         
         try:
@@ -617,6 +907,24 @@ python scripts/manage_tasks.py index
             
             # Simulate successful completion
             result['files_modified'] = estimated_files
+            
+            # Run post-task validation if not skipped
+            if not skip_validation:
+                print(f"   🔍 Running post-task validation...")
+                post_validation = self.validator.run_all_validations(strict_validation)
+                result['validation_results'].append({
+                    'stage': 'post-task',
+                    'result': post_validation
+                })
+                
+                if not post_validation['success']:
+                    result['error'] = f"Post-task validation failed: {', '.join(post_validation['errors'])}"
+                    # Move back to TODO on validation failure
+                    self.move_task(in_progress_file, 'todo', auto_commit=False)
+                    return result
+                
+                if post_validation['warnings']:
+                    result['validation_warnings'] = post_validation['warnings']
             
             # Move to completed (this will auto-commit by default)
             self.move_task(in_progress_file, 'completed', auto_commit=True)
@@ -657,6 +965,10 @@ def main():
                        help='Maximum files to modify per task in YOLO mode')
     parser.add_argument('--dry-run', action='store_true',
                        help='Show what YOLO mode would do without executing')
+    parser.add_argument('--strict-validation', action='store_true',
+                       help='Treat warnings as errors during validation')
+    parser.add_argument('--skip-validation', action='store_true',
+                       help='Skip validation checks (emergency override)')
     
     args = parser.parse_args()
     
@@ -705,7 +1017,9 @@ def main():
             component_filter=args.component,
             dry_run=args.dry_run,
             timeout=args.timeout,
-            max_files=args.max_files
+            max_files=args.max_files,
+            strict_validation=args.strict_validation,
+            skip_validation=args.skip_validation
         )
         
         # Update index after YOLO mode

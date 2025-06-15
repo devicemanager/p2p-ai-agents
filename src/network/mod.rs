@@ -488,7 +488,7 @@ mod tests {
     #[test]
     fn test_resource_limits_creation() {
         let limits = ResourceLimits {
-            max_bandwidth: 1024 * 1024, // 1MB/s
+            max_bandwidth: 1024 * 1024,    // 1MB/s
             max_memory: 512 * 1024 * 1024, // 512MB
             max_connections: 100,
         };
@@ -496,7 +496,7 @@ mod tests {
         assert_eq!(limits.max_bandwidth, 1024 * 1024);
         assert_eq!(limits.max_memory, 512 * 1024 * 1024);
         assert_eq!(limits.max_connections, 100);
-    }    // Test for PeerInfo creation and manipulation
+    } // Test for PeerInfo creation and manipulation
     #[test]
     fn test_peer_info_creation() {
         let peer_id = PeerId("test-peer".to_string());
@@ -505,7 +505,7 @@ mod tests {
             Multiaddr("/ip4/192.168.1.100/tcp/8080".to_string()),
         ];
         let now = chrono::Utc::now();
-        
+
         let peer_info = PeerInfo {
             peer_id: peer_id.clone(),
             addresses: addresses.clone(),
@@ -514,7 +514,7 @@ mod tests {
             capabilities: PeerCapabilities {},
             status: ConnectionStatus::Connected,
         };
-        
+
         assert_eq!(peer_info.peer_id, peer_id);
         assert_eq!(peer_info.addresses.len(), 2);
         assert_eq!(peer_info.reputation, 50);

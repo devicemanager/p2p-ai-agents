@@ -41,6 +41,8 @@ show_help() {
     echo -e "  ${YELLOW}--timeout SECONDS${NC}            Execution timeout (default: 300)"
     echo -e "  ${YELLOW}--max-files N${NC}               Max files per task (default: 10)"
     echo -e "  ${YELLOW}--dry-run${NC}                   Show actions without executing"
+    echo -e "  ${YELLOW}--strict-validation${NC}         Treat warnings as errors"
+    echo -e "  ${YELLOW}--skip-validation${NC}           Skip validation checks (emergency override)"
     echo ""
     echo "Examples:"
     echo "  $0 generate                       # Generate all tasks from checklist"
