@@ -1,6 +1,6 @@
 # Task Management Index
 
-*Last updated: 2025-06-15 15:56:39*
+*Last updated: 2025-06-15 15:58:13*
 
 ## Overview
 
@@ -8,8 +8,8 @@ This directory contains all implementation tasks for the P2P AI Agents project, 
 
 ## Task Statistics
 
-- **Total Tasks**: 365
-- **Completed**: 13 (3.6%)
+- **Total Tasks**: 366
+- **Completed**: 14 (3.8%)
 - **In Progress**: 0
 - **TODO**: 352
 
@@ -21,7 +21,7 @@ Tasks that are planned but not yet started.
 ### 🚧 [In Progress Tasks](./in-progress/) (0 tasks)
 Tasks that are currently being worked on.
 
-### ✅ [Completed Tasks](./completed/) (13 tasks)
+### ✅ [Completed Tasks](./completed/) (14 tasks)
 Tasks that have been finished and verified.
 
 ## Task Management
@@ -425,6 +425,7 @@ No tasks in this category.
 ### Completed Tasks
 
 - [Task: Add Code Format Documentation](./completed/add-code-format-docs.md)
+- [Task: Add Supabase Storage Documentation](./completed/add-supabase-storage-docs.md)
 - [Task: Add Unit Test for TaskId](./completed/add-taskid-unit-tests.md)
 - [All public APIs have unit tests](./completed/core-implementation-core-implementation-all-public.md)
 - [Base agent trait and types](./completed/core-implementation-core-implementation-base-agent.md)
