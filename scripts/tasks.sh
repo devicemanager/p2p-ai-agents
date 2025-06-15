@@ -50,6 +50,10 @@ show_help() {
     echo "  $0 start task-name.md             # Start working on a task"
     echo "  $0 complete task-name.md          # Mark task as completed (with auto-commit)"
     echo "  $0 complete task-name.md --no-auto-commit  # Mark completed without committing"
+    echo "  $0 yolo --max-tasks 3             # Run YOLO mode on up to 3 tasks"
+    echo "  $0 yolo --component docs --dry-run # Show what YOLO mode would do for docs tasks"
+    echo "  $0 yolo --strict-validation       # Run YOLO mode with warnings as errors"
+    echo "  $0 yolo --skip-validation         # Emergency override: skip all validation"
     echo "  $0 search 'network manager'       # Find tasks related to network manager"
     echo ""
 }
