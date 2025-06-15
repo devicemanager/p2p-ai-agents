@@ -42,8 +42,8 @@ pre-commit run --all-files
 ### Docker
 ```bash
 # Build and run
-docker build -t p2p-ai-agent .
-docker run -d --name my-agent -p 8080:8080 p2p-ai-agent
+docker build -t p2p-ai-agents .
+docker run -d --name my-agent -p 8080:8080 p2p-ai-agents
 
 # Docker Compose
 docker-compose up -d

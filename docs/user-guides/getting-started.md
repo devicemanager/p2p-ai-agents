@@ -1,6 +1,6 @@
 # Getting Started Guide
 
-Welcome to P2P AI Agents! This guide will help you set up the development environment and run your first distributed AI agent using Rust.
+Welcome to P2P AI Agents! This guide will help you set up the development environment and run your first distributed AI agents using Rust.
 
 > **⚠️ Development Status**: This project is currently in early development and serves as foundational boilerplate. Many features are still being implemented.
 
@@ -113,7 +113,7 @@ docker-compose run p2p-agent cargo test
 ```
 
 This will start:
-- The P2P AI agent service
+- The P2P AI Agents service
 - Redis for caching
 - IPFS node (optional)
 - Monitoring stack with Prometheus and Grafana (optional)

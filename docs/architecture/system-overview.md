@@ -217,7 +217,7 @@ sequenceDiagram
 ### 3. Resource Management
 1. Resource monitoring
 2. Load balancing
-3. Task scheduling
+3. Task processing
 4. Energy optimization
 5. Performance tracking
 

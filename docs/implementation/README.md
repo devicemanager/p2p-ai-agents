@@ -13,7 +13,7 @@ This directory contains detailed implementation guides for the P2P AI Agents sys
 ### Core Components
 
 - [Agent Implementation](agent.md) - Core agent types and behaviors
-- [Task Processing](task.md) - Task management and execution
+- [Task Processing](task.md) - Task processing and execution
 - [Network Protocol](network/README.md) - P2P networking and communication
 - [Storage Layer](storage.md) - Data storage and management
 
@@ -200,7 +200,7 @@ thiserror = "1.0"
    RUN cargo build --release
    
    FROM debian:bullseye-slim
-   COPY --from=builder /usr/src/app/target/release/p2p-ai-agent /usr/local/bin/
+   COPY --from=builder /usr/src/app/target/release/p2p-ai-agents /usr/local/bin/
    ```
 
 2. **Configuration**

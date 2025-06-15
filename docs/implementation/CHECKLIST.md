@@ -103,10 +103,10 @@ Each component must pass the following test categories before being marked as co
   - [ ] Integration tests for Task Processing
   - [ ] Performance tests for manager operations
   - [ ] Documentation verified against tests
-- [ ] Task scheduling
-  - [ ] Unit tests for scheduler
-  - [ ] Integration tests for scheduling
-  - [ ] Performance tests for scheduling
+- [ ] Task processing
+  - [ ] Unit tests for processor
+  - [ ] Integration tests for processing
+  - [ ] Performance tests for processing
   - [ ] Documentation verified against tests
 - [ ] Task execution
   - [ ] Unit tests for execution
