@@ -12,10 +12,11 @@
 1. [Development Setup](#development-setup)
 2. [Building the Project](#building-the-project)
 3. [Running Tests](#running-tests)
-4. [Code Quality](#code-quality)
-5. [Contributing](#contributing)
-6. [Debugging](#debugging)
-7. [Related Documentation](#related-documentation)
+4. [Task Management](#task-management)
+5. [Code Quality](#code-quality)
+6. [Contributing](#contributing)
+7. [Debugging](#debugging)
+8. [Related Documentation](#related-documentation)
 
 ## Development Setup
 
@@ -109,6 +110,57 @@ cargo test --test network_integration
 # Generate coverage report
 cargo tarpaulin --out Html --output-dir coverage/
 ```
+
+## Task Management
+
+The project uses a Markdown-based task management system to track implementation progress. Tasks are automatically generated from implementation checklists and organized by status.
+
+### Quick Start
+
+```bash
+# View available commands
+./scripts/tasks.sh help
+
+# Generate tasks from implementation checklists
+./scripts/tasks.sh generate
+
+# View current progress
+./scripts/tasks.sh stats
+
+# Start working on a task
+./scripts/tasks.sh start task-name.md
+
+# Complete a task
+./scripts/tasks.sh complete task-name.md
+```
+
+### Task Organization
+
+- **TODO Tasks**: `/tasks/todo/` - Planned but not started
+- **In Progress**: `/tasks/in-progress/` - Currently being worked on  
+- **Completed**: `/tasks/completed/` - Finished and verified
+
+### Search and Discovery
+
+```bash
+# Find tasks by keyword
+./scripts/tasks.sh search "network manager"
+./scripts/tasks.sh search "unit test"
+
+# List tasks by status
+./scripts/tasks.sh list todo
+./scripts/tasks.sh list in-progress
+```
+
+### Integration with Development
+
+Tasks are linked to:
+- Implementation checklists in `docs/implementation/`
+- Source code locations and line numbers
+- Acceptance criteria and testing requirements
+- Progress tracking with timestamps
+
+For complete documentation, see [Task Management Guide](./task-management.md).
 
 ## Code Quality
 

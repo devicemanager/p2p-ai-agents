@@ -83,7 +83,23 @@ This project aims to democratize AI by building a distributed, peer-to-peer (P2P
    make coverage
    ```
 
-3. **CI/CD Status**
+3. **Task Management**
+   ```bash
+   # View implementation progress
+   ./scripts/tasks.sh stats
+   
+   # Find tasks to work on
+   ./scripts/tasks.sh search "network"
+   ./scripts/tasks.sh list todo
+   
+   # Start working on a task
+   ./scripts/tasks.sh start task-name.md
+   
+   # Complete a task
+   ./scripts/tasks.sh complete task-name.md
+   ```
+
+4. **CI/CD Status**
    - ✅ **Rust CI**: Automated building, testing, and linting
    - ✅ **Documentation**: Automated quality checks and maintenance
    - ✅ **Code Coverage**: Automated coverage reporting via Codecov
