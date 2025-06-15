@@ -56,15 +56,15 @@ check_dependencies() {
         exit 1
     fi
     
-    # Check Docker if using local mode
+    # Check container runtime if using local mode
     if [[ "${USE_LOCAL:-}" == "true" ]]; then
-        if ! command -v docker &> /dev/null; then
-            log_error "Docker is not installed. Please install Docker for local Supabase."
-            exit 1
-        fi
-        
-        if ! docker info &> /dev/null; then
-            log_error "Docker daemon is not running. Please start Docker."
+        if command -v docker &> /dev/null && docker info &> /dev/null 2>&1; then
+            log_info "Using Docker for local Supabase"
+        elif command -v podman &> /dev/null; then
+            log_info "Using Podman for local Supabase"
+        else
+            log_error "Neither Docker nor Podman is available."
+            log_error "Please install Docker or Podman for local Supabase testing."
             exit 1
         fi
     fi
@@ -77,7 +77,7 @@ show_help() {
     echo ""
     echo "Options:"
     echo "  --mock         Run with mock Supabase configuration (default)"
-    echo "  --local        Run with local Supabase instance (Docker)"
+    echo "  --local        Run with local Supabase instance (Docker/Podman)"
     echo "  --real         Run with real Supabase instance (requires env vars)"
     echo "  --setup        Show setup instructions for real Supabase instance"
     echo "  --quick        Run quick performance test (100 ops)"
@@ -87,7 +87,7 @@ show_help() {
     echo ""
     echo "Local Supabase (--local mode):"
     echo "  Automatically starts and configures a local Supabase instance"
-    echo "  Uses Docker containers for PostgreSQL and PostgREST"
+    echo "  Uses Docker or Podman containers for PostgreSQL and PostgREST"
     echo "  Perfect for development and testing"
     echo ""
     echo "Environment Variables (for --real mode):"
