@@ -370,7 +370,7 @@ cargo test --release -- --bench
 3. **Read Documentation**
    - [Architecture Overview](../architecture/system-overview.md)
    - [Development Guide](../development/README.md)
-   - [Implementation Docs](../implementation/)
+   - [Implementation Docs](../implementation/README.md)
 
 4. **Contributing**
    - See [CONTRIBUTING.md](../../CONTRIBUTING.md)

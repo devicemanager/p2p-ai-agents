@@ -178,8 +178,8 @@ cargo test --test performance -- --ignored
 
 <!-- Links to related documentation - use relative paths -->
 
-- [Architecture Overview](../architecture/system-overview.md)
-- [Security Architecture](../architecture/security.md)
+- [Architecture Overview](architecture/system-overview.md)
+- [Security Architecture](architecture/security.md)
 - [Contributing Guide](../CONTRIBUTING.md)
 - [Glossary](GLOSSARY.md)
 
