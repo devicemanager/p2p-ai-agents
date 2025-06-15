@@ -49,16 +49,20 @@ async fn test_network_initialization_and_message() {
     // Example error handling
     let err = NetworkError::NotInitialized;
     match err {
-        NetworkError::NotInitialized => assert!(true),
-        _ => assert!(false, "Unexpected error variant"),
+        NetworkError::NotInitialized => {
+            // Expected error type
+        }
+        _ => panic!("Unexpected error variant"),
     }
 
     // Example: Handling a failing operation
     let result: Result<(), NetworkError> = Err(NetworkError::NotInitialized);
     if let Err(e) = result {
         match e {
-            NetworkError::NotInitialized => assert!(true),
-            _ => assert!(false, "Unexpected error variant in failing operation"),
+            NetworkError::NotInitialized => {
+                // Expected error type
+            }
+            _ => panic!("Unexpected error variant in failing operation"),
         }
     }
 }
