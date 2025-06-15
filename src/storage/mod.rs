@@ -1,9 +1,15 @@
 /// The local module provides storage backends for the system.
 pub mod local;
 
+/// Supabase storage adapter (optional)
+#[cfg(feature = "storage-supabase")]
+pub mod supabase;
+
 #[cfg(test)]
 mod tests {
     use super::local::{LocalStorage, Storage};
+    #[cfg(feature = "storage-supabase")]
+    use super::supabase::{SupabaseConfig, SupabaseStorage};
     use tokio;
 
     #[tokio::test]
@@ -123,5 +129,35 @@ mod tests {
         run_perf_test(&distributed, "DistributedStorage (stub)", n).await;
         run_perf_test(&cache, "CacheStorage (stub)", n).await;
         run_perf_test(&custom, "CustomStorage (stub)", n).await;
+    }
+
+    #[cfg(feature = "storage-supabase")]
+    #[test]
+    fn test_supabase_storage_creation() {
+        let config = SupabaseConfig {
+            url: "https://test.supabase.co".to_string(),
+            anon_key: "test-key".to_string(),
+            service_role_key: None,
+            schema: "public".to_string(),
+            table_name: "test_storage".to_string(),
+            timeout: 30,
+            max_retries: 3,
+        };
+
+        let result = SupabaseStorage::new(config);
+        assert!(
+            result.is_ok(),
+            "Should be able to create Supabase storage adapter"
+        );
+    }
+
+    #[cfg(feature = "storage-supabase")]
+    #[test]
+    fn test_supabase_config_serialization() {
+        let config = SupabaseConfig::default();
+        let json = serde_json::to_string(&config).expect("Should serialize");
+        let deserialized: SupabaseConfig = serde_json::from_str(&json).expect("Should deserialize");
+        assert_eq!(config.schema, deserialized.schema);
+        assert_eq!(config.table_name, deserialized.table_name);
     }
 }

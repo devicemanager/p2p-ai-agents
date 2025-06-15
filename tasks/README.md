@@ -1,6 +1,6 @@
 # Task Management Index
 
-*Last updated: 2025-06-15 15:58:13*
+*Last updated: 2025-06-15 16:06:21*
 
 ## Overview
 
@@ -10,15 +10,15 @@ This directory contains all implementation tasks for the P2P AI Agents project, 
 
 - **Total Tasks**: 366
 - **Completed**: 14 (3.8%)
-- **In Progress**: 0
-- **TODO**: 352
+- **In Progress**: 1
+- **TODO**: 351
 
 ## Task Directories
 
-### 📋 [TODO Tasks](./todo/) (352 tasks)
+### 📋 [TODO Tasks](./todo/) (351 tasks)
 Tasks that are planned but not yet started.
 
-### 🚧 [In Progress Tasks](./in-progress/) (0 tasks)
+### 🚧 [In Progress Tasks](./in-progress/) (1 tasks)
 Tasks that are currently being worked on.
 
 ### ✅ [Completed Tasks](./completed/) (14 tasks)
@@ -237,7 +237,6 @@ Each task follows a standardized Markdown format with:
 - [Video processing](./todo/core-implementation-core-implementation-video-proc.md)
 - [Vulnerability scanning](./todo/core-implementation-core-implementation-vulnerabil.md)
 - [WebSocket API](./todo/core-implementation-core-implementation-websocket-.md)
-- [Task: Implement Supabase Storage Adapter](./todo/implement-supabase-storage-adapter.md)
 - [Access control mechanisms](./todo/network-network-access-control-mechani.md)
 - [Access control](./todo/network-network-access-control.md)
 - [access-control.md](./todo/network-network-access-controlmd.md)
@@ -420,7 +419,7 @@ Each task follows a standardized Markdown format with:
 
 ### In Progress Tasks
 
-No tasks in this category.
+- [Task: Implement Supabase Storage Adapter](./in-progress/implement-supabase-storage-adapter.md)
 
 ### Completed Tasks
 
