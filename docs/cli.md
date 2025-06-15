@@ -19,7 +19,7 @@ All commands support the following global options:
 
 ### Run Agent
 
-Start a new P2P AI agent.
+Start a new P2P AI Agents node.
 
 ```bash
 p2p-ai-agents run --agent-id <id> [options]
@@ -27,7 +27,7 @@ p2p-ai-agents run --agent-id <id> [options]
 
 Options:
 - `--agent-id`: (Required) Unique identifier for this agent
-- `--storage-path`: Path for agent storage (default: ~/.p2p_ai_agents/<agent_id>)
+- `--storage-path`: Path for agent storage (default: ~/.p2p-ai-agents/<agent_id>)
 - `--identity-path`: Path for identity storage (default: <storage_path>/identities)
 - `--bootstrap-peer`: Address of a bootstrap peer (can be specified multiple times)
   - Format: `/ip4/<ip>/tcp/<port>`
@@ -89,7 +89,7 @@ p2p-ai-agents create-token --agent-id <id> [options]
 
 Options:
 - `--agent-id`: (Required) Agent identifier
-- `--storage-path`: Path for agent storage (default: ~/.p2p_ai_agents/<agent_id>)
+- `--storage-path`: Path for agent storage (default: ~/.p2p-ai-agents/<agent_id>)
 - `--identity-path`: Path for identity storage (default: <storage_path>/identities)
 - `--expires-in`: Token expiration time in seconds (default: 3600)
 
@@ -118,7 +118,7 @@ p2p-ai-agents list-peers --agent-id <id> [options]
 
 Options:
 - `--agent-id`: (Required) Agent identifier
-- `--storage-path`: Path for agent storage (default: ~/.p2p_ai_agents/<agent_id>)
+- `--storage-path`: Path for agent storage (default: ~/.p2p-ai-agents/<agent_id>)
 - `--identity-path`: Path for identity storage (default: <storage_path>/identities)
 
 Example:
