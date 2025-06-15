@@ -226,7 +226,7 @@ cargo flamegraph --bin p2p-ai-agents
 
 - [Testing Guide](testing-guide.md) - Comprehensive testing documentation
 - [Architecture Overview](../architecture/system-overview.md) - System architecture
-- [Contributing Guide](../CONTRIBUTING.md) - Contribution guidelines
+- [Contributing Guide](../../CONTRIBUTING.md) - Contribution guidelines
 - [Security Best Practices](../user-guides/security-best-practices.md) - Security guidelines
 
 ---
