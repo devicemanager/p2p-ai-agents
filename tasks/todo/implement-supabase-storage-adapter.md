@@ -1,10 +1,10 @@
 # Task: Implement Supabase Storage Adapter
 
 ## Objective
-Implement a Supabase storage adapter that integrates with the existing storage layer architecture to provide cloud-based storage capabilities with real-time features.
+Implement a Supabase storage adapter that integrates with the existing storage layer architecture to provide cloud-based storage capabilities with documentation and unit tests.
 
 ## Description
-This task focuses on creating a new storage adapter that leverages Supabase's PostgreSQL database and real-time capabilities to provide a cloud-based storage solution for the P2P AI agents system. The adapter should implement the existing storage traits and provide additional real-time synchronization features.
+This task focuses on creating a new storage adapter that leverages Supabase's PostgreSQL database to provide a cloud-based storage solution for the P2P AI agents system. The adapter should implement the existing storage traits and provide comprehensive documentation and unit test coverage.
 
 ## Requirements
 
@@ -16,31 +16,18 @@ This task focuses on creating a new storage adapter that leverages Supabase's Po
 - [ ] Add connection pooling and retry mechanisms
 
 ### Supabase Integration Features
-- [ ] Configure Supabase client with authentication
-- [ ] Implement row-level security (RLS) policies
+- [ ] Configure Supabase client with connection settings
 - [ ] Add real-time subscriptions for data changes
 - [ ] Support for JSON document storage and querying
 - [ ] Implement file storage integration (Supabase Storage)
+- [ ] Add comprehensive unit tests for all operations
 
 ### Configuration and Setup
 - [ ] Add Supabase configuration options to storage config
 - [ ] Environment variable support for connection strings
 - [ ] Database schema initialization and migrations
 - [ ] Connection health checks and monitoring
-
-### Performance and Reliability
-- [ ] Connection pooling for optimal performance
-- [ ] Implement caching layer for frequently accessed data
-- [ ] Add retry logic with exponential backoff
-- [ ] Error handling and graceful degradation
-- [ ] Metrics collection for monitoring
-
-### Security Implementation
-- [ ] Secure credential management
-- [ ] SSL/TLS connection enforcement
-- [ ] API key rotation support
-- [ ] Row-level security policy implementation
-- [ ] Audit logging for data operations
+- [ ] Add usage documentation and examples
 
 ## Implementation Steps
 

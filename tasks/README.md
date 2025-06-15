@@ -1,6 +1,6 @@
 # Task Management Index
 
-*Last updated: 2025-06-15 15:49:19*
+*Last updated: 2025-06-15 15:56:39*
 
 ## Overview
 
@@ -8,8 +8,8 @@ This directory contains all implementation tasks for the P2P AI Agents project, 
 
 ## Task Statistics
 
-- **Total Tasks**: 364
-- **Completed**: 12 (3.3%)
+- **Total Tasks**: 365
+- **Completed**: 13 (3.6%)
 - **In Progress**: 0
 - **TODO**: 352
 
@@ -21,7 +21,7 @@ Tasks that are planned but not yet started.
 ### 🚧 [In Progress Tasks](./in-progress/) (0 tasks)
 Tasks that are currently being worked on.
 
-### ✅ [Completed Tasks](./completed/) (12 tasks)
+### ✅ [Completed Tasks](./completed/) (13 tasks)
 Tasks that have been finished and verified.
 
 ## Task Management
@@ -65,7 +65,6 @@ Each task follows a standardized Markdown format with:
 
 ### TODO Tasks
 
-- [Task: Add Code Format Documentation](./todo/add-code-format-docs.md)
 - [Access control](./todo/core-implementation-core-implementation-access-con.md)
 - [Add load tests](./todo/core-implementation-core-implementation-add-load-t.md)
 - [Add missing information](./todo/core-implementation-core-implementation-add-missin.md)
@@ -238,6 +237,7 @@ Each task follows a standardized Markdown format with:
 - [Video processing](./todo/core-implementation-core-implementation-video-proc.md)
 - [Vulnerability scanning](./todo/core-implementation-core-implementation-vulnerabil.md)
 - [WebSocket API](./todo/core-implementation-core-implementation-websocket-.md)
+- [Task: Implement Supabase Storage Adapter](./todo/implement-supabase-storage-adapter.md)
 - [Access control mechanisms](./todo/network-network-access-control-mechani.md)
 - [Access control](./todo/network-network-access-control.md)
 - [access-control.md](./todo/network-network-access-controlmd.md)
@@ -424,6 +424,7 @@ No tasks in this category.
 
 ### Completed Tasks
 
+- [Task: Add Code Format Documentation](./completed/add-code-format-docs.md)
 - [Task: Add Unit Test for TaskId](./completed/add-taskid-unit-tests.md)
 - [All public APIs have unit tests](./completed/core-implementation-core-implementation-all-public.md)
 - [Base agent trait and types](./completed/core-implementation-core-implementation-base-agent.md)
