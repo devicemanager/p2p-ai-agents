@@ -54,19 +54,38 @@ class DocumentationValidator:
                 
                 # Convert relative path to absolute
                 if link_url.startswith('../'):
-                    # Handle relative paths
+                    # Handle relative paths - check in parent directory too
                     current_dir = file_path.parent.relative_to(self.docs_dir)
                     target_path = current_dir / link_url
-                    normalized_path = Path(*[p for p in target_path.parts if p != '..'])
+                    
+                    # Try to resolve the path relative to docs directory
+                    try:
+                        normalized_path = target_path.resolve()
+                        # Check if it's a file in the docs directory
+                        if normalized_path.is_relative_to(self.docs_dir):
+                            relative_to_docs = normalized_path.relative_to(self.docs_dir)
+                            if relative_to_docs not in existing_files:
+                                relative_file = file_path.relative_to(self.docs_dir)
+                                self.issues.append(f"❌ Broken link in {relative_file}: {link_url}")
+                        else:
+                            # Check if it exists in the parent directory (project root)
+                            root_target = self.root_dir / link_url.replace('../', '')
+                            if not root_target.exists():
+                                relative_file = file_path.relative_to(self.docs_dir)
+                                self.issues.append(f"❌ Broken link in {relative_file}: {link_url}")
+                    except (ValueError, OSError):
+                        # If path resolution fails, mark as broken
+                        relative_file = file_path.relative_to(self.docs_dir)
+                        self.issues.append(f"❌ Broken link in {relative_file}: {link_url}")
                 else:
                     # Handle same-directory paths
                     current_dir = file_path.parent.relative_to(self.docs_dir)
                     normalized_path = current_dir / link_url
-                
-                # Check if target file exists
-                if normalized_path not in existing_files:
-                    relative_file = file_path.relative_to(self.docs_dir)
-                    self.issues.append(f"❌ Broken link in {relative_file}: {link_url}")
+                    
+                    # Check if target file exists
+                    if normalized_path not in existing_files:
+                        relative_file = file_path.relative_to(self.docs_dir)
+                        self.issues.append(f"❌ Broken link in {relative_file}: {link_url}")
                     
     def check_version_consistency(self):
         """Check version information consistency"""

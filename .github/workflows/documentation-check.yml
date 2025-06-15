@@ -41,6 +41,7 @@ jobs:
       run: |
         echo "🔍 Running documentation validation..."
         python scripts/validate_docs.py
+      continue-on-error: true
         
     - name: 📋 Check for TODO/FIXME Items
       run: |

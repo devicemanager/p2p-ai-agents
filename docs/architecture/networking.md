@@ -348,6 +348,6 @@ sequenceDiagram
 
 ---
 
-*Note: This document outlines the networking architecture. For implementation details, see the [Networking Implementation Guide](networking-implementation.md).*
+*Note: This document outlines the networking architecture. For implementation details, see the [Networking Implementation Guide](networking.md).*
 
 *Last updated: [Current Date]* 
