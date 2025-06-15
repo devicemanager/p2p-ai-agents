@@ -30,9 +30,17 @@ show_help() {
     echo -e "  ${GREEN}stats${NC}                        Show task statistics"
     echo -e "  ${GREEN}index${NC}                        Update the task index"
     echo -e "  ${GREEN}search${NC} <term>               Search for tasks containing term"
+    echo -e "  ${RED}yolo${NC} [options]              🚀 YOLO Mode: Automated task execution"
     echo ""
     echo "Options:"
     echo -e "  ${YELLOW}--no-auto-commit${NC}             Disable automatic git commit and push (for move operations)"
+    echo ""
+    echo "YOLO Mode Options:"
+    echo -e "  ${YELLOW}--max-tasks N${NC}               Maximum tasks to process (default: 1)"
+    echo -e "  ${YELLOW}--component NAME${NC}             Filter by component (network, storage, agent, docs)"
+    echo -e "  ${YELLOW}--timeout SECONDS${NC}            Execution timeout (default: 300)"
+    echo -e "  ${YELLOW}--max-files N${NC}               Max files per task (default: 10)"
+    echo -e "  ${YELLOW}--dry-run${NC}                   Show actions without executing"
     echo ""
     echo "Examples:"
     echo "  $0 generate                       # Generate all tasks from checklist"
@@ -172,6 +180,16 @@ case "$1" in
         ;;
     "search"|"find")
         search_tasks "$2"
+        ;;
+    "yolo")
+        echo -e "${RED}🚀 YOLO Mode - Automated Task Execution${NC}"
+        echo -e "${YELLOW}⚠️  This mode will automatically process tasks with safety checks${NC}"
+        echo -e "${BLUE}ℹ️  Press Ctrl+C to stop at any time${NC}"
+        echo ""
+        
+        # Pass all remaining arguments to the Python script
+        shift  # Remove 'yolo' from arguments
+        python3 "$TASK_SCRIPT" yolo "$@"
         ;;
     "help"|"-h"|"--help"|"")
         show_help
