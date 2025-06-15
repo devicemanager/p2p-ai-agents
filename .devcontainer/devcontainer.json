@@ -1,0 +1,11 @@
+{
+    "name": "My Rust Project",
+    "dockerFile": "Dockerfile",
+    "context": "..",
+    "features": {
+        "rust": {}
+    },
+    "settings": {
+        "rust-analyzer.cargo.loadOutDirsFromCheck": true
+    }
+}
