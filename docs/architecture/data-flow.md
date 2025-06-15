@@ -346,6 +346,6 @@ sequenceDiagram
 
 ---
 
-*Note: This document outlines the data flow architecture. For implementation details, see the [Data Flow Implementation Guide](data-flow-implementation.md).*
+*Note: This document outlines the data flow architecture. For implementation details, see the [Data Flow Implementation Guide](data-flow.md).*
 
 *Last updated: [Current Date]* 

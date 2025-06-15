@@ -284,6 +284,6 @@ graph TD
 
 ---
 
-*Note: This document outlines the security architecture. For implementation details, see the [Security Implementation Guide](security-implementation.md).*
+*Note: This document outlines the security architecture. For implementation details, see the [Security Implementation Guide](security.md).*
 
 *Last updated: [Current Date]* 

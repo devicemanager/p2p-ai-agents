@@ -476,7 +476,7 @@ backup:
 - [Getting Started Guide](getting-started.md)
 - [Agent Configuration](agent-configuration.md)
 - [Security Best Practices](security-best-practices.md)
-- [Monitoring Guide](monitoring.md)
+- [Monitoring Guide](README.md)
 
 ---
 

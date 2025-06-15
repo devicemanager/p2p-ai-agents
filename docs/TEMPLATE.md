@@ -187,4 +187,4 @@ cargo test --test performance -- --ignored
 
 *Last updated: 2025-06-14*
 
-*This document follows the [P2P AI Agents Documentation Standards](STYLE_GUIDE.md).*
+*This document follows the [P2P AI Agents Documentation Standards](TEMPLATE.md).*

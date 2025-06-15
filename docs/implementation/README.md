@@ -18,11 +18,11 @@ This directory contains detailed implementation guides for the P2P AI Agents sys
 - [Storage Layer](storage.md) - Data storage and management
 
 ### Specialized Components
-- [Processing Agents](processing-agents.md) - Data processing implementations
-- [Vector Agents](vector-agents.md) - Vector operations and search
-- [Storage Agents](storage-agents.md) - Distributed storage
-- [Coordinator Agents](coordinator-agents.md) - Workflow management
-- [Gateway Agents](gateway-agents.md) - External service integration
+- [Processing Agents](README.md) - Data processing implementations
+- [Vector Agents](README.md) - Vector operations and search
+- [Storage Agents](README.md) - Distributed storage
+- [Coordinator Agents](README.md) - Workflow management
+- [Gateway Agents](README.md) - External service integration
 
 ## 🛠 Implementation Guidelines
 
@@ -220,5 +220,5 @@ thiserror = "1.0"
 ## 📝 License
 
 Implementation documentation is licensed under the same terms as the software:
-- MIT License ([LICENSE-MIT](../LICENSE-MIT))
-- Apache License, Version 2.0 ([LICENSE-APACHE](../LICENSE-APACHE)) 
+- MIT License ([LICENSE-MIT](../LICENSE))
+- Apache License, Version 2.0 ([LICENSE-APACHE](../LICENSE)) 
