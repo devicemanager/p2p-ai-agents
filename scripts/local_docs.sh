@@ -8,8 +8,30 @@ PROJECT_ROOT="/workspaces/p2p-ai-agents"
 DOCS_DIR="$PROJECT_ROOT/docs"
 
 # Colors for output
-RED='\033[0;31m'
-GREEN='\033[0;32m'
+RED='\03    "stats"|"stat")
+        show_stats
+        ;;
+    "policy"|"500"|"limit")
+        check_500_line_limit
+        ;;
+    "all"|"")
+        run_all
+        ;;
+    "help"|"-h"|"--help")
+        echo "Documentation Management Script"
+        echo
+        echo "Usage: $0 [command]"
+        echo
+        echo "Commands:"
+        echo "  all        Run all checks (default)"
+        echo "  validate   Run comprehensive validation"
+        echo "  todos      Check for TODO/FIXME items"
+        echo "  structure  Show documentation structure"
+        echo "  links      Quick broken link check"
+        echo "  format     Check formatting issues"
+        echo "  stats      Show documentation statistics"
+        echo "  policy     Check 500-line limit policy"
+        echo "  help       Show this help message"[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m' # No Color
@@ -140,6 +162,25 @@ format_docs() {
     echo
 }
 
+# Function to check 500-line limit policy
+check_500_line_limit() {
+    print_header "Checking 500-Line Limit Policy"
+    cd "$PROJECT_ROOT"
+    
+    echo "📏 Checking file size limits..."
+    
+    violations=$(find . -name "*.rs" -o -name "*.md" | grep -v target | xargs wc -l | awk '$1 > 500 && $2 != "total"' | wc -l)
+    
+    if [ $violations -gt 0 ]; then
+        echo "⚠️  Files exceeding 500-line limit:"
+        find . -name "*.rs" -o -name "*.md" | grep -v target | xargs wc -l | awk '$1 > 500 && $2 != "total" {printf "  ❌ %s: %d lines (+%d over limit)\n", $2, $1, $1-500}' | sort -nr
+        print_warning "$violations files exceed the 500-line policy"
+    else
+        print_success "All files comply with 500-line limit"
+    fi
+    echo
+}
+
 # Function to show quick stats
 show_stats() {
     print_header "Documentation Statistics"
@@ -168,6 +209,7 @@ run_all() {
     check_structure
     check_links_simple
     format_docs
+    check_500_line_limit
     
     print_header "Documentation Check Complete"
     print_success "All local documentation checks completed!"
@@ -176,6 +218,7 @@ run_all() {
     echo "   $0 todos       - Check TODO/FIXME items"
     echo "   $0 links       - Quick link check"
     echo "   $0 stats       - Show statistics"
+    echo "   $0 policy      - Check 500-line policy"
 }
 
 # Main script logic
@@ -198,6 +241,9 @@ case "${1:-all}" in
     "stats"|"stat")
         show_stats
         ;;
+    "policy"|"500"|"limit")
+        check_500_line_limit
+        ;;
     "all"|"")
         run_all
         ;;
@@ -214,6 +260,7 @@ case "${1:-all}" in
         echo "  links      Quick broken link check"
         echo "  format     Check formatting issues"
         echo "  stats      Show documentation statistics"
+        echo "  policy     Check 500-line limit policy"
         echo "  help       Show this help message"
         ;;
     *)
