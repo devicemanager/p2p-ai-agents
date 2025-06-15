@@ -75,25 +75,35 @@ show_help() {
 check_dependencies() {
     log_info "Checking dependencies..."
     
-    # Check Docker
-    if ! command -v docker &> /dev/null; then
-        log_error "Docker is not installed. Please install Docker first."
+    # Check for container runtime (Docker or Podman)
+    if command -v docker &> /dev/null && docker info &> /dev/null 2>&1; then
+        CONTAINER_RUNTIME="docker"
+        COMPOSE_CMD="docker-compose"
+        if ! command -v docker-compose &> /dev/null && ! docker compose version &> /dev/null; then
+            log_error "Docker Compose is not available. Please install Docker Compose."
+            exit 1
+        fi
+        if docker compose version &> /dev/null; then
+            COMPOSE_CMD="docker compose"
+        fi
+        log_info "Using Docker as container runtime"
+    elif command -v podman &> /dev/null; then
+        CONTAINER_RUNTIME="podman"
+        if command -v podman-compose &> /dev/null; then
+            COMPOSE_CMD="podman-compose"
+            log_info "Using Podman with podman-compose"
+        else
+            log_error "Podman is available but podman-compose is not installed."
+            log_info "Install with: pip3 install podman-compose"
+            exit 1
+        fi
+    else
+        log_error "Neither Docker nor Podman is available."
+        log_error "Please install Docker or Podman first."
         exit 1
     fi
     
-    # Check Docker Compose
-    if ! command -v docker-compose &> /dev/null && ! docker compose version &> /dev/null; then
-        log_error "Docker Compose is not installed. Please install Docker Compose first."
-        exit 1
-    fi
-    
-    # Check if Docker is running
-    if ! docker info &> /dev/null; then
-        log_error "Docker daemon is not running. Please start Docker first."
-        exit 1
-    fi
-    
-    log_success "All dependencies are available"
+    log_success "Container runtime available: $CONTAINER_RUNTIME"
 }
 
 start_services() {
@@ -101,12 +111,8 @@ start_services() {
     
     cd "$DOCKER_DIR"
     
-    log_info "Starting services with Docker Compose..."
-    if command -v docker-compose &> /dev/null; then
-        docker-compose up -d
-    else
-        docker compose up -d
-    fi
+    log_info "Starting services with $COMPOSE_CMD..."
+    $COMPOSE_CMD up -d
     
     log_info "Waiting for services to become healthy..."
     sleep 10
@@ -115,7 +121,7 @@ start_services() {
     local retries=30
     local count=0
     while [ $count -lt $retries ]; do
-        if docker exec supabase-lab-db pg_isready -U postgres &> /dev/null; then
+        if $CONTAINER_RUNTIME exec supabase-lab-db pg_isready -U postgres &> /dev/null; then
             break
         fi
         count=$((count + 1))
@@ -159,11 +165,7 @@ stop_services() {
     
     cd "$DOCKER_DIR"
     
-    if command -v docker-compose &> /dev/null; then
-        docker-compose down
-    else
-        docker compose down
-    fi
+    $COMPOSE_CMD down
     
     log_success "Local Supabase instance stopped"
 }
@@ -180,17 +182,13 @@ show_status() {
     
     cd "$DOCKER_DIR"
     
-    if command -v docker-compose &> /dev/null; then
-        docker-compose ps
-    else
-        docker compose ps
-    fi
+    $COMPOSE_CMD ps
     
     echo ""
     log_info "Service health checks:"
     
     # Check database
-    if docker exec supabase-lab-db pg_isready -U postgres &> /dev/null; then
+    if $CONTAINER_RUNTIME exec supabase-lab-db pg_isready -U postgres &> /dev/null; then
         echo -e "  ${GREEN}✅${NC} PostgreSQL Database: Running"
     else
         echo -e "  ${RED}❌${NC} PostgreSQL Database: Not running"
@@ -218,18 +216,10 @@ show_logs() {
     
     if [ -n "$service" ]; then
         log_info "Showing logs for $service..."
-        if command -v docker-compose &> /dev/null; then
-            docker-compose logs -f "$service"
-        else
-            docker compose logs -f "$service"
-        fi
+        $COMPOSE_CMD logs -f "$service"
     else
         log_info "Showing logs for all services..."
-        if command -v docker-compose &> /dev/null; then
-            docker-compose logs -f
-        else
-            docker compose logs -f
-        fi
+        $COMPOSE_CMD logs -f
     fi
 }
 
@@ -247,14 +237,14 @@ clean_all() {
     cd "$DOCKER_DIR"
     
     log_info "Stopping and removing containers..."
-    if command -v docker-compose &> /dev/null; then
-        docker-compose down -v --remove-orphans
-    else
-        docker compose down -v --remove-orphans
-    fi
+    $COMPOSE_CMD down -v --remove-orphans
     
     log_info "Removing volumes..."
-    docker volume rm $(docker volume ls -q | grep supabase-lab) 2>/dev/null || true
+    if [ "$CONTAINER_RUNTIME" = "docker" ]; then
+        docker volume rm $(docker volume ls -q | grep supabase-lab) 2>/dev/null || true
+    else
+        podman volume rm $(podman volume ls -q | grep supabase-lab) 2>/dev/null || true
+    fi
     
     log_info "Cleaning up data directory..."
     rm -rf "$DOCKER_DIR/data"
@@ -288,7 +278,7 @@ run_tests() {
     
     # Test database connection
     log_info "Testing PostgreSQL connection..."
-    if docker exec supabase-lab-db psql -U postgres -d postgres -c "SELECT 1;" &> /dev/null; then
+    if $CONTAINER_RUNTIME exec supabase-lab-db psql -U postgres -d postgres -c "SELECT 1;" &> /dev/null; then
         log_success "PostgreSQL connection: OK"
     else
         log_error "PostgreSQL connection: FAILED"
@@ -357,7 +347,7 @@ show_env() {
 
 connect_db() {
     log_info "Connecting to PostgreSQL database..."
-    docker exec -it supabase-lab-db psql -U postgres -d postgres
+    $CONTAINER_RUNTIME exec -it supabase-lab-db psql -U postgres -d postgres
 }
 
 main() {
