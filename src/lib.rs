@@ -1,5 +1,5 @@
 //! P2P AI Agents - A distributed peer-to-peer network of AI agents
-//! 
+//!
 //! This library provides the core functionality for creating and managing
 //! a network of AI agents that can collaborate on processing tasks in a
 //! decentralized manner.
@@ -15,15 +15,11 @@ pub mod storage;
 
 /// Re-exports of commonly used types
 pub mod prelude {
-    pub use crate::agent::{Agent, AgentId, AgentConfig};
+    pub use crate::agent::{Agent, AgentConfig, AgentId};
     pub use crate::network::{
-        NetworkManager,
-        NetworkConfig,
-        NetworkMessage,
-        NetworkError,
-        NetworkResult,
         discovery::{DiscoveryManager, PeerInfo},
-        transport::{TransportType, TransportError},
+        transport::{TransportError, TransportType},
+        NetworkConfig, NetworkError, NetworkManager, NetworkMessage, NetworkResult,
     };
     // Removed broken storage re-exports
 }
@@ -45,7 +41,6 @@ pub enum Error {
     // Storage-related errors (commented out until implemented)
     // #[error("Storage error: {0}")]
     // Storage(#[from] storage::Error),
-
     /// Configuration errors
     #[error("Configuration error: {0}")]
     Config(#[from] config::ConfigError),

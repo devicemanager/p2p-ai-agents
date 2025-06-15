@@ -1,13 +1,13 @@
 //! Task management for agents
-//! 
+//!
 //! This module provides functionality for creating, managing, and
 //! executing tasks in the agent network.
 
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use serde::{Serialize, Deserialize};
+use std::fmt;
 use thiserror::Error;
 use uuid::Uuid;
-use std::fmt;
 
 /// Task identifier
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -178,18 +178,25 @@ impl<E: TaskExecutor> TaskManager<E> {
     }
     pub async fn get_task(&self, task_id: &TaskId) -> TaskResultType<Task> {
         let tasks = self.tasks.lock().await;
-        tasks.get(task_id).cloned().ok_or(TaskError::NotFound(task_id.clone()))
+        tasks
+            .get(task_id)
+            .cloned()
+            .ok_or(TaskError::NotFound(task_id.clone()))
     }
     pub async fn execute_task(&self, task_id: &TaskId) -> TaskResultType<TaskResult> {
         let mut tasks = self.tasks.lock().await;
-        let task = tasks.get_mut(task_id).ok_or(TaskError::NotFound(task_id.clone()))?;
+        let task = tasks
+            .get_mut(task_id)
+            .ok_or(TaskError::NotFound(task_id.clone()))?;
         let result = self.executor.execute(task).await?;
         task.set_result(result.clone());
         Ok(result)
     }
     pub async fn cancel_task(&self, task_id: &TaskId) -> TaskResultType<()> {
         let mut tasks = self.tasks.lock().await;
-        let task = tasks.get_mut(task_id).ok_or(TaskError::NotFound(task_id.clone()))?;
+        let task = tasks
+            .get_mut(task_id)
+            .ok_or(TaskError::NotFound(task_id.clone()))?;
         task.set_status(TaskStatus::Cancelled);
         Ok(())
     }
@@ -247,7 +254,10 @@ impl Task {
     /// Set the task status
     pub fn set_status(&mut self, status: TaskStatus) {
         self.status = status.clone();
-        if matches!(status, TaskStatus::Completed | TaskStatus::Failed(_) | TaskStatus::Cancelled) {
+        if matches!(
+            status,
+            TaskStatus::Completed | TaskStatus::Failed(_) | TaskStatus::Cancelled
+        ) {
             self.completed_at = Some(chrono::Utc::now());
         }
     }

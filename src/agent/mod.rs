@@ -1,25 +1,54 @@
 //! Agent module for managing AI agents in the P2P network
-//! 
+//!
 //! This module provides the core functionality for creating and managing
 //! AI agents, including identity management, task handling, and resource
 //! monitoring.
 
 mod identity;
-mod task;
 mod resource;
+mod task;
 
-use std::sync::Arc;
 use async_trait::async_trait;
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
+use std::sync::Arc;
 use thiserror::Error;
 
 pub use identity::{Identity, IdentityError};
-pub use task::{Task, TaskId, TaskStatus, TaskError};
-pub use resource::{ResourceMonitor, ResourceError, ResourceUsage};
+pub use resource::{ResourceError, ResourceMonitor, ResourceUsage};
+pub use task::{Task, TaskError, TaskId, TaskStatus};
 
 /// Agent identifier type
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct AgentId(String);
+
+impl AgentId {
+    /// Create a new agent ID with a randomly generated UUID
+    pub fn new() -> Self {
+        Self(uuid::Uuid::new_v4().to_string())
+    }
+
+    /// Create an agent ID from a string
+    pub fn from_string(id: String) -> Self {
+        Self(id)
+    }
+
+    /// Get the inner string value
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
+}
+
+impl Default for AgentId {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl std::fmt::Display for AgentId {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
 
 /// Agent configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -180,7 +209,10 @@ impl Agent for DefaultAgent {
     }
 
     async fn resource_usage(&self) -> Result<ResourceUsage> {
-        self.resource_monitor.current_usage().await.map_err(Error::Resource)
+        self.resource_monitor
+            .current_usage()
+            .await
+            .map_err(Error::Resource)
     }
 }
 
@@ -194,9 +226,9 @@ mod tests {
             id: AgentId("test-agent".to_string()),
             resource_limits: ResourceLimits {
                 max_cpu: 0.8,
-                max_memory: 1024 * 1024 * 1024, // 1GB
+                max_memory: 1024 * 1024 * 1024,       // 1GB
                 max_storage: 10 * 1024 * 1024 * 1024, // 10GB
-                max_bandwidth: 1024 * 1024, // 1MB/s
+                max_bandwidth: 1024 * 1024,           // 1MB/s
             },
         };
 

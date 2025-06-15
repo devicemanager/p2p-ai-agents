@@ -1,12 +1,12 @@
 //! Network module for peer-to-peer agent system.
 //! Provides types and helpers for network management, metrics, resources, health, and security.
 
+use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use std::net::SocketAddr;
 use std::sync::Arc;
-use tokio::sync::Mutex;
 use thiserror::Error;
-use serde::{Serialize, Deserialize};
-use std::collections::HashMap;
+use tokio::sync::Mutex;
 
 /// Discovery submodule for peer discovery and management.
 pub mod discovery;
@@ -322,7 +322,9 @@ pub struct MetricsCollector {
 impl MetricsCollector {
     /// Create a new metrics collector.
     pub fn new() -> Self {
-        MetricsCollector { metrics: HashMap::new() }
+        MetricsCollector {
+            metrics: HashMap::new(),
+        }
     }
     /// Increment a metric by 1.
     pub fn increment(&mut self, key: &str) {

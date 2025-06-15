@@ -1,4 +1,6 @@
-use p2p_ai_agents::storage::local::{LocalStorage, DistributedStorage, CacheStorage, CustomStorage, Storage};
+use p2p_ai_agents::storage::local::{
+    CacheStorage, CustomStorage, DistributedStorage, LocalStorage, Storage,
+};
 use std::time::Instant;
 
 #[tokio::test]

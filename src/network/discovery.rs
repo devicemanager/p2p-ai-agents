@@ -1,8 +1,8 @@
 use std::collections::HashSet;
 use std::net::SocketAddr;
 use std::sync::Arc;
-use tokio::sync::Mutex;
 use thiserror::Error;
+use tokio::sync::Mutex;
 
 /// Errors that can occur during peer discovery operations.
 #[derive(Debug, Error)]
@@ -99,7 +99,9 @@ impl DiscoveryManager {
 
         let bootstrap_nodes = self.get_bootstrap_nodes().await;
         if bootstrap_nodes.is_empty() {
-            return Err(DiscoveryError::BootstrapError("No bootstrap nodes available".into()));
+            return Err(DiscoveryError::BootstrapError(
+                "No bootstrap nodes available".into(),
+            ));
         }
 
         // Basic peer discovery implementation

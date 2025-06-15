@@ -13,10 +13,10 @@ fn test_library_compiles() {
 fn test_error_types() {
     // Test that error types can be created and matched
     use p2p_ai_agents::Error;
-    
+
     let io_error = std::io::Error::new(std::io::ErrorKind::Other, "test");
     let lib_error = Error::Io(io_error);
-    
+
     match lib_error {
         Error::Io(_) => assert!(true),
         _ => assert!(false, "Expected IO error"),
@@ -35,7 +35,7 @@ fn test_agent_id_creation() {
 fn test_network_config_creation() {
     // Test basic NetworkConfig creation if network feature is enabled
     use std::net::SocketAddr;
-    
+
     let addr: SocketAddr = "127.0.0.1:8080".parse().unwrap();
     let _config = NetworkConfig {
         listen_addr: addr,
@@ -49,7 +49,7 @@ fn test_network_config_creation() {
         },
         security_config: SecurityConfig {},
     };
-    
+
     assert!(true);
 }
 
