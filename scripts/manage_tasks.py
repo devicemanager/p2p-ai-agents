@@ -152,7 +152,79 @@ class TaskManager:
         
         return created_tasks
     
-    def move_task(self, task_file: Path, new_status: str) -> bool:
+    def auto_commit_and_push(self, task_name: str, action: str = "completed") -> bool:
+        """Automatically commit and push changes when a task is completed"""
+        try:
+            # Check if we're in a git repository
+            result = subprocess.run(['git', 'status'], 
+                                  cwd=self.root_dir, 
+                                  capture_output=True, 
+                                  text=True)
+            if result.returncode != 0:
+                print("⚠️ Not in a git repository, skipping auto-commit")
+                return False
+            
+            # Check if there are changes to commit
+            result = subprocess.run(['git', 'diff', '--cached', '--name-only'], 
+                                  cwd=self.root_dir, 
+                                  capture_output=True, 
+                                  text=True)
+            
+            # Stage all changes
+            subprocess.run(['git', 'add', '.'], 
+                          cwd=self.root_dir, 
+                          check=True)
+            
+            # Check again for staged changes
+            result = subprocess.run(['git', 'diff', '--cached', '--name-only'], 
+                                  cwd=self.root_dir, 
+                                  capture_output=True, 
+                                  text=True)
+            
+            if not result.stdout.strip():
+                print("ℹ️ No changes to commit")
+                return True
+            
+            # Create commit message
+            commit_msg = f"Task {action}: {task_name}\n\n"
+            commit_msg += f"✅ {action.capitalize()} task: {task_name}\n"
+            commit_msg += f"📅 {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n"
+            commit_msg += f"🔧 Task management: Auto-commit on task {action}"
+            
+            # Commit changes
+            result = subprocess.run(['git', 'commit', '-m', commit_msg], 
+                                  cwd=self.root_dir, 
+                                  capture_output=True, 
+                                  text=True)
+            
+            if result.returncode != 0:
+                print(f"❌ Failed to commit: {result.stderr}")
+                return False
+            
+            print(f"✅ Committed changes for task: {task_name}")
+            
+            # Push to remote (if configured)
+            result = subprocess.run(['git', 'push'], 
+                                  cwd=self.root_dir, 
+                                  capture_output=True, 
+                                  text=True)
+            
+            if result.returncode == 0:
+                print(f"🚀 Pushed changes to remote repository")
+                return True
+            else:
+                print(f"⚠️ Failed to push to remote: {result.stderr}")
+                print("💡 You may need to push manually later")
+                return True  # Still return True since commit succeeded
+            
+        except subprocess.CalledProcessError as e:
+            print(f"❌ Git operation failed: {e}")
+            return False
+        except Exception as e:
+            print(f"❌ Unexpected error during git operations: {e}")
+            return False
+
+    def move_task(self, task_file: Path, new_status: str, auto_commit: bool = True) -> bool:
         """Move a task to a different status directory"""
         status_dirs = {
             'todo': self.todo_dir,
@@ -176,6 +248,10 @@ class TaskManager:
         # Move the file
         task_file.rename(new_path)
         print(f"✅ Moved {task_file.name} to {new_status}")
+        
+        if auto_commit:
+            self.auto_commit_and_push(task_file.name, new_status)
+        
         return True
     
     def update_task_status(self, task_file: Path, new_status: str):
@@ -328,6 +404,8 @@ def main():
     parser.add_argument('status', nargs='?', help='New status for move action')
     parser.add_argument('--json-file', default='implementation_issues.json', 
                        help='JSON file to generate tasks from')
+    parser.add_argument('--no-auto-commit', action='store_true', 
+                       help='Disable automatic git commit and push when completing tasks')
     
     args = parser.parse_args()
     
@@ -357,7 +435,9 @@ def main():
             print(f"❌ Task file not found: {args.target}")
             sys.exit(1)
         
-        task_manager.move_task(task_file, args.status)
+        # Auto-commit is enabled by default, disabled only if --no-auto-commit is specified
+        auto_commit = not args.no_auto_commit
+        task_manager.move_task(task_file, args.status, auto_commit)
         task_manager.generate_index()
         
     elif args.action == 'index':

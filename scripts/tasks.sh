@@ -18,7 +18,7 @@ TASK_SCRIPT="$SCRIPT_DIR/manage_tasks.py"
 show_help() {
     echo -e "${BLUE}📋 Task Management System${NC}"
     echo ""
-    echo "Usage: $0 <command> [arguments]"
+    echo "Usage: $0 <command> [arguments] [options]"
     echo ""
     echo "Commands:"
     echo -e "  ${GREEN}generate${NC}                     Generate tasks from implementation checklist"
@@ -31,11 +31,15 @@ show_help() {
     echo -e "  ${GREEN}index${NC}                        Update the task index"
     echo -e "  ${GREEN}search${NC} <term>               Search for tasks containing term"
     echo ""
+    echo "Options:"
+    echo -e "  ${YELLOW}--no-auto-commit${NC}             Disable automatic git commit and push (for move operations)"
+    echo ""
     echo "Examples:"
     echo "  $0 generate                       # Generate all tasks from checklist"
     echo "  $0 list todo                      # List all TODO tasks"
     echo "  $0 start task-name.md             # Start working on a task"
-    echo "  $0 complete task-name.md          # Mark task as completed"
+    echo "  $0 complete task-name.md          # Mark task as completed (with auto-commit)"
+    echo "  $0 complete task-name.md --no-auto-commit  # Mark completed without committing"
     echo "  $0 search 'network manager'       # Find tasks related to network manager"
     echo ""
 }
@@ -97,6 +101,26 @@ search_tasks() {
     done
 }
 
+# Parse options
+AUTO_COMMIT_FLAG=""
+ARGS=()
+
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        --no-auto-commit)
+            AUTO_COMMIT_FLAG="--no-auto-commit"
+            shift
+            ;;
+        *)
+            ARGS+=("$1")
+            shift
+            ;;
+    esac
+done
+
+# Restore positional parameters
+set -- "${ARGS[@]}"
+
 # Main command handling
 case "$1" in
     "generate")
@@ -112,7 +136,7 @@ case "$1" in
             exit 1
         fi
         echo -e "${BLUE}📋 Moving task $2 to $3...${NC}"
-        python3 "$TASK_SCRIPT" move "$2" "$3"
+        python3 "$TASK_SCRIPT" move "$2" "$3" $AUTO_COMMIT_FLAG
         ;;
     "start")
         if [ -z "$2" ]; then
@@ -120,7 +144,7 @@ case "$1" in
             exit 1
         fi
         echo -e "${YELLOW}🚧 Starting work on $2...${NC}"
-        python3 "$TASK_SCRIPT" move "$2" "in-progress"
+        python3 "$TASK_SCRIPT" move "$2" "in-progress" $AUTO_COMMIT_FLAG
         ;;
     "complete"|"done")
         if [ -z "$2" ]; then
@@ -128,7 +152,7 @@ case "$1" in
             exit 1
         fi
         echo -e "${GREEN}✅ Completing task $2...${NC}"
-        python3 "$TASK_SCRIPT" move "$2" "completed"
+        python3 "$TASK_SCRIPT" move "$2" "completed" $AUTO_COMMIT_FLAG
         ;;
     "todo"|"reopen")
         if [ -z "$2" ]; then
@@ -136,7 +160,7 @@ case "$1" in
             exit 1
         fi
         echo -e "${BLUE}📋 Moving task $2 back to TODO...${NC}"
-        python3 "$TASK_SCRIPT" move "$2" "todo"
+        python3 "$TASK_SCRIPT" move "$2" "todo" $AUTO_COMMIT_FLAG
         ;;
     "stats"|"status")
         echo -e "${BLUE}📊 Task Statistics:${NC}"
