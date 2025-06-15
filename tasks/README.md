@@ -1,6 +1,6 @@
 # Task Management Index
 
-*Last updated: 2025-06-15 15:47:08*
+*Last updated: 2025-06-15 15:49:19*
 
 ## Overview
 
@@ -8,8 +8,8 @@ This directory contains all implementation tasks for the P2P AI Agents project, 
 
 ## Task Statistics
 
-- **Total Tasks**: 363
-- **Completed**: 11 (3.0%)
+- **Total Tasks**: 364
+- **Completed**: 12 (3.3%)
 - **In Progress**: 0
 - **TODO**: 352
 
@@ -21,7 +21,7 @@ Tasks that are planned but not yet started.
 ### 🚧 [In Progress Tasks](./in-progress/) (0 tasks)
 Tasks that are currently being worked on.
 
-### ✅ [Completed Tasks](./completed/) (11 tasks)
+### ✅ [Completed Tasks](./completed/) (12 tasks)
 Tasks that have been finished and verified.
 
 ## Task Management
@@ -65,6 +65,7 @@ Each task follows a standardized Markdown format with:
 
 ### TODO Tasks
 
+- [Task: Add Code Format Documentation](./todo/add-code-format-docs.md)
 - [Access control](./todo/core-implementation-core-implementation-access-con.md)
 - [Add load tests](./todo/core-implementation-core-implementation-add-load-t.md)
 - [Add missing information](./todo/core-implementation-core-implementation-add-missin.md)
@@ -416,7 +417,6 @@ Each task follows a standardized Markdown format with:
 - [Visualization setup](./todo/network-network-visualization-setup.md)
 - [Vulnerability testing](./todo/network-network-vulnerability-testing.md)
 - [Implement Critical Security Authentication System](./todo/security-auth-critical-system.md)
-- [Task: YOLO Mode Documentation and Testing Enhancement](./todo/yolo-validation-integration.md)
 
 ### In Progress Tasks
 
@@ -435,6 +435,7 @@ No tasks in this category.
 - [Test Auto-Commit Feature](./completed/test-auto-commit-feature.md)
 - [Test No Auto-Commit Feature](./completed/test-no-auto-commit-feature.md)
 - [Test Documentation Validation](./completed/test-validation-task.md)
+- [Task: YOLO Mode Documentation and Testing Enhancement](./completed/yolo-validation-integration.md)
 
 ---
 
