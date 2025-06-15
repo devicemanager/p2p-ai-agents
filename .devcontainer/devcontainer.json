@@ -25,6 +25,6 @@
     }
   },
   "forwardPorts": [3000, 8080],
-  "postCreateCommand": "rustc --version && cargo --version",
+  "postCreateCommand": "sudo apt-get update && sudo apt-get install -y build-essential libc6-dev pkg-config libssl-dev && rustc --version && cargo --version && cargo install cargo-llvm-cov && rustup component add rustfmt clippy llvm-tools-preview",
   "remoteUser": "vscode"
 }
