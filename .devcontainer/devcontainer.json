@@ -1,5 +1,5 @@
 {
-  "name": "Rust Development",
+  "name": "Rust Development with Docker Support",
   "image": "mcr.microsoft.com/devcontainers/rust:1-1-bullseye",
   "features": {
     "ghcr.io/devcontainers/features/common-utils:2": {
@@ -8,7 +8,11 @@
       "installOhMyZsh": true
     },
     "ghcr.io/devcontainers/features/git:1": {},
-    "ghcr.io/devcontainers/features/github-cli:1": {}
+    "ghcr.io/devcontainers/features/github-cli:1": {},
+    "ghcr.io/devcontainers/features/docker-in-docker:2": {
+      "dockerDashComposeVersion": "latest",
+      "installDockerBuildx": true
+    }
   },
   "customizations": {
     "vscode": {
@@ -16,7 +20,8 @@
         "rust-lang.rust-analyzer",
         "vadimcn.vscode-lldb",
         "serayuzgur.crates",
-        "tamasfe.even-better-toml"
+        "tamasfe.even-better-toml",
+        "ms-vscode-remote.remote-containers"
       ],
       "settings": {
         "rust-analyzer.check.command": "clippy",
@@ -24,7 +29,11 @@
       }
     }
   },
-  "forwardPorts": [3000, 8080],
+  "forwardPorts": [3000, 5432, 8000, 8080],
   "postCreateCommand": "sudo apt-get update && sudo apt-get install -y build-essential libc6-dev pkg-config libssl-dev lld && rustc --version && cargo --version && cargo install cargo-llvm-cov && rustup component add rustfmt clippy llvm-tools-preview",
-  "remoteUser": "vscode"
+  "remoteUser": "vscode",
+  "runArgs": ["--privileged"],
+  "containerEnv": {
+    "DOCKER_BUILDKIT": "1"
+  }
 }
