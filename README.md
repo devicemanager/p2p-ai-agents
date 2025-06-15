@@ -9,6 +9,12 @@
 [![Dependency Status](https://deps.rs/repo/github/p2p-ai-agents/p2p-ai-agents/status.svg)](https://deps.rs/repo/github/p2p-ai-agents/p2p-ai-agents)
 [![Code Coverage](https://codecov.io/gh/p2p-ai-agents/p2p-ai-agents/branch/main/graph/badge.svg)](https://codecov.io/gh/p2p-ai-agents/p2p-ai-agents)
 
+> **⚠️ WORK IN PROGRESS DISCLAIMER**
+> 
+> This project is currently in early development and serves as a foundational boilerplate for building distributed peer-to-peer AI agents. The current implementation provides basic structure and components, but many features are still being developed. This is not yet ready for production use.
+> 
+> We welcome contributions and feedback as we work toward a fully functional system!
+
 ## Vision
 
 This project aims to democratize AI by building a distributed, peer-to-peer (P2P) network of lightweight AI agents. Anyone can contribute their idle compute (PC, server, Raspberry Pi, etc.) to help process, chunk, and retrieve data—reducing the need for centralized, energy-intensive datacenters and making AI accessible to all.
@@ -17,52 +23,34 @@ This project aims to democratize AI by building a distributed, peer-to-peer (P2P
 
 ## Quick Links
 
-1. [Getting Started](docs/getting-started.md)
-   - [Installation](docs/getting-started.md#installation)
-   - [Quick Start Example](docs/getting-started.md#quick-start-example)
-   - [Development Setup](docs/getting-started.md#development-setup)
+1. [Getting Started](docs/user-guides/getting-started.md)
+   - [Agent Configuration](docs/user-guides/agent-configuration.md)
+   - [Security Best Practices](docs/user-guides/security-best-practices.md)
+   - [Troubleshooting](docs/user-guides/troubleshooting.md)
 
-2. [Architecture](docs/architecture.md)
-   - [High-Level Design](docs/architecture.md#high-level-design)
-   - [Component Details](docs/architecture.md#component-details)
-   - [Network Protocol](docs/architecture.md#network-protocol)
+2. [Architecture](docs/architecture/)
+   - [System Overview](docs/architecture/system-overview.md)
+   - [Data Flow](docs/architecture/data-flow.md)
+   - [Networking](docs/architecture/networking.md)
+   - [Security](docs/architecture/security.md)
 
-3. [Features](docs/features.md)
-   - [Core Capabilities](docs/features.md#core-capabilities)
-   - [Technical Features](docs/features.md#technical-features)
-   - [Specialized Agent Types](docs/features.md#specialized-agent-types)
+3. [Development](docs/development/)
+   - [Development Guide](docs/development/README.md)
+   - [Testing Guide](docs/development/testing-guide.md)
+   - [Implementation Docs](docs/implementation/)
 
-4. [Use Cases](docs/use-cases.md)
-   - [Distributed Document Processing](docs/use-cases.md#distributed-document-processing)
-   - [Collaborative Machine Learning](docs/use-cases.md#collaborative-machine-learning)
-   - [Data Processing Pipeline](docs/use-cases.md#data-processing-pipeline)
-
-5. [Development](docs/development.md)
-   - [Project Structure](docs/development.md#project-structure)
-   - [Testing Strategy](docs/development.md#testing-strategy)
-   - [Contributing Guidelines](docs/development.md#contributing-guidelines)
-
-6. [Deployment](docs/deployment.md)
-   - [Container Deployment](docs/deployment.md#container-deployment)
-   - [Kubernetes Deployment](docs/deployment.md#kubernetes-deployment)
-   - [Scaling Strategies](docs/deployment.md#scaling-strategies)
-
-7. [Security](docs/security.md)
-   - [Cryptographic Operations](docs/security.md#cryptographic-operations)
-   - [Access Control](docs/security.md#access-control)
-   - [Security Monitoring](docs/security.md#security-monitoring)
-
-8. [API Reference](docs/api-reference.md)
-   - [Core Types](docs/api-reference.md#core-types)
-   - [Common Use Cases](docs/api-reference.md#common-use-cases)
-   - [Component Details](docs/api-reference.md#component-details)
+4. [Documentation](docs/)
+   - [Documentation Index](docs/INDEX.md)
+   - [Quick Reference](docs/QUICK_REFERENCE.md)
+   - [Glossary](docs/GLOSSARY.md)
+   - [CLI Documentation](docs/cli.md)
 
 ## Community & Support
 
-- 📖 [Documentation](https://p2p-ai-agents.readthedocs.io/)
-- 💬 [Discord Community](https://discord.gg/p2p-ai-agents)
+- 📖 [Documentation](docs/)
+- 💬 [Discord Community](https://discord.gg/p2p-ai-agents) *(coming soon)*
 - 🐛 [Report Issues](https://github.com/p2p-ai-agents/p2p-ai-agents/issues)
-- 📧 [Email Support](mailto:support@p2p-ai-agents.org)
+- 📧 [Email Support](mailto:support@p2p-ai-agents.org) *(coming soon)*
 
 ## Development
 
@@ -103,7 +91,7 @@ This project aims to democratize AI by building a distributed, peer-to-peer (P2P
 
 ### Project Structure
 
-See [development documentation](docs/development.md) for detailed information about:
+See [development documentation](docs/development/) for detailed information about:
 - Code organization
 - Testing strategies
 - Contributing guidelines
@@ -113,8 +101,10 @@ See [development documentation](docs/development.md) for detailed information ab
 
 This project is licensed under either of:
 
-- Apache License, Version 2.0 ([LICENSE-APACHE](LICENSE-APACHE))
-- MIT License ([LICENSE-MIT](LICENSE-MIT))
+- Apache License, Version 2.0 
+- MIT License 
+
+See [LICENSE](LICENSE) for details.
 
 ## Acknowledgments
 

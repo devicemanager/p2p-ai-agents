@@ -1,7 +1,12 @@
 version: '3.8'
 
+# P2P AI Agents Docker Compose Configuration
+# This setup provides a complete development and testing environment
+# with all necessary dependencies pre-configured
+
 services:
-  # P2P AI Agent
+  # P2P AI Agent - Main application
+  # Built from Dockerfile which includes all Rust compilation dependencies
   p2p-agent:
     build: .
     container_name: p2p-ai-agent
