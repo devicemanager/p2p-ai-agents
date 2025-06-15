@@ -6,7 +6,7 @@ The P2P AI Agents project uses a Markdown-based task management system to track 
 
 - **Location**: `/tasks/` directory
 - **Format**: Markdown files with standardized structure
-- **Organization**: Tasks are organized into `todo/`, `in-progress/`, and `completed/` directories
+- **Organization**: Tasks are organized into `todo/`, `in-progress/` and `completed/` directories
 - **Automation**: Tasks are generated from implementation checklists and managed via scripts
 
 ## Directory Structure
@@ -45,8 +45,11 @@ tasks/
 # Start working on a task
 ./scripts/tasks.sh start task-name.md
 
-# Complete a task
+# Complete a task (with automatic commit and push)
 ./scripts/tasks.sh complete task-name.md
+
+# Complete a task without auto-commit
+./scripts/tasks.sh complete task-name.md --no-auto-commit
 
 # Move task back to TODO
 ./scripts/tasks.sh todo task-name.md
@@ -282,3 +285,46 @@ This system replaces the GitHub Issues workflow for implementation tracking:
 - **Local Development**: Fast, responsive task management
 
 The GitHub Issues workflow has been disabled and all existing issues have been converted to Markdown tasks.
+
+## Automation Features
+
+### Auto-Commit and Push
+
+By default, when a task is moved to `completed` status, the system automatically:
+
+1. **Commits changes** with a descriptive commit message
+2. **Pushes to remote** repository (if configured)
+3. **Updates task index** with latest statistics
+
+This automation ensures that:
+- Progress is immediately saved and backed up
+- Git history maintains clear task completion records
+- No manual commit steps are required
+
+#### Auto-Commit Behavior
+
+**Default (Auto-commit enabled):**
+```bash
+./scripts/tasks.sh complete my-task.md
+# ✅ Completing task my-task.md...
+# ✅ Moved my-task.md to completed  
+# ✅ Committed changes for task: my-task.md
+# 🚀 Pushed changes to remote repository
+```
+
+**With auto-commit disabled:**
+```bash
+./scripts/tasks.sh complete my-task.md --no-auto-commit
+# ✅ Completing task my-task.md...
+# ✅ Moved my-task.md to completed
+# (No commit or push)
+```
+
+#### When to Use --no-auto-commit
+
+- **Batch operations**: When completing multiple tasks
+- **Testing**: When experimenting with task workflows  
+- **Review first**: When you want to review changes before committing
+- **Custom commits**: When you prefer to create your own commit messages
+
+## Task File Structure
