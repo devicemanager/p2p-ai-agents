@@ -5,6 +5,7 @@ use tokio::time;
 mod discovery;
 mod transport;
 mod e2e;
+mod storage_perf;
 
 /// Common test utilities and fixtures
 mod common {
