@@ -31,6 +31,7 @@ Welcome to the **P2P AI Agents** documentation system. This dashboard provides s
 ### 👩‍💻 **Implementation & Development**
 - [Getting Started](user-guides/getting-started.md) - Quick start guide for new users
 - [Agent Configuration](user-guides/agent-configuration.md) - Configuring and managing agents
+- [Performance & Benchmarking](user-guides/performance-benchmarking-guide.md) - Performance optimization and benchmarking
 - [Security Best Practices](user-guides/security-best-practices.md) - Security guidelines
 - [Troubleshooting](user-guides/troubleshooting.md) - Common issues and solutions
 

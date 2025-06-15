@@ -445,4 +445,122 @@ mod tests {
     fn test_security_manager_new() {
         let _ = SecurityManager::new();
     }
+
+    // Test for PeerId public methods
+    #[test]
+    fn test_peer_id_creation() {
+        let id_str = "test-peer-123";
+        let peer_id = PeerId(id_str.to_string());
+
+        assert_eq!(peer_id.0, id_str);
+    }
+
+    #[test]
+    fn test_peer_id_equality() {
+        let id1 = PeerId("same-id".to_string());
+        let id2 = PeerId("same-id".to_string());
+        let id3 = PeerId("different-id".to_string());
+
+        assert_eq!(id1, id2);
+        assert_ne!(id1, id3);
+    }
+
+    // Test for Multiaddr public methods
+    #[test]
+    fn test_multiaddr_creation() {
+        let addr_str = "/ip4/127.0.0.1/tcp/8080";
+        let multiaddr = Multiaddr(addr_str.to_string());
+
+        assert_eq!(multiaddr.0, addr_str);
+    }
+
+    #[test]
+    fn test_multiaddr_equality() {
+        let addr1 = Multiaddr("/ip4/127.0.0.1/tcp/8080".to_string());
+        let addr2 = Multiaddr("/ip4/127.0.0.1/tcp/8080".to_string());
+        let addr3 = Multiaddr("/ip4/127.0.0.1/tcp/9090".to_string());
+
+        assert_eq!(addr1, addr2);
+        assert_ne!(addr1, addr3);
+    }
+
+    // Test for ResourceLimits
+    #[test]
+    fn test_resource_limits_creation() {
+        let limits = ResourceLimits {
+            max_bandwidth: 1024 * 1024, // 1MB/s
+            max_memory: 512 * 1024 * 1024, // 512MB
+            max_connections: 100,
+        };
+
+        assert_eq!(limits.max_bandwidth, 1024 * 1024);
+        assert_eq!(limits.max_memory, 512 * 1024 * 1024);
+        assert_eq!(limits.max_connections, 100);
+    }    // Test for PeerInfo creation and manipulation
+    #[test]
+    fn test_peer_info_creation() {
+        let peer_id = PeerId("test-peer".to_string());
+        let addresses = vec![
+            Multiaddr("/ip4/127.0.0.1/tcp/8080".to_string()),
+            Multiaddr("/ip4/192.168.1.100/tcp/8080".to_string()),
+        ];
+        let now = chrono::Utc::now();
+        
+        let peer_info = PeerInfo {
+            peer_id: peer_id.clone(),
+            addresses: addresses.clone(),
+            last_seen: now,
+            reputation: 50,
+            capabilities: PeerCapabilities {},
+            status: ConnectionStatus::Connected,
+        };
+        
+        assert_eq!(peer_info.peer_id, peer_id);
+        assert_eq!(peer_info.addresses.len(), 2);
+        assert_eq!(peer_info.reputation, 50);
+        assert!(matches!(peer_info.status, ConnectionStatus::Connected));
+    }
+
+    // Test ConnectionStatus enum
+    #[test]
+    fn test_connection_status_variants() {
+        let connected = ConnectionStatus::Connected;
+        let disconnected = ConnectionStatus::Disconnected;
+
+        assert!(matches!(connected, ConnectionStatus::Connected));
+        assert!(matches!(disconnected, ConnectionStatus::Disconnected));
+        assert_ne!(
+            std::mem::discriminant(&connected),
+            std::mem::discriminant(&disconnected)
+        );
+    }
+
+    // Test NetworkConfig creation and validation
+    #[test]
+    fn test_network_config_creation() {
+        let config = NetworkConfig {
+            listen_addr: "127.0.0.1:8080".parse().unwrap(),
+            bootstrap_peers: vec![PeerInfo {
+                peer_id: PeerId("bootstrap-peer".to_string()),
+                addresses: vec![Multiaddr("/ip4/127.0.0.1/tcp/8081".to_string())],
+                last_seen: chrono::Utc::now(),
+                reputation: 100,
+                capabilities: PeerCapabilities {},
+                status: ConnectionStatus::Connected,
+            }],
+            max_peers: 200,
+            protocol_config: ProtocolConfig {},
+            resource_limits: ResourceLimits {
+                max_bandwidth: 1024 * 1024,
+                max_memory: 1024 * 1024 * 1024,
+                max_connections: 200,
+            },
+            security_config: SecurityConfig {},
+        };
+
+        assert_eq!(config.listen_addr.port(), 8080);
+        assert_eq!(config.bootstrap_peers.len(), 1);
+        assert_eq!(config.max_peers, 200);
+        assert_eq!(config.resource_limits.max_connections, 200);
+    }
 }
