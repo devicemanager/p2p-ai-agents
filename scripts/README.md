@@ -1,6 +1,6 @@
-# 📚 Local Documentation Scripts
+# 📚 Local Documentation and Task Management Scripts
 
-This directory contains scripts for running documentation checks and maintenance tasks locally, providing faster feedback than waiting for CI workflows.
+This directory contains scripts for running documentation checks, maintaining documentation quality, and managing implementation tasks locally, providing faster feedback than waiting for CI workflows.
 
 ## 🚀 Quick Start
 
@@ -14,13 +14,32 @@ This directory contains scripts for running documentation checks and maintenance
 ./scripts/local_docs.sh todos       # Check TODO/FIXME items  
 ./scripts/local_docs.sh links       # Quick link check
 ./scripts/local_docs.sh stats       # Show documentation statistics
+./scripts/local_docs.sh policy      # Check 500-line policy
 ./scripts/local_docs.sh help        # Show all available commands
+```
+
+### Task Management System
+```bash
+# Task management commands
+./scripts/tasks.sh help             # Show task management help
+./scripts/tasks.sh generate         # Generate tasks from checklists
+./scripts/tasks.sh stats            # Show task statistics
+./scripts/tasks.sh start task.md    # Start working on a task
+./scripts/tasks.sh complete task.md # Complete a task
+./scripts/tasks.sh search "term"    # Search for tasks
 ```
 
 ### Individual Python Scripts
 ```bash
 # Comprehensive validation (same as CI)
 python3 scripts/validate_docs.py
+
+# Task management backend
+python3 scripts/manage_tasks.py generate
+python3 scripts/manage_tasks.py stats
+
+# Legacy issue creation (disabled)
+python3 scripts/create_implementation_issues.py
 
 # Generate documentation from templates
 python3 scripts/generate_docs.py
@@ -29,24 +48,40 @@ python3 scripts/generate_docs.py
 bash scripts/test_doc_format.sh
 ```
 
-## 📋 Available Commands
+## 📋 Available Scripts
 
-| Command | Description | Usage |
-|---------|-------------|-------|
-| `local_docs.sh` | Main documentation management script | `./scripts/local_docs.sh [command]` |
-| `validate_docs.py` | Comprehensive validation script | `python3 scripts/validate_docs.py` |
-| `generate_docs.py` | Generate docs from templates | `python3 scripts/generate_docs.py` |
-| `test_doc_format.sh` | Check documentation formatting | `bash scripts/test_doc_format.sh` |
+| Script | Type | Description | Usage |
+|--------|------|-------------|-------|
+| `local_docs.sh` | Documentation | Main documentation management script | `./scripts/local_docs.sh [command]` |
+| `tasks.sh` | Task Management | Convenient task management wrapper | `./scripts/tasks.sh [command]` |
+| `manage_tasks.py` | Task Management | Core task management backend | `python3 scripts/manage_tasks.py [action]` |
+| `validate_docs.py` | Documentation | Comprehensive validation script | `python3 scripts/validate_docs.py` |
+| `generate_docs.py` | Documentation | Generate docs from templates | `python3 scripts/generate_docs.py` |
+| `test_doc_format.sh` | Documentation | Check documentation formatting | `bash scripts/test_doc_format.sh` |
 
 ## 🎯 Common Workflows
 
 ### Before Committing Changes
 ```bash
-# Quick check
+# Quick documentation check
 ./scripts/local_docs.sh validate
 
-# Full check with stats
+# Check task status
+./scripts/tasks.sh stats
+
+# Full documentation check
 ./scripts/local_docs.sh
+```
+
+### Working with Tasks
+```bash
+# Start implementing a feature
+./scripts/tasks.sh search "network manager"
+./scripts/tasks.sh start network-manager-task.md
+
+# Complete implementation
+./scripts/tasks.sh complete network-manager-task.md
+./scripts/tasks.sh stats  # Check updated progress
 ```
 
 ### Working on Documentation
