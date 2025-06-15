@@ -5,6 +5,10 @@ services:
   db:
     image: supabase/postgres:15.1.0.147
     restart: unless-stopped
+    privileged: true
+    security_opt:
+      - seccomp:unconfined
+      - apparmor:unconfined
     ports:
       - "5432:5432"
     environment:
@@ -13,7 +17,7 @@ services:
       POSTGRES_USER: postgres
     volumes:
       - db_data:/var/lib/postgresql/data
-      - ./lab/config/supabase/init.sql:/docker-entrypoint-initdb.d/init.sql
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 5s
@@ -31,7 +35,7 @@ services:
       - "3000:3000"
     environment:
       PGRST_DB_URI: postgres://authenticator:your-super-secret-jwt-token-with-at-least-32-characters-long@db:5432/postgres
-      PGRST_DB_SCHEMAS: public,storage
+      PGRST_DB_SCHEMAS: public
       PGRST_DB_ANON_ROLE: anon
       PGRST_JWT_SECRET: your-super-secret-jwt-token-with-at-least-32-characters-long
       PGRST_DB_USE_LEGACY_GUCS: "false"
@@ -134,7 +138,7 @@ services:
       KONG_DNS_ORDER: LAST,A,CNAME
       KONG_PLUGINS: request-transformer,cors,key-auth,acl
     volumes:
-      - ./lab/config/supabase/kong.yml:/var/lib/kong/kong.yml
+      - ./kong.yml:/var/lib/kong/kong.yml
     depends_on:
       - rest
       - auth
