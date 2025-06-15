@@ -13,6 +13,7 @@ help:
 	@echo "  fmt        - Format code"
 	@echo "  fmt-check  - Check code formatting"
 	@echo "  clippy     - Run clippy linter"
+	@echo "  clippy-strict - Run clippy linter (treat warnings as errors)"
 	@echo "  coverage   - Generate code coverage report"
 	@echo "  clean      - Clean build artifacts"
 	@echo "  install-tools - Install development tools"
@@ -52,6 +53,11 @@ fmt-check:
 # Run clippy
 clippy:
 	@echo "Running clippy..."
+	cargo clippy --all-targets --all-features
+
+# Run clippy with strict warnings (treat warnings as errors)
+clippy-strict:
+	@echo "Running clippy (strict mode)..."
 	cargo clippy --all-targets --all-features -- -D warnings
 
 # Generate coverage report
@@ -72,7 +78,7 @@ clean:
 	cargo clean
 
 # CI-like check that runs all validations
-ci-check: fmt-check clippy check test
+ci-check: fmt-check clippy-strict check test
 
 # Quick development check
 dev-check: fmt check test
