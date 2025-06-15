@@ -2,6 +2,8 @@
 
 This directory contains additional documentation and reference materials for P2P AI Agents.
 
+<!-- Updated workflow test -->
+
 ## 📁 Contents
 
 - **[INDEX.md](INDEX.md)** - Complete documentation overview and navigation guide
