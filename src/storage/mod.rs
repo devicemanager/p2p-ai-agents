@@ -98,7 +98,9 @@ mod tests {
 
     #[tokio::test]
     async fn compare_storage_layer_performance() {
-        use super::local::{LocalStorage, DistributedStorage, CacheStorage, CustomStorage, Storage};
+        use super::local::{
+            CacheStorage, CustomStorage, DistributedStorage, LocalStorage, Storage,
+        };
         use std::time::Instant;
         let n = 10_000;
         let local = LocalStorage::new();

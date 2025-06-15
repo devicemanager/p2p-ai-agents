@@ -1,13 +1,13 @@
 //! Resource monitoring for agents
-//! 
+//!
 //! This module provides functionality for monitoring and managing
 //! agent resources, including CPU, memory, storage, and network usage.
 
+use serde::{Deserialize, Serialize};
 use std::sync::Arc;
-use serde::{Serialize, Deserialize};
-use tokio::sync::RwLock;
+use sysinfo::{get_current_pid, System};
 use thiserror::Error;
-use sysinfo::{System, get_current_pid};
+use tokio::sync::RwLock;
 
 use crate::agent::ResourceLimits;
 
@@ -116,7 +116,7 @@ impl ResourceMonitor {
         Ok(ResourceUsage {
             cpu: process.cpu_usage() / 100.0,
             memory: process.memory(),
-            storage: 0, // TODO: Implement storage monitoring
+            storage: 0,   // TODO: Implement storage monitoring
             bandwidth: 0, // TODO: Implement bandwidth monitoring
         })
     }
@@ -146,9 +146,9 @@ mod tests {
     async fn test_resource_monitor() {
         let limits = ResourceLimits {
             max_cpu: 0.8,
-            max_memory: 1024 * 1024 * 1024, // 1GB
+            max_memory: 1024 * 1024 * 1024,       // 1GB
             max_storage: 10 * 1024 * 1024 * 1024, // 10GB
-            max_bandwidth: 1024 * 1024, // 1MB/s
+            max_bandwidth: 1024 * 1024,           // 1MB/s
         };
 
         let monitor = ResourceMonitor::new(&limits).unwrap();
@@ -165,9 +165,9 @@ mod tests {
     #[tokio::test]
     async fn test_resource_limits() {
         let limits = ResourceLimits {
-            max_cpu: 0.1, // Very low CPU limit
-            max_memory: 1024, // Very low memory limit
-            max_storage: 1024, // Very low storage limit
+            max_cpu: 0.1,        // Very low CPU limit
+            max_memory: 1024,    // Very low memory limit
+            max_storage: 1024,   // Very low storage limit
             max_bandwidth: 1024, // Very low bandwidth limit
         };
 
@@ -181,7 +181,10 @@ mod tests {
         let result = monitor.check_limits().await;
         if result.is_err() {
             let err = result.unwrap_err();
-            assert!(matches!(err, ResourceError::CpuLimitExceeded | ResourceError::MemoryLimitExceeded));
+            assert!(matches!(
+                err,
+                ResourceError::CpuLimitExceeded | ResourceError::MemoryLimitExceeded
+            ));
         }
     }
 }

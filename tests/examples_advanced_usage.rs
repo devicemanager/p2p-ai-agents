@@ -1,6 +1,6 @@
 //! Integration test for advanced usage examples: protocol and metrics.
-use serde::{Serialize, Deserialize};
 use p2p_ai_agents::network::MetricsCollector;
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 enum ProtocolState {

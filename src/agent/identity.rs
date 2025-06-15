@@ -1,12 +1,12 @@
 //! Cryptographic identity management for agents
-//! 
+//!
 //! This module provides functionality for creating and managing
 //! cryptographic identities for agents, including key generation,
 //! signing, and verification.
 
-use std::path::Path;
-use ed25519_dalek::{SigningKey, VerifyingKey, Signer, Signature, Verifier};
+use ed25519_dalek::{Signature, Signer, SigningKey, Verifier, VerifyingKey};
 use rand::rngs::OsRng;
+use std::path::Path;
 use thiserror::Error;
 
 /// Cryptographic identity for an agent

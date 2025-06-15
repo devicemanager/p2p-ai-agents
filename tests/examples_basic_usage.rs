@@ -1,6 +1,9 @@
 //! Integration test for basic usage examples from the documentation.
-use p2p_ai_agents::network::{NetworkConfig, ProtocolConfig, ResourceLimits, SecurityConfig, NetworkManager, PeerInfo, PeerId, Multiaddr, PeerCapabilities, ConnectionStatus, NetworkMessage, NetworkError};
 use chrono::Utc;
+use p2p_ai_agents::network::{
+    ConnectionStatus, Multiaddr, NetworkConfig, NetworkError, NetworkManager, NetworkMessage,
+    PeerCapabilities, PeerId, PeerInfo, ProtocolConfig, ResourceLimits, SecurityConfig,
+};
 
 #[tokio::test]
 async fn test_network_initialization_and_message() {
@@ -29,7 +32,9 @@ async fn test_network_initialization_and_message() {
         status: ConnectionStatus::Connected,
     };
     // Example stub: add peer address to connected_peers
-    manager.add_connected_peer("127.0.0.1:8080".parse().unwrap()).await;
+    manager
+        .add_connected_peer("127.0.0.1:8080".parse().unwrap())
+        .await;
 
     // Simulate sending and receiving a message using public methods
     let msg = NetworkMessage {
