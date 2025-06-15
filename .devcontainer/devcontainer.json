@@ -1,11 +1,29 @@
 {
-    "name": "My Rust Project",
-    "dockerFile": "Dockerfile",
+    "name": "P2P AI Agents Rust Project",
+    "dockerfile": "Dockerfile",
     "context": "..",
     "features": {
-        "rust": {}
+        "ghcr.io/devcontainers/features/rust:1": {
+            "version": "latest",
+            "profile": "default"
+        },
+        "ghcr.io/devcontainers/features/git:1": {}
     },
-    "settings": {
-        "rust-analyzer.cargo.loadOutDirsFromCheck": true
-    }
+    "customizations": {
+        "vscode": {
+            "extensions": [
+                "rust-lang.rust-analyzer",
+                "vadimcn.vscode-lldb",
+                "serayuzgur.crates",
+                "tamasfe.even-better-toml"
+            ],
+            "settings": {
+                "rust-analyzer.cargo.loadOutDirsFromCheck": true,
+                "rust-analyzer.checkOnSave.command": "clippy"
+            }
+        }
+    },
+    "forwardPorts": [8080, 3000],
+    "postCreateCommand": "cargo --version && rustc --version",
+    "remoteUser": "vscode"
 }
