@@ -1,9 +1,0 @@
-# Python dependencies for documentation processing
-# These are installed in GitHub Actions workflows for documentation tasks
-
-PyYAML>=6.0
-pathlib2>=2.3.0  # Enhanced pathlib features (pathlib is built-in for Python 3.4+)
-
-# Optional dependencies for enhanced functionality
-# markdown>=3.4.0  # If we add markdown processing in the future
-# jinja2>=3.0.0    # If we add template processing in the future
