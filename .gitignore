@@ -135,7 +135,8 @@ data/
 agents/
 .agent_data/
 peer_data/
-storage/
+# Ignore runtime storage but not source code
+/storage/
 cache/
 
 # Configuration files with secrets
