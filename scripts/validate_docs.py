@@ -178,7 +178,16 @@ class DocumentationValidator:
         return False
 
 if __name__ == "__main__":
-    validator = DocumentationValidator("/workspaces/p2p-ai-agents")
+    # Use current working directory or the directory containing this script
+    import sys
+    if len(sys.argv) > 1:
+        root_path = sys.argv[1]
+    else:
+        # Get the project root (parent of scripts directory)
+        script_dir = Path(__file__).parent
+        root_path = script_dir.parent
+        
+    validator = DocumentationValidator(str(root_path))
     success = validator.validate_all()
     
     # Count critical issues (broken links)

@@ -19,9 +19,9 @@ Thank you for your interest in contributing! This project is written in Rust. Pl
 
 ## 📖 Related Documentation
 
-- **[Documentation Index](docs/INDEX.md)** - Complete documentation overview
-- **[README](README.md)** - Project overview and getting started
-- **[Quick Reference](docs/QUICK_REFERENCE.md)** - Commands and configuration
+- **[Documentation Index](INDEX.md)** - Complete documentation overview
+- **[README](../README.md)** - Project overview and getting started
+- **[Quick Reference](QUICK_REFERENCE.md)** - Commands and configuration
 - **[High Level Design](HIGH_LEVEL_DESIGN.md)** - Technical architecture
 - **[Agent Protocol](AGENT_PROTOCOL.md)** - Communication protocol specification
 
@@ -292,8 +292,8 @@ New contributors can request mentorship through:
 
 - [Architecture Overview](HIGH_LEVEL_DESIGN.md)
 - [Protocol Specification](AGENT_PROTOCOL.md)
-- [Developer Tutorials](docs/tutorials/)
-- [FAQ](docs/FAQ.md)
+- [User Guides](user-guides/)
+- [Troubleshooting](user-guides/troubleshooting.md)
 
 ## License
 
@@ -351,6 +351,6 @@ pre-commit run --all-files
 find . -name "*.py" -o -name "*.md" | xargs wc -l | awk '$1 > 500'
 ```
 
-See **[500-Line Limit Policy](docs/500_LINE_LIMIT_POLICY.md)** for complete guidelines.
+See **[500-Line Limit Policy](500_LINE_LIMIT_POLICY.md)** for complete guidelines.
 
 *Note: This contributing guide is continuously updated. Check the [documentation](https://p2p-agent.readthedocs.io/) for the latest contribution guidelines.*

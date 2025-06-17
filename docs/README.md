@@ -14,10 +14,13 @@ This directory contains additional documentation and reference materials for P2P
 The core documentation files are located in the project root:
 
 - **[../README.md](../README.md)** - Main project documentation (367 lines)
-- **[../HIGH_LEVEL_DESIGN.md](../HIGH_LEVEL_DESIGN.md)** - Technical architecture (287 lines)  
-- **[../AGENT_PROTOCOL.md](../AGENT_PROTOCOL.md)** - Protocol specification (319 lines)
-- **[../CONTRIBUTING.md](../CONTRIBUTING.md)** - Development guidelines (319 lines)
-- **[../CODE_OF_CONDUCT.md](../CODE_OF_CONDUCT.md)** - Community standards (147 lines)
+- **[HIGH_LEVEL_DESIGN.md](HIGH_LEVEL_DESIGN.md)** - Technical architecture (287 lines)  
+- **[AGENT_PROTOCOL.md](AGENT_PROTOCOL.md)** - Protocol specification (319 lines)
+- **[CONTRIBUTING.md](CONTRIBUTING.md)** - Development guidelines (357 lines)
+- **[CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)** - Community standards (147 lines)
+- **[SUPABASE_SETUP_COMPLETE.md](SUPABASE_SETUP_COMPLETE.md)** - Supabase migration summary
+- **[PLUGIN_SYSTEM_IMPLEMENTATION_COMPLETE.md](PLUGIN_SYSTEM_IMPLEMENTATION_COMPLETE.md)** - Plugin system documentation
+- **[GITHUB_WORKFLOWS_INTEGRATION.md](GITHUB_WORKFLOWS_INTEGRATION.md)** - GitHub workflows integration
 
 ## 🎯 File Size Analysis
 
@@ -25,13 +28,16 @@ All documentation files are optimally sized (under 500 lines each):
 
 | File | Lines | Purpose |
 |------|-------|---------|
-| README.md | 367 | Project overview and getting started |
-| CONTRIBUTING.md | 319 | Development guidelines |
+| ../README.md | 367 | Project overview and getting started |
+| CONTRIBUTING.md | 357 | Development guidelines |
 | AGENT_PROTOCOL.md | 319 | Protocol specification |
 | HIGH_LEVEL_DESIGN.md | 287 | System architecture |
 | CODE_OF_CONDUCT.md | 147 | Community standards |
-| docs/INDEX.md | ~200 | Documentation index |
-| docs/QUICK_REFERENCE.md | ~250 | Quick reference guide |
+| INDEX.md | ~200 | Documentation index |
+| QUICK_REFERENCE.md | ~250 | Quick reference guide |
+| SUPABASE_SETUP_COMPLETE.md | ~100 | Supabase migration summary |
+| PLUGIN_SYSTEM_IMPLEMENTATION_COMPLETE.md | ~150 | Plugin system documentation |
+| GITHUB_WORKFLOWS_INTEGRATION.md | ~100 | GitHub workflows integration |
 
 ## 🧭 Navigation Strategy
 
@@ -54,13 +60,13 @@ Each major document includes navigation links to related documentation at the bo
 3. Check [INDEX.md](INDEX.md) for comprehensive overview
 
 ### For Developers
-1. Read [CONTRIBUTING.md](../CONTRIBUTING.md)
-2. Study [HIGH_LEVEL_DESIGN.md](../HIGH_LEVEL_DESIGN.md)
-3. Reference [AGENT_PROTOCOL.md](../AGENT_PROTOCOL.md)
+1. Read [CONTRIBUTING.md](CONTRIBUTING.md)
+2. Study [HIGH_LEVEL_DESIGN.md](HIGH_LEVEL_DESIGN.md)
+3. Reference [AGENT_PROTOCOL.md](AGENT_PROTOCOL.md)
 
 ### For System Architects
-1. Focus on [HIGH_LEVEL_DESIGN.md](../HIGH_LEVEL_DESIGN.md)
-2. Review [AGENT_PROTOCOL.md](../AGENT_PROTOCOL.md)
+1. Focus on [HIGH_LEVEL_DESIGN.md](HIGH_LEVEL_DESIGN.md)
+2. Review [AGENT_PROTOCOL.md](AGENT_PROTOCOL.md)
 3. Check configuration examples in [../config/](../config/)
 
 ---

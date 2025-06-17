@@ -5,6 +5,16 @@ pub mod local;
 #[cfg(feature = "storage-supabase")]
 pub mod supabase;
 
+/// Plugin system for dynamic storage backend registration
+pub mod plugin;
+
+/// Storage manager for orchestrating multiple backends
+pub mod manager;
+
+// Re-exports for convenience
+pub use manager::{BackendConfig, ManagerError, StorageManager, StorageMetrics, StoragePolicy};
+pub use plugin::{PluginError, StorageConfig, StoragePlugin, StorageRegistry};
+
 #[cfg(test)]
 mod tests {
     use super::local::{LocalStorage, Storage};
@@ -138,8 +148,7 @@ mod tests {
             url: "https://test.supabase.co".to_string(),
             anon_key: "test-key".to_string(),
             service_role_key: None,
-            schema: "public".to_string(),
-            table_name: "test_storage".to_string(),
+            bucket_name: "test_storage".to_string(),
             timeout: 30,
             max_retries: 3,
         };
@@ -157,7 +166,6 @@ mod tests {
         let config = SupabaseConfig::default();
         let json = serde_json::to_string(&config).expect("Should serialize");
         let deserialized: SupabaseConfig = serde_json::from_str(&json).expect("Should deserialize");
-        assert_eq!(config.schema, deserialized.schema);
-        assert_eq!(config.table_name, deserialized.table_name);
+        assert_eq!(config.bucket_name, deserialized.bucket_name);
     }
 }

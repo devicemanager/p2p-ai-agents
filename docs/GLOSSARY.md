@@ -119,7 +119,7 @@ Use this checklist to validate terminology usage:
 ## Related Documentation
 
 - [Style Guide](implementation/network/STYLE_GUIDE.md) - Documentation formatting standards
-- [Contributing Guide](../CONTRIBUTING.md) - Contribution guidelines
+- [Contributing Guide](CONTRIBUTING.md) - Contribution guidelines
 - [Architecture Overview](architecture/system-overview.md) - System architecture
 
 ---

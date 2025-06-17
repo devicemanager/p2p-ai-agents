@@ -373,7 +373,7 @@ cargo test --release -- --bench
    - [Implementation Docs](../implementation/README.md)
 
 4. **Contributing**
-   - See [CONTRIBUTING.md](../../CONTRIBUTING.md)
+   - See [CONTRIBUTING.md](../CONTRIBUTING.md)
    - Check out [GitHub Issues](https://github.com/p2p-ai-agents/p2p-ai-agents/issues)
 
 ## Development Resources

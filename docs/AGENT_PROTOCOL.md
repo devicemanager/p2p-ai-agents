@@ -299,9 +299,9 @@ The protocol supports custom message types through extension mechanism:
 
 ## 📖 Related Documentation
 
-- **[Documentation Index](docs/INDEX.md)** - Complete documentation overview
+- **[Documentation Index](INDEX.md)** - Complete documentation overview
 - **[README](README.md)** - Project overview and getting started
-- **[Quick Reference](docs/QUICK_REFERENCE.md)** - Commands and configuration
+- **[Quick Reference](QUICK_REFERENCE.md)** - Commands and configuration
 - **[High Level Design](HIGH_LEVEL_DESIGN.md)** - Technical architecture
 - **[Contributing Guide](CONTRIBUTING.md)** - Development guidelines
 
