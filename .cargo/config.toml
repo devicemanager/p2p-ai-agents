@@ -3,9 +3,17 @@
 # This helps catch compilation issues early
 # all-features = true
 
-[target.'cfg(all())']
-# Use faster linker on Linux
+[target.'cfg(target_os = "linux")']
+# Use faster linker on Linux only
 rustflags = ["-C", "link-arg=-fuse-ld=lld"]
+
+[target.aarch64-apple-darwin]
+# Use the system linker on macOS
+# No additional flags needed, will use default system linker
+
+[target.x86_64-apple-darwin]
+# Use the system linker on macOS
+# No additional flags needed, will use default system linker
 
 [alias]
 # Useful cargo aliases

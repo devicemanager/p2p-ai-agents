@@ -1,5 +1,10 @@
 # Makefile for P2P AI Agents project
 
+# Ensure cargo is available by sourcing the cargo environment
+SHELL := /bin/zsh
+.SHELLFLAGS := -c
+CARGO_ENV := source "$$HOME/.cargo/env" &&
+
 .PHONY: help check test build fmt clippy coverage clean install-tools all
 
 # Default target
@@ -22,60 +27,60 @@ help:
 # Install required development tools
 install-tools:
 	@echo "Installing development tools..."
-	cargo install cargo-llvm-cov
-	rustup component add rustfmt clippy llvm-tools-preview
+	$(CARGO_ENV) cargo install cargo-llvm-cov
+	$(CARGO_ENV) rustup component add rustfmt clippy llvm-tools-preview
 
 # Check compilation
 check:
 	@echo "Checking compilation..."
-	cargo check --all-targets --all-features
+	$(CARGO_ENV) cargo check --all-targets --all-features
 
 # Run tests
 test:
 	@echo "Running tests..."
-	cargo test --all-features --workspace
+	$(CARGO_ENV) cargo test --all-features --workspace
 
 # Build all targets
 build:
 	@echo "Building all targets..."
-	cargo build --all-targets --all-features
+	$(CARGO_ENV) cargo build --all-targets --all-features
 
 # Format code
 fmt:
 	@echo "Formatting code..."
-	cargo fmt --all
+	$(CARGO_ENV) cargo fmt --all
 
 # Check code formatting
 fmt-check:
 	@echo "Checking code formatting..."
-	cargo fmt --all -- --check
+	$(CARGO_ENV) cargo fmt --all -- --check
 
 # Run clippy
 clippy:
 	@echo "Running clippy..."
-	cargo clippy --all-targets --all-features
+	$(CARGO_ENV) cargo clippy --all-targets --all-features
 
 # Run clippy with strict warnings (treat warnings as errors)
 clippy-strict:
 	@echo "Running clippy (strict mode)..."
-	cargo clippy --all-targets --all-features -- -D warnings
+	$(CARGO_ENV) cargo clippy --all-targets --all-features -- -D warnings
 
 # Generate coverage report
 coverage:
 	@echo "Generating coverage report..."
-	cargo llvm-cov --all-features --workspace --lcov --output-path lcov.info
+	$(CARGO_ENV) cargo llvm-cov --all-features --workspace --lcov --output-path lcov.info
 	@echo "Coverage report generated: lcov.info"
 
 # Generate HTML coverage report
 coverage-html:
 	@echo "Generating HTML coverage report..."
-	cargo llvm-cov --all-features --workspace --html
+	$(CARGO_ENV) cargo llvm-cov --all-features --workspace --html
 	@echo "HTML coverage report generated in target/llvm-cov/html/"
 
 # Clean build artifacts
 clean:
 	@echo "Cleaning build artifacts..."
-	cargo clean
+	$(CARGO_ENV) cargo clean
 
 # CI-like check that runs all validations
 ci-check: fmt-check clippy-strict check test
