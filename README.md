@@ -4,7 +4,7 @@
 [![Rust](https://img.shields.io/badge/Rust-1.70%2B-blue.svg)](https://www.rust-lang.org)
 [![Crates.io](https://img.shields.io/crates/v/p2p-ai-agents.svg)](https://crates.io/crates/p2p-ai-agents)
 [![Build Status](https://img.shields.io/badge/Build-Passing-green.svg)](https://github.com/p2p-ai-agents/p2p-ai-agents)
-[![Contributors](https://img.shields.io/badge/Contributors-Welcome-brightgreen.svg)](CONTRIBUTING.md)
+[![Contributors](https://img.shields.io/badge/Contributors-Welcome-brightgreen.svg)](docs/CONTRIBUTING.md)
 [![Rust Documentation](https://img.shields.io/badge/docs-rustdoc-blue.svg)](https://docs.rs/p2p-ai-agents)
 [![Dependency Status](https://deps.rs/repo/github/p2p-ai-agents/p2p-ai-agents/status.svg)](https://deps.rs/repo/github/p2p-ai-agents/p2p-ai-agents)
 [![Code Coverage](https://codecov.io/gh/p2p-ai-agents/p2p-ai-agents/branch/main/graph/badge.svg)](https://codecov.io/gh/p2p-ai-agents/p2p-ai-agents)

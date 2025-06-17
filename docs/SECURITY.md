@@ -117,10 +117,10 @@ We take the security of P2P AI Agents seriously. If you believe you have found a
 
 ## Security Resources
 
-- [Security Documentation](docs/security.md)
-- [Security Best Practices](docs/security-best-practices.md)
-- [Security Configuration Guide](docs/security-configuration.md)
-- [Security FAQ](docs/security-faq.md)
+- [Security Architecture](architecture/security.md)
+- [Security Best Practices](user-guides/security-best-practices.md)
+- [Network Security](implementation/network/security/)
+- [Troubleshooting](user-guides/troubleshooting.md)
 
 ## Security Team
 
@@ -132,7 +132,7 @@ Our security team consists of:
 
 ## Security Acknowledgments
 
-We thank all security researchers who have responsibly disclosed vulnerabilities to us. See our [Security Hall of Fame](docs/security-hall-of-fame.md) for a list of contributors.
+We thank all security researchers who have responsibly disclosed vulnerabilities to us.
 
 ---
 

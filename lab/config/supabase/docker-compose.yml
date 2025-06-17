@@ -1,149 +1,23 @@
-# Local Supabase Docker Setup for Performance Testing
+version: '3.8'
 
 services:
-  # Supabase PostgreSQL Database
+  # PostgreSQL Database (for local development if needed)
   db:
-    image: supabase/postgres:15.1.0.147
+    image: postgres:15
     restart: unless-stopped
-    privileged: true
-    security_opt:
-      - seccomp:unconfined
-      - apparmor:unconfined
     ports:
       - "5432:5432"
     environment:
-      POSTGRES_PASSWORD: your-super-secret-jwt-token-with-at-least-32-characters-long
-      POSTGRES_DB: postgres
-      POSTGRES_USER: postgres
+      POSTGRES_DB: ${POSTGRES_DB:-postgres}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-your-super-secret-jwt-token-with-at-least-32-characters-long}
     volumes:
-      - db_data:/var/lib/postgresql/data
-      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+      - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
-      interval: 5s
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres}"]
+      interval: 10s
       timeout: 5s
       retries: 5
 
-  # Supabase API Gateway (PostgREST)
-  rest:
-    image: postgrest/postgrest:v11.2.0
-    depends_on:
-      db:
-        condition: service_healthy
-    restart: unless-stopped
-    ports:
-      - "3000:3000"
-    environment:
-      PGRST_DB_URI: postgres://authenticator:your-super-secret-jwt-token-with-at-least-32-characters-long@db:5432/postgres
-      PGRST_DB_SCHEMAS: public
-      PGRST_DB_ANON_ROLE: anon
-      PGRST_JWT_SECRET: your-super-secret-jwt-token-with-at-least-32-characters-long
-      PGRST_DB_USE_LEGACY_GUCS: "false"
-    command: 
-      - postgrest
-
-  # Supabase Auth (Gotrue)
-  auth:
-    image: supabase/gotrue:v2.99.0
-    depends_on:
-      db:
-        condition: service_healthy
-    restart: unless-stopped
-    ports:
-      - "9999:9999"
-    environment:
-      GOTRUE_API_HOST: "0.0.0.0"
-      GOTRUE_API_PORT: "9999"
-      GOTRUE_DB_DRIVER: postgres
-      GOTRUE_DB_DATABASE_URL: postgres://supabase_auth_admin:your-super-secret-jwt-token-with-at-least-32-characters-long@db:5432/postgres
-      GOTRUE_SITE_URL: http://localhost:3000
-      GOTRUE_URI_ALLOW_LIST: "*"
-      GOTRUE_JWT_SECRET: your-super-secret-jwt-token-with-at-least-32-characters-long
-      GOTRUE_JWT_EXP: 3600
-      GOTRUE_JWT_DEFAULT_GROUP_NAME: authenticated
-      GOTRUE_JWT_ADMIN_ROLES: service_role
-      GOTRUE_JWT_AUD: authenticated
-      GOTRUE_JWT_DEFAULT_ROLE: authenticated
-      GOTRUE_DISABLE_SIGNUP: "false"
-
-  # Supabase Storage
-  storage:
-    image: supabase/storage-api:v0.43.11
-    depends_on:
-      db:
-        condition: service_healthy
-      rest:
-        condition: service_started
-    restart: unless-stopped
-    ports:
-      - "5000:5000"
-    environment:
-      ANON_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0
-      SERVICE_ROLE_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTk4MzgxMjk5Nn0.EGIM96RAZx35lJzdJsyH-qQwv8Hdp7fsn3W0YpN81IU
-      POSTGREST_URL: http://rest:3000
-      PGRST_JWT_SECRET: your-super-secret-jwt-token-with-at-least-32-characters-long
-      DATABASE_URL: postgres://supabase_storage_admin:your-super-secret-jwt-token-with-at-least-32-characters-long@db:5432/postgres
-      FILE_SIZE_LIMIT: 52428800
-      STORAGE_BACKEND: file
-      FILE_STORAGE_BACKEND_PATH: /var/lib/storage
-      TENANT_ID: stub
-      REGION: stub
-      GLOBAL_S3_BUCKET: stub
-    volumes:
-      - storage_data:/var/lib/storage
-
-  # Supabase Studio (Dashboard)
-  studio:
-    image: supabase/studio:20240101-ce42139
-    restart: unless-stopped
-    ports:
-      - "3001:3000"
-    environment:
-      STUDIO_PG_META_URL: http://meta:8080
-      POSTGRES_PASSWORD: your-super-secret-jwt-token-with-at-least-32-characters-long
-      DEFAULT_ORGANIZATION_NAME: "Default Organization"
-      DEFAULT_PROJECT_NAME: "Default Project"
-      SUPABASE_URL: http://localhost:8000
-      SUPABASE_REST_URL: http://localhost:8000/rest/v1/
-      SUPABASE_ANON_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0
-      SUPABASE_SERVICE_ROLE_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTk4MzgxMjk5Nn0.EGIM96RAZx35lJzdJsyH-qQwv8Hdp7fsn3W0YpN81IU
-
-  # PostgREST Meta API
-  meta:
-    image: supabase/postgres-meta:v0.68.0
-    depends_on:
-      db:
-        condition: service_healthy
-    restart: unless-stopped
-    ports:
-      - "8080:8080"
-    environment:
-      PG_META_PORT: 8080
-      PG_META_DB_HOST: db
-      PG_META_DB_PORT: 5432
-      PG_META_DB_NAME: postgres
-      PG_META_DB_USER: postgres
-      PG_META_DB_PASSWORD: your-super-secret-jwt-token-with-at-least-32-characters-long
-
-  # Kong API Gateway
-  kong:
-    image: kong:2.8.1
-    restart: unless-stopped
-    ports:
-      - "8000:8000"
-      - "8443:8443"
-    environment:
-      KONG_DATABASE: "off"
-      KONG_DECLARATIVE_CONFIG: /var/lib/kong/kong.yml
-      KONG_DNS_ORDER: LAST,A,CNAME
-      KONG_PLUGINS: request-transformer,cors,key-auth,acl
-    volumes:
-      - ./kong.yml:/var/lib/kong/kong.yml
-    depends_on:
-      - rest
-      - auth
-      - storage
-
 volumes:
-  db_data:
-  storage_data:
+  postgres_data:
