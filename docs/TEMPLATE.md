@@ -180,7 +180,7 @@ cargo test --test performance -- --ignored
 
 - [Architecture Overview](architecture/system-overview.md)
 - [Security Architecture](architecture/security.md)
-- [Contributing Guide](../CONTRIBUTING.md)
+- [Contributing Guide](CONTRIBUTING.md)
 - [Glossary](GLOSSARY.md)
 
 ---

@@ -7,6 +7,51 @@ use std::sync::Arc;
 use std::time::{Duration, Instant};
 use tokio::time::sleep;
 
+/// Check if Supabase Docker containers are running
+/// Returns true if all required containers are running, false otherwise
+async fn is_supabase_docker_running() -> bool {
+    use std::process::Command;
+
+    // Check if required Supabase containers are running (official Supabase stack)
+    let required_containers = vec![
+        "supabase-db",          // PostgreSQL database
+        "supabase-kong",        // API Gateway
+        "supabase-storage",     // Storage API
+        "supabase-auth",        // Supabase Auth service
+    ];
+
+    for container in required_containers {
+        let output = Command::new("docker")
+            .args(&["ps", "--filter", &format!("name={}", container), "--filter", "status=running", "--format", "{{.Names}}"])
+            .output();
+
+        match output {
+            Ok(output) => {
+                let stdout = String::from_utf8_lossy(&output.stdout);
+                if !stdout.trim().contains(container) {
+                    eprintln!("❌ Required Supabase container '{}' is not running", container);
+                    eprintln!("💡 To start Supabase: cd lab/docker && docker compose up -d");
+                    return false;
+                }
+            }
+            Err(_) => {
+                eprintln!("❌ Failed to check Docker containers (is Docker running?)");
+                return false;
+            }
+        }
+    }
+
+    true
+}
+
+/// Check if Supabase is accessible via HTTP
+async fn is_supabase_accessible(url: &str) -> bool {
+    match reqwest::get(format!("{}/health", url)).await {
+        Ok(response) => response.status().is_success(),
+        Err(_) => false,
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct PerfResults {
     pub backend: String,
@@ -205,8 +250,19 @@ impl StoragePerfTest {
         {
             // Test SupabaseStorage (if configured)
             if std::env::var("SUPABASE_URL").is_ok() && std::env::var("SUPABASE_ANON_KEY").is_ok() {
+                // Check if Supabase Docker containers are running
+                if !is_supabase_docker_running().await {
+                    panic!("❌ Supabase is configured but Docker containers are not running. Start them with: cd lab/docker && docker-compose up -d");
+                }
+                
+                // Check if Supabase is accessible
+                let url = std::env::var("SUPABASE_URL").unwrap_or_else(|_| "http://localhost:54321".to_string());
+                if !is_supabase_accessible(&url).await {
+                    panic!("❌ Supabase is configured but not accessible at {}. Check if the containers are healthy.", url);
+                }
+                
                 if let Ok(supabase_storage) = self.create_test_supabase_storage().await {
-                    println!("Testing Supabase storage adapter...");
+                    println!("✅ Testing Supabase storage adapter...");
                     results.push(
                         self.run_write_test(&supabase_storage, "SupabaseStorage")
                             .await,
@@ -224,10 +280,10 @@ impl StoragePerfTest {
                             .await,
                     );
                 } else {
-                    println!("Skipping Supabase tests - configuration error");
+                    panic!("❌ Failed to create Supabase storage adapter despite configuration being present");
                 }
             } else {
-                println!("Skipping Supabase tests - environment variables not set");
+                println!("ℹ️  Skipping Supabase tests - environment variables not set");
             }
         }
 
@@ -248,14 +304,15 @@ impl StoragePerfTest {
             url,
             anon_key,
             service_role_key: std::env::var("SUPABASE_SERVICE_ROLE_KEY").ok(),
-            schema: std::env::var("SUPABASE_SCHEMA").unwrap_or_else(|_| "public".to_string()),
-            table_name: std::env::var("SUPABASE_TABLE_NAME")
+            bucket_name: std::env::var("SUPABASE_BUCKET_NAME")
                 .unwrap_or_else(|_| "storage_perf_test".to_string()),
             timeout: 30,
             max_retries: 3,
         };
 
-        Ok(SupabaseStorage::new(config)?)
+        SupabaseStorage::new(config).map_err(|e| -> Box<dyn std::error::Error> {
+            Box::new(std::io::Error::other(e.to_string()))
+        })
     }
 
     /// Print benchmark results in a nice table format
@@ -416,33 +473,71 @@ async fn test_supabase_storage_performance() {
     };
 
     let config = SupabaseConfig {
-        url,
+        url: url.clone(),
         anon_key,
         service_role_key: std::env::var("SUPABASE_SERVICE_ROLE_KEY").ok(),
-        schema: "public".to_string(),
-        table_name: "storage_perf_test".to_string(),
+        bucket_name: "storage_perf_test".to_string(),
         timeout: 30,
         max_retries: 3,
     };
 
-    if let Ok(storage) = SupabaseStorage::new(config) {
-        let test = StoragePerfTest::new(100, 1024, 4);
+    let storage = match SupabaseStorage::new(config) {
+        Ok(storage) => storage,
+        Err(e) => {
+            panic!("Failed to create Supabase storage: {}", e);
+        }
+    };
 
-        println!("Testing Supabase storage performance...");
-        let write_result = test.run_write_test(&storage, "Supabase").await;
-        let read_result = test.run_read_test(&storage, "Supabase").await;
-        let delete_result = test.run_delete_test(&storage, "Supabase").await;
+    // Test actual connectivity to Supabase before running performance tests
+    println!("Testing Supabase connectivity to {}...", url);
 
-        println!("\nSupabase Storage Performance Results:");
-        write_result.print_summary();
-        read_result.print_summary();
-        delete_result.print_summary();
-
-        // Verify reasonable performance
-        assert!(write_result.ops_per_second > 0.0);
-        assert!(read_result.ops_per_second > 0.0);
-        assert!(delete_result.ops_per_second > 0.0);
-    } else {
-        println!("Could not create Supabase storage - check configuration");
+    // First check if the service is reachable
+    if let Err(e) = storage.test_connectivity().await {
+        panic!("❌ Supabase connectivity test failed: {}. Make sure a local Supabase instance is running on {}", e, url);
     }
+
+    // Try a simple operation to verify Supabase is actually working
+    let test_key = "connectivity_test";
+    let test_data = vec![1, 2, 3, 4];
+
+    // This should work if Supabase is available
+    if let Err(e) = storage.put(test_key, test_data.clone()).await {
+        panic!("❌ Supabase put operation failed: {}. Make sure a local Supabase instance is running on {}", e, url);
+    }
+
+    // Verify we can read it back
+    match storage.get(test_key).await {
+        Ok(Some(data)) if data == test_data => {
+            println!("✅ Supabase connectivity verified");
+        }
+        Ok(Some(_)) => {
+            panic!("❌ Supabase data mismatch - possible fallback to in-memory storage");
+        }
+        Ok(None) => {
+            panic!("❌ Supabase data not found - possible connectivity issue");
+        }
+        Err(e) => {
+            panic!("❌ Supabase read operation failed: {}", e);
+        }
+    }
+
+    let test = StoragePerfTest::new(100, 1024, 4);
+
+    println!("Testing Supabase storage performance...");
+    let write_result = test.run_write_test(&storage, "Supabase").await;
+    let read_result = test.run_read_test(&storage, "Supabase").await;
+    let delete_result = test.run_delete_test(&storage, "Supabase").await;
+
+    println!("\nSupabase Storage Performance Results:");
+    write_result.print_summary();
+    read_result.print_summary();
+    delete_result.print_summary();
+
+    // Verify reasonable performance
+    assert!(write_result.ops_per_second > 0.0);
+    assert!(read_result.ops_per_second > 0.0);
+    assert!(delete_result.ops_per_second > 0.0);
+
+    // Clean up test data
+    let _ = storage.delete(test_key).await;
 }
