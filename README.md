@@ -12,6 +12,7 @@
 > **⚠️ WORK IN PROGRESS DISCLAIMER**
 > 
 > This project is currently in early development and serves as a foundational boilerplate for building distributed peer-to-peer AI agents. The current implementation provides basic structure and components, but many features are still being developed. This is not yet ready for production use.
+> Developed by AI for those who are enthusiastic about to develop AI for AI and AI developers and enthusiasts.
 > 
 > We welcome contributions and feedback as we work toward a fully functional system!
 
