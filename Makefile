@@ -1,7 +1,7 @@
 # Makefile for P2P AI Agents project
 
 # Ensure cargo is available by sourcing the cargo environment
-SHELL := /bin/zsh
+SHELL := /bin/bash
 .SHELLFLAGS := -c
 CARGO_ENV := source "$$HOME/.cargo/env" &&
 
