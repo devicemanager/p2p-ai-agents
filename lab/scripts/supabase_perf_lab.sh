@@ -107,8 +107,23 @@ show_setup_instructions() {
     echo "1. Create a Supabase account at https://supabase.com"
     echo "2. Create a new project"
     echo "3. Go to Settings > API to get your keys"
-    echo "4. Create a table for storage testing:"
+    echo "4. Create a storage bucket for testing:"
+    echo "   - Go to your Supabase project dashboard."
+    echo "   - Navigate to Storage → Buckets."
+    echo "   - Create a new bucket named: storage-perf-test (all lowercase, hyphens only)."
+    echo "   - Leave 'Public bucket' checked for easiest testing (you can restrict later)."
     echo ""
+    echo "5. Add a storage policy to allow public read/write for testing (recommended for test/dev only):"
+    echo "   - Go to Storage → Policies → New Policy."
+    echo "   - Name: public read/write for storage-perf-test"
+    echo "   - Apply to: storage.objects"
+    echo "   - Policy definition:"
+    echo "     For full public access, use this expression:"
+    echo "     (auth.role() = 'anon' OR auth.role() = 'authenticated')"
+    echo "   - Check all actions (SELECT, INSERT, UPDATE, DELETE)"
+    echo "   - Save policy."
+    echo ""
+    echo "6. Create a table for performance test metadata (optional):"
     echo "   SQL to run in Supabase SQL editor:"
     echo "   ------------------------------------"
     echo "   CREATE TABLE IF NOT EXISTS storage_perf_test ("
@@ -117,7 +132,7 @@ show_setup_instructions() {
     echo "       created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()"
     echo "   );"
     echo ""
-    echo "5. Set environment variables:"
+    echo "7. Set environment variables:"
     echo "   export SUPABASE_URL='https://your-project.supabase.co'"
     echo "   export SUPABASE_ANON_KEY='your-anon-key'"
     echo "   export SUPABASE_SERVICE_ROLE_KEY='your-service-role-key'"
@@ -135,6 +150,10 @@ setup_mock_environment() {
     export SUPABASE_SERVICE_ROLE_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.demo-service-key"
     export SUPABASE_SCHEMA="public"
     export SUPABASE_TABLE_NAME="storage_perf_test"
+    # Only set SUPABASE_BUCKET_NAME if not already set
+    if [[ -z "${SUPABASE_BUCKET_NAME:-}" ]]; then
+        export SUPABASE_BUCKET_NAME="storage-perf-test"
+    fi
     
     log_warning "Using mock Supabase configuration"
     log_warning "Tests will demonstrate the framework but won't hit a real database"
@@ -162,6 +181,14 @@ setup_local_environment() {
     export SUPABASE_SERVICE_ROLE_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTk4MzgxMjk5Nn0.EGIM96RAZx35lJzdJsyH-qQwv8Hdp7fsn3W0YpN81IU"
     export SUPABASE_SCHEMA="public"
     export SUPABASE_TABLE_NAME="storage_perf_test"
+    # Only set SUPABASE_BUCKET_NAME if not already set
+    if [[ -z "${SUPABASE_BUCKET_NAME:-}" ]]; then
+        export SUPABASE_BUCKET_NAME="storage-perf-test"
+    fi
+    # Validate that SUPABASE_URL is local
+    if [[ "$SUPABASE_URL" != http://localhost* && "$SUPABASE_URL" != http://127.0.0.1* ]]; then
+        log_warning "Local mode expects SUPABASE_URL to be a localhost address. Current: $SUPABASE_URL"
+    fi
     
     log_success "Local Supabase environment configured"
     log_info "URL: $SUPABASE_URL"
@@ -170,6 +197,7 @@ setup_local_environment() {
 }
 
 check_real_environment() {
+    # NOTE: Anon access must be enabled for testing. This is not recommended for production, but required for these tests.
     log_info "Checking real Supabase environment..."
     
     local missing_vars=()
@@ -177,21 +205,26 @@ check_real_environment() {
     if [[ -z "${SUPABASE_URL:-}" ]]; then
         missing_vars+=("SUPABASE_URL")
     fi
-    
     if [[ -z "${SUPABASE_ANON_KEY:-}" ]]; then
         missing_vars+=("SUPABASE_ANON_KEY")
     fi
-    
+    if [[ -z "${SUPABASE_BUCKET_NAME:-}" ]]; then
+        missing_vars+=("SUPABASE_BUCKET_NAME")
+    fi
     if [[ ${#missing_vars[@]} -gt 0 ]]; then
         log_error "Missing required environment variables: ${missing_vars[*]}"
         echo ""
         echo "Run '$0 --setup' for setup instructions"
         exit 1
     fi
-    
+    # Validate that SUPABASE_URL is not local
+    if [[ "$SUPABASE_URL" == http://localhost* || "$SUPABASE_URL" == http://127.0.0.1* ]]; then
+        log_warning "Real mode expects SUPABASE_URL to be a remote address. Current: $SUPABASE_URL"
+    fi
     log_success "Real Supabase environment configured"
     log_info "URL: $SUPABASE_URL"
     log_info "Using anon key: ${SUPABASE_ANON_KEY:0:20}..."
+    log_info "Using bucket: $SUPABASE_BUCKET_NAME"
     if [[ -n "${SUPABASE_SERVICE_ROLE_KEY:-}" ]]; then
         log_info "Service role key: configured"
     else

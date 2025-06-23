@@ -23,8 +23,13 @@ async fn test_protocol_state_transitions() {
 #[test]
 fn test_metrics_collector_usage() {
     let mut metrics = MetricsCollector::new();
+    
+    // Test increment
     metrics.increment("messages_sent");
     metrics.increment("messages_sent");
     let count = metrics.get("messages_sent");
     assert_eq!(count, 2);
+
+    // Test non-existent metric
+    assert_eq!(metrics.get("nonexistent"), 0);
 }

@@ -1,6 +1,6 @@
 # Lab Scripts - Supabase Storage Adapter Testing
 
-This directory contains scripts for setting up, testing, and troubleshooting the Supabase storage adapter in various environments.
+This directory contains scripts for setting up, testing, benchmarking, and troubleshooting the Supabase storage adapter in various environments.
 
 ## Quick Start
 
@@ -15,6 +15,9 @@ For **GitHub Codespaces** or any environment where Docker has restrictions:
 
 # 3. Validate Rust adapter
 ./lab/scripts/validate_rust_adapter.sh
+
+# 4. (Optional) Benchmark Supabase Storage performance
+./lab/scripts/test_supabase_storage.sh
 ```
 
 For **Local Development** with Docker support:
@@ -32,8 +35,9 @@ docker compose up -d
 
 ### External Supabase Setup
 - **`setup_external_supabase.sh`** - Interactive setup for external Supabase instance
-- **`test_external_supabase.sh`** - Test external Supabase connectivity and operations
-- **`validate_rust_adapter.sh`** - Validate Rust adapter against external Supabase
+- **`test_external_supabase.sh`** - Test external Supabase connectivity and operations (API, DB, Rust)
+- **`validate_rust_adapter.sh`** - Validate Rust adapter against external Supabase (compilation, tests)
+- **`test_supabase_storage.sh`** - Performance and correctness test for Supabase Storage bucket (upload/download benchmark)
 
 ### Local Database Setup
 - **`setup_database.sh`** - Setup local PostgreSQL database
@@ -70,7 +74,7 @@ This will test your Docker capabilities and recommend the best setup approach:
 
 | Environment | Recommended Approach | Scripts to Use |
 |-------------|---------------------|----------------|
-| **GitHub Codespaces** | External Supabase | `setup_external_supabase.sh` → `test_external_supabase.sh` → `validate_rust_adapter.sh` |
+| **GitHub Codespaces** | External Supabase | `setup_external_supabase.sh` → `test_external_supabase.sh` → `validate_rust_adapter.sh` → `test_supabase_storage.sh` |
 | **Local Docker** | Docker Compose | `docker compose up` → `run_comprehensive_test.sh` |
 | **Local Native** | Standalone Setup | `setup_database.sh` → `run_comprehensive_test.sh` |
 | **CI/CD** | External Supabase | `setup_external_supabase.sh` (with env vars) |
@@ -132,6 +136,31 @@ Rust-specific validation that:
 - Configured external Supabase instance
 - Rust toolchain with required features
 
+### test_supabase_storage.sh
+
+Supabase Storage performance and correctness test:
+- ✅ Uploads and downloads files to/from your Supabase Storage bucket
+- ✅ Verifies file content matches (correctness)
+- ✅ Reports upload/download timing statistics (performance)
+- ✅ Supports configurable number of operations and file size
+
+**Usage:**
+```bash
+./lab/scripts/test_supabase_storage.sh
+# or for a larger test:
+NUM_OPS=100 FILE_SIZE_KB=16 ./lab/scripts/test_supabase_storage.sh
+```
+
+**Requirements:**
+- `.env` file with SUPABASE_URL, SUPABASE_ANON_KEY, SUPABASE_BUCKET_NAME
+- Storage bucket and policy set up in Supabase
+
+### Other scripts
+- **`setup_database.sh`** - Local Postgres setup
+- **`run_comprehensive_test.sh`** - Run all storage adapter tests
+- **`reset_environment.sh`** - Reset local dev environment
+- **`diagnose_docker_runtime.sh`** - Docker diagnostics and recommendations
+
 ## Environment Variables
 
 ### Required for External Supabase
@@ -139,6 +168,7 @@ Rust-specific validation that:
 SUPABASE_URL=https://your-project-ref.supabase.co
 SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+SUPABASE_BUCKET_NAME=storage-perf-test
 ```
 
 ### Optional Configuration
@@ -147,6 +177,8 @@ TEST_TABLE_NAME=test_storage          # Default: test_storage
 TEST_BUCKET_NAME=test-bucket          # Default: test-bucket
 RUST_LOG=debug                        # Rust logging level
 RUST_BACKTRACE=1                      # Enable Rust backtraces
+NUM_OPS=100                           # Number of upload/download cycles for test_supabase_storage.sh
+FILE_SIZE_KB=16                       # File size in KB for test_supabase_storage.sh
 ```
 
 ## Troubleshooting
@@ -207,9 +239,11 @@ Set environment variables and run:
 export SUPABASE_URL="https://your-ref.supabase.co"
 export SUPABASE_ANON_KEY="your-anon-key"
 export SUPABASE_SERVICE_ROLE_KEY="your-service-role-key"
+export SUPABASE_BUCKET_NAME="storage-perf-test"
 
 ./lab/scripts/test_external_supabase.sh
 ./lab/scripts/validate_rust_adapter.sh
+./lab/scripts/test_supabase_storage.sh
 ```
 
 ### For Testing

@@ -10,7 +10,7 @@ pub struct SupabaseStorageAdapter {
     anon_key: String,
     service_role_key: Option<String>,
     bucket_name: String,
-    client: reqwest::Client,
+    client: request::Client,
 }
 
 impl SupabaseStorageAdapter {
@@ -26,7 +26,7 @@ impl SupabaseStorageAdapter {
             anon_key,
             service_role_key,
             bucket_name,
-            client: reqwest::Client::new(),
+            client: request::Client::new(),
         }
     }
 

@@ -10,6 +10,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
+use reqwest::Client;
 
 /// Configuration for Supabase storage
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -70,7 +71,7 @@ impl SupabaseConfig {
 /// Supabase storage implementation using the official Storage API
 pub struct SupabaseStorage {
     config: SupabaseConfig,
-    client: reqwest::Client,
+    client: Client,
     data: Arc<RwLock<HashMap<String, Vec<u8>>>>, // Fallback for compatibility
 }
 
@@ -79,7 +80,7 @@ impl SupabaseStorage {
     pub fn new(config: SupabaseConfig) -> Result<Self, Box<dyn std::error::Error + Send + Sync>> {
         Ok(Self {
             config,
-            client: reqwest::Client::new(),
+            client: Client::new(),
             data: Arc::new(RwLock::new(HashMap::new())),
         })
     }

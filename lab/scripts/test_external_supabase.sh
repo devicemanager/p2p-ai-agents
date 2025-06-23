@@ -34,6 +34,34 @@ if [ -z "$SUPABASE_URL" ] || [ -z "$SUPABASE_ANON_KEY" ] || [ -z "$SUPABASE_SERV
     exit 1
 fi
 
+
+# Pre-check: Is Supabase instance reachable?
+
+echo -n "🌐 Checking Supabase instance reachability... "
+# Try curl and capture both HTTP status and exit code
+HTTP_STATUS=""
+CURL_EXIT=0
+HTTP_STATUS=$(curl -sS -o /dev/null -w "%{http_code}" --max-time 8 "$SUPABASE_URL/rest/v1/" 2>/dev/null) || CURL_EXIT=$?
+if [ "$CURL_EXIT" -ne 0 ]; then
+    echo "FAILED (network error)"
+    echo "❌ Supabase URL is not reachable (curl exit code $CURL_EXIT)"
+    echo "   - Check your internet connection and the SUPABASE_URL: $SUPABASE_URL"
+    echo "   - If using the free tier, your project may be paused due to inactivity."
+    echo "   - Visit your Supabase dashboard and resume the project, then retry."
+    exit 1
+elif [ "$HTTP_STATUS" != "200" ]; then
+    echo "FAILED (HTTP $HTTP_STATUS)"
+    echo "❌ Supabase instance is unreachable, paused, or returned error (HTTP $HTTP_STATUS)"
+    echo "   - If using the free tier, your project may be paused due to inactivity."
+    echo "   - Visit your Supabase dashboard and resume the project, then retry."
+    echo "   - If this is a network issue, check your internet connection and project URL."
+    echo "   - If this is a 4xx/5xx error, check your Supabase project status."
+    exit 1
+else
+    echo "OK (HTTP $HTTP_STATUS)"
+    echo "   ✅ Supabase instance is reachable (HTTP $HTTP_STATUS)"
+fi
+
 echo "📋 Configuration:"
 echo "   Supabase URL: $SUPABASE_URL"
 echo "   Anon Key: ${SUPABASE_ANON_KEY:0:20}..." 
