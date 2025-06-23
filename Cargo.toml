@@ -40,6 +40,10 @@ uuid = { version = "1.7", features = ["v4", "serde"] }
 # Time handling
 chrono = { version = "0.4", features = ["serde"] }
 
+# Metrics
+metrics = "0.21"
+metrics-util = "0.15"
+
 # Supabase/PostgreSQL (optional)
 postgrest = { version = "1.5", optional = true }
 reqwest = { version = "0.11", features = ["json"], optional = true }
@@ -81,3 +85,4 @@ network = ["libp2p", "futures", "bytes"]
 storage = []
 storage-supabase = ["postgrest", "reqwest", "url", "base64"]
 cli = []
+reqwest = ["dep:reqwest"]

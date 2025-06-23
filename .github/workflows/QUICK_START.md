@@ -70,4 +70,3 @@ gh run download --name documentation-health-report
 See [README.md](README.md) for detailed setup instructions.
 
 ---
-*Part of the smart documentation system 🤖*

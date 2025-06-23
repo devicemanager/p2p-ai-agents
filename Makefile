@@ -7,8 +7,17 @@ CARGO_ENV := source "$$HOME/.cargo/env" &&
 
 .PHONY: help check test build fmt clippy coverage clean install-tools all
 
+# Start Supabase containers
+supabase-up:
+	@if [ ! -f lab/docker/.env ]; then \
+		cp lab/docker/.env.example lab/docker/.env; \
+		echo "[INFO] lab/docker/.env was missing. Created from .env.example. Please update with your own secrets if needed."; \
+	fi
+	@echo "Starting Supabase containers with local environment variables..."
+	cd lab/docker && docker compose --env-file .env up -d
+
 # Default target
-all: check test
+all: supabase-up fmt-check clippy-strict check test
 
 help:
 	@echo "Available targets:"

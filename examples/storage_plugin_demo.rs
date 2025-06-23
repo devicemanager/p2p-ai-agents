@@ -15,7 +15,7 @@ async fn is_supabase_docker_running() -> bool {
 
     for container in required_containers {
         let output = Command::new("docker")
-            .args(&["ps", "--filter", &format!("name={}", container), "--filter", "status=running", "--format", "{{.Names}}"])
+            .args(["ps", "--filter", &format!("name={}", container), "--filter", "status=running", "--format", "{{.Names}}"])
             .output();
 
         match output {

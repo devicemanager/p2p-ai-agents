@@ -93,6 +93,7 @@ For actual performance testing against Supabase:
    export SUPABASE_URL='https://your-project.supabase.co'
    export SUPABASE_ANON_KEY='your-anon-key-here'
    export SUPABASE_SERVICE_ROLE_KEY='your-service-role-key-here'
+   export SUPABASE_BUCKET_NAME='storage-perf-test'
    ```
 
 ## Performance Metrics
@@ -172,6 +173,7 @@ cargo test --features storage-supabase storage_perf -- --nocapture
 # Run with environment variables
 SUPABASE_URL=https://your-project.supabase.co \
 SUPABASE_ANON_KEY=your-key \
+SUPABASE_BUCKET_NAME=storage-perf-test \
 cargo test --features storage-supabase test_supabase_storage_performance -- --nocapture
 ```
 
@@ -242,6 +244,7 @@ For nightly or scheduled runs against real Supabase:
   env:
     SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
     SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+    SUPABASE_BUCKET_NAME: storage-perf-test
   run: |
     ./lab/scripts/supabase_perf_lab.sh --real --full
 ```
