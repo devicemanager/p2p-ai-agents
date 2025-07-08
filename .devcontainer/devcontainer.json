@@ -1,6 +1,6 @@
 {
   "name": "Rust Development with Docker Support",
-  "image": "mcr.microsoft.com/devcontainers/rust:1-1-bullseye",
+  "image": "ghcr.io/devicemanager/p2p-ai-agents-devcontainer:latest",
   "features": {
     "ghcr.io/devcontainers/features/common-utils:2": {
       "installZsh": true,
