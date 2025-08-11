@@ -1,0 +1,11 @@
+services:
+  vector:
+    volumes:
+      - ${DOCKER_SOCKET:-/var/run/docker.sock}:/var/run/docker.sock:ro,z
+    depends_on:
+      - db
+  analytics:
+    volumes:
+      - ${DOCKER_SOCKET:-/var/run/docker.sock}:/var/run/docker.sock:ro,z
+    depends_on:
+      - db
