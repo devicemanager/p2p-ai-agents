@@ -1,4 +1,3 @@
-version: '3.8'
 
 # P2P AI Agents Docker Compose Configuration
 # This setup provides a complete development and testing environment

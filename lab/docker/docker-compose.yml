@@ -3,7 +3,7 @@
 #   With helpers:       docker compose -f docker-compose.yml -f ./dev/docker-compose.dev.yml up
 #   Stop:               docker compose down
 #   Destroy:            docker compose -f docker-compose.yml -f ./dev/docker-compose.dev.yml down -v --remove-orphans
-#   Reset everything:   ./reset.sh
+#   Reset everything:  ./reset.sh
 
 name: supabase
 
@@ -11,7 +11,7 @@ services:
 
   studio:
     container_name: supabase-studio
-    image: supabase/studio:2025.06.02-sha-8f2993d
+    image: supabase/studio:2025.05.19-sha-3487831
     restart: unless-stopped
     healthcheck:
       test:
@@ -41,7 +41,7 @@ services:
       SUPABASE_SERVICE_KEY: ${SERVICE_ROLE_KEY}
       AUTH_JWT_SECRET: ${JWT_SECRET}
 
-      LOGFLARE_PRIVATE_ACCESS_TOKEN: ${LOGFLARE_PRIVATE_ACCESS_TOKEN}
+      LOGFLARE_API_KEY: ${LOGFLARE_API_KEY}
       LOGFLARE_URL: http://analytics:4000
       NEXT_PUBLIC_ENABLE_LOGS: true
       # Comment to use Big Query backend for analytics
@@ -79,7 +79,7 @@ services:
 
   auth:
     container_name: supabase-auth
-    image: supabase/gotrue:v2.174.0
+    image: supabase/gotrue:v2.172.1
     restart: unless-stopped
     healthcheck:
       test:
@@ -126,7 +126,6 @@ services:
       # GOTRUE_EXTERNAL_SKIP_NONCE_CHECK: true
 
       # GOTRUE_MAILER_SECURE_EMAIL_CHANGE_ENABLED: true
-
       # GOTRUE_SMTP_MAX_FREQUENCY: 1s
       GOTRUE_SMTP_ADMIN_EMAIL: ${SMTP_ADMIN_EMAIL}
       GOTRUE_SMTP_HOST: ${SMTP_HOST}
@@ -134,7 +133,6 @@ services:
       GOTRUE_SMTP_USER: ${SMTP_USER}
       GOTRUE_SMTP_PASS: ${SMTP_PASS}
       GOTRUE_SMTP_SENDER_NAME: ${SMTP_SENDER_NAME}
-
       GOTRUE_MAILER_URLPATHS_INVITE: ${MAILER_URLPATHS_INVITE}
       GOTRUE_MAILER_URLPATHS_CONFIRMATION: ${MAILER_URLPATHS_CONFIRMATION}
       GOTRUE_MAILER_URLPATHS_RECOVERY: ${MAILER_URLPATHS_RECOVERY}
@@ -233,7 +231,7 @@ services:
   # To use S3 backed storage: docker compose -f docker-compose.yml -f docker-compose.s3.yml up
   storage:
     container_name: supabase-storage
-    image: supabase/storage-api:v1.23.0
+    image: supabase/storage-api:v1.22.17
     restart: unless-stopped
     volumes:
       - ./volumes/storage:/var/lib/storage:z
@@ -298,7 +296,7 @@ services:
 
   meta:
     container_name: supabase-meta
-    image: supabase/postgres-meta:v0.89.3
+    image: supabase/postgres-meta:v0.89.0
     restart: unless-stopped
     depends_on:
       db:
@@ -340,7 +338,7 @@ services:
 
   analytics:
     container_name: supabase-analytics
-    image: supabase/logflare:1.14.2
+    image: supabase/logflare:1.12.0
     restart: unless-stopped
     ports:
       - 4000:4000
@@ -372,11 +370,11 @@ services:
       DB_PORT: ${POSTGRES_PORT}
       DB_PASSWORD: ${POSTGRES_PASSWORD}
       DB_SCHEMA: _analytics
-      LOGFLARE_PUBLIC_ACCESS_TOKEN: ${LOGFLARE_PUBLIC_ACCESS_TOKEN}
-      LOGFLARE_PRIVATE_ACCESS_TOKEN: ${LOGFLARE_PRIVATE_ACCESS_TOKEN}
+      LOGFLARE_API_KEY: ${LOGFLARE_API_KEY}
       LOGFLARE_SINGLE_TENANT: true
       LOGFLARE_SUPABASE_MODE: true
       LOGFLARE_MIN_CLUSTER_SIZE: 1
+
       # Comment variables to use Big Query backend for analytics
       POSTGRES_BACKEND_URL: postgresql://supabase_admin:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:${POSTGRES_PORT}/_supabase
       POSTGRES_BACKEND_SCHEMA: _analytics
@@ -411,12 +409,12 @@ services:
     healthcheck:
       test:
         [
-          "CMD",
-          "pg_isready",
-          "-U",
-          "postgres",
-          "-h",
-          "localhost"
+        "CMD",
+        "pg_isready",
+        "-U",
+        "postgres",
+        "-h",
+        "localhost"
         ]
       interval: 5s
       timeout: 5s
@@ -449,7 +447,7 @@ services:
     restart: unless-stopped
     volumes:
       - ./volumes/logs/vector.yml:/etc/vector/vector.yml:ro,z
-      - ${DOCKER_SOCKET_LOCATION:-/var/run/docker.sock}:/var/run/docker.sock:ro,z
+      - ${DOCKER_SOCKET_LOCATION}:/var/run/docker.sock:ro,z
     healthcheck:
       test:
         [
@@ -464,7 +462,7 @@ services:
       interval: 5s
       retries: 3
     environment:
-      LOGFLARE_PUBLIC_ACCESS_TOKEN: ${LOGFLARE_PUBLIC_ACCESS_TOKEN}
+      LOGFLARE_API_KEY: ${LOGFLARE_API_KEY}
     command:
       [
         "--config",
@@ -479,7 +477,6 @@ services:
     image: supabase/supavisor:2.5.1
     restart: unless-stopped
     ports:
-      - ${POSTGRES_PORT}:5432
       - ${POOLER_PROXY_PORT_TRANSACTION}:6543
     volumes:
       - ./volumes/pooler/pooler.exs:/etc/pooler/pooler.exs:ro,z
