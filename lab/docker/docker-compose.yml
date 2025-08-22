@@ -474,12 +474,17 @@ services:
   # Update the DATABASE_URL if you are using an external Postgres database
   supavisor:
     container_name: supabase-pooler
-    image: supabase/supavisor:2.5.1
+    build:
+      context: .
+      dockerfile: Dockerfile.supavisor
+    image: custom-supavisor:local
     restart: unless-stopped
     ports:
       - ${POOLER_PROXY_PORT_TRANSACTION}:6543
     volumes:
       - ./volumes/pooler/pooler.exs:/etc/pooler/pooler.exs:ro,z
+      - ./vault_enc_key.bin:/run/secrets/vault_enc_key:ro
+      - ./supavisor-entrypoint.sh:/run/secrets/supavisor-entrypoint.sh:ro
     healthcheck:
       test:
         [
@@ -505,9 +510,9 @@ services:
       POSTGRES_DB: ${POSTGRES_DB}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       DATABASE_URL: ecto://supabase_admin:${POSTGRES_PASSWORD}@db:${POSTGRES_PORT}/_supabase
+      SUPAVISOR_CLOAK_KEY: ${SUPAVISOR_CLOAK_KEY}
       CLUSTER_POSTGRES: true
       SECRET_KEY_BASE: ${SECRET_KEY_BASE}
-      VAULT_ENC_KEY: ${VAULT_ENC_KEY}
       API_JWT_SECRET: ${JWT_SECRET}
       METRICS_JWT_SECRET: ${JWT_SECRET}
       REGION: local
@@ -516,6 +521,8 @@ services:
       POOLER_DEFAULT_POOL_SIZE: ${POOLER_DEFAULT_POOL_SIZE}
       POOLER_MAX_CLIENT_CONN: ${POOLER_MAX_CLIENT_CONN}
       POOLER_POOL_MODE: transaction
+      VAULT_ENC_KEY_FILE: /run/secrets/vault_enc_key
+    entrypoint: ["/bin/sh", "/run/secrets/supavisor-entrypoint.sh"]
     command:
       [
         "/bin/sh",
