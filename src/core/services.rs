@@ -16,6 +16,7 @@ use uuid::Uuid;
 pub struct ServiceId(pub Uuid);
 
 impl ServiceId {
+    /// Create a new service identifier
     pub fn new() -> Self {
         Self(Uuid::new_v4())
     }
@@ -45,18 +46,26 @@ pub enum ServiceStatus {
 /// Service health information
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ServiceHealth {
+    /// Current service status
     pub status: ServiceStatus,
+    /// How long the service has been running
     pub uptime: std::time::Duration,
+    /// Last time the service reported its health
     pub last_heartbeat: chrono::DateTime<chrono::Utc>,
+    /// Service-specific metrics
     pub metrics: HashMap<String, serde_json::Value>,
 }
 
 /// Service configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ServiceConfig {
+    /// Service name
     pub name: String,
+    /// Service version
     pub version: String,
+    /// List of service dependencies
     pub dependencies: Vec<String>,
+    /// Service-specific settings
     pub settings: HashMap<String, serde_json::Value>,
 }
 
@@ -94,19 +103,28 @@ pub trait Service: Send + Sync {
 /// Service request
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ServiceRequest {
+    /// Request identifier
     pub id: Uuid,
+    /// Method name to call
     pub method: String,
+    /// Method parameters
     pub parameters: HashMap<String, serde_json::Value>,
+    /// Request timeout
     pub timeout: Option<std::time::Duration>,
 }
 
 /// Service response
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ServiceResponse {
+    /// Response identifier (matches request ID)
     pub id: Uuid,
+    /// Whether the request was successful
     pub success: bool,
+    /// Response data
     pub data: Option<serde_json::Value>,
+    /// Error message if unsuccessful
     pub error: Option<String>,
+    /// Request processing duration
     pub duration: std::time::Duration,
 }
 
@@ -476,7 +494,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_service_lifecycle() {
-        let mut service = TestService::new();
+        let service = TestService::new();
         
         // Initialize
         service.initialize().await.unwrap();

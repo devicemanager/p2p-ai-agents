@@ -13,11 +13,17 @@ use thiserror::Error;
 /// Configuration value types
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum ConfigValue {
+    /// String configuration value
     String(String),
+    /// Integer configuration value
     Integer(i64),
+    /// Float configuration value
     Float(f64),
+    /// Boolean configuration value
     Boolean(bool),
+    /// Array configuration value
     Array(Vec<ConfigValue>),
+    /// Object configuration value
     Object(HashMap<String, ConfigValue>),
 }
 
@@ -89,27 +95,39 @@ pub enum ConfigSource {
 /// Configuration entry
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ConfigEntry {
+    /// Configuration key
     pub key: String,
+    /// Configuration value
     pub value: ConfigValue,
+    /// Source of the configuration
     pub source: ConfigSource,
+    /// Optional description of the configuration
     pub description: Option<String>,
+    /// Whether this configuration is required
     pub required: bool,
+    /// Whether this configuration contains sensitive data
     pub sensitive: bool,
 }
 
 /// Configuration section
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ConfigSection {
+    /// Section name
     pub name: String,
+    /// Configuration entries in this section
     pub entries: HashMap<String, ConfigEntry>,
+    /// Optional section description
     pub description: Option<String>,
 }
 
 /// Main configuration structure
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Config {
+    /// Configuration sections
     pub sections: HashMap<String, ConfigSection>,
+    /// Configuration version
     pub version: String,
+    /// Environment name
     pub environment: String,
 }
 
@@ -434,6 +452,9 @@ mod tests {
         // Set a value
         manager.set("test_key", ConfigValue::String("new_value".to_string())).await.unwrap();
         
+        // Wait a bit for the async watcher to process
+        tokio::time::sleep(tokio::time::Duration::from_millis(10)).await;
+        
         // Check if watcher was notified
         let changes = changes.read().await;
         assert_eq!(changes.len(), 1);
@@ -446,6 +467,15 @@ mod tests {
         
         // Set a required empty value
         manager.set("required_key", ConfigValue::String("".to_string())).await.unwrap();
+        
+        // Mark it as required
+        let mut config = manager.config.write().await;
+        if let Some(section) = config.sections.get_mut("default") {
+            if let Some(entry) = section.entries.get_mut("required_key") {
+                entry.required = true;
+            }
+        }
+        drop(config);
         
         // This should fail validation
         let result = manager.validate().await;
