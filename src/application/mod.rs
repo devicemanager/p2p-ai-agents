@@ -9,7 +9,7 @@ use crate::core::{
     services::{Service, ServiceRegistry, ServiceError},
     config::{ConfigManager, ConfigError},
 };
-use crate::agent::{Agent, AgentConfig, AgentId};
+use crate::agent::Agent;
 use crate::network::{NetworkManager, NetworkConfig};
 use crate::storage::{StorageManager, StoragePolicy};
 use std::sync::Arc;
@@ -312,6 +312,7 @@ impl Clone for Application {
 
 /// Event bus service wrapper
 struct EventBusService {
+    #[allow(dead_code)]
     event_bus: Arc<EventBus>,
 }
 
@@ -373,6 +374,7 @@ impl Service for EventBusService {
 
 /// Config service wrapper
 struct ConfigService {
+    #[allow(dead_code)]
     config_manager: Arc<ConfigManager>,
 }
 
@@ -435,6 +437,7 @@ impl Service for ConfigService {
 /// Application event handler
 #[derive(Clone)]
 struct ApplicationEventHandler {
+    #[allow(dead_code)]
     application: Application,
 }
 

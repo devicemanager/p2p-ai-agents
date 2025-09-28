@@ -31,6 +31,7 @@ pub enum ContainerError {
 
 /// Service factory trait for creating service instances
 pub trait ServiceFactory: Send + Sync {
+    /// Create a new service instance
     fn create(&self, container: &Container) -> Result<Box<dyn Any + Send + Sync>, ContainerError>;
 }
 
