@@ -310,6 +310,12 @@ impl Clone for Application {
     }
 }
 
+impl Default for Application {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 /// Event bus service wrapper
 struct EventBusService {
     #[allow(dead_code)]
