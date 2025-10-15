@@ -12,6 +12,9 @@ use tokio::sync::RwLock;
 use thiserror::Error;
 use uuid::Uuid;
 
+/// Type alias for event handler storage to reduce complexity
+type EventHandlerMap = Arc<RwLock<HashMap<TypeId, Vec<Arc<dyn Any + Send + Sync>>>>>;
+
 /// Event identifier
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct EventId(pub Uuid);
@@ -97,7 +100,7 @@ pub enum EventResult {
 
 /// Event bus for managing event publishing and subscription
 pub struct EventBus {
-    handlers: Arc<RwLock<HashMap<TypeId, Vec<Arc<dyn Any + Send + Sync>>>>>,
+    handlers: EventHandlerMap,
 }
 
 /// Error types for event operations
