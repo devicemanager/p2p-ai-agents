@@ -21,22 +21,16 @@ cargo run -- --submit --task "process_document" --file document.pdf
 cargo run -- --monitor --metrics cpu,memory,network
 ```
 
-### Development
+### Core Components
 ```bash
-# Setup development environment
-cargo new venv
-source venv/bin/activate  # Windows: venv\Scripts\activate
+# Access control testing
+cargo test access_control
 
-# Run tests
-cargo test
+# Load testing
+cargo test load_tests
 
-# Code quality
-cargo fmt
-cargo clippy
-
-# Pre-commit hooks
-pre-commit install
-pre-commit run --all-files
+# Run all core tests
+cargo test core::
 ```
 
 ### Docker
