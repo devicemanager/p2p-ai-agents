@@ -9,6 +9,7 @@ use tokio::time::sleep;
 
 /// Check if Supabase Docker containers are running
 /// Returns true if all required containers are running, false otherwise
+#[allow(dead_code)]
 async fn is_supabase_docker_running() -> bool {
     use std::process::Command;
 
@@ -56,6 +57,7 @@ async fn is_supabase_docker_running() -> bool {
 }
 
 /// Check if Supabase is accessible via HTTP
+#[allow(dead_code)]
 async fn is_supabase_accessible(url: &str) -> bool {
     match reqwest::get(format!("{}/health", url)).await {
         Ok(response) => response.status().is_success(),
