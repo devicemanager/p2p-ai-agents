@@ -14,22 +14,33 @@ async fn is_supabase_docker_running() -> bool {
 
     // Check if required Supabase containers are running (official Supabase stack)
     let required_containers = vec![
-        "supabase-db",          // PostgreSQL database
-        "supabase-kong",        // API Gateway
-        "supabase-storage",     // Storage API
-        "supabase-auth",        // Supabase Auth service
+        "supabase-db",      // PostgreSQL database
+        "supabase-kong",    // API Gateway
+        "supabase-storage", // Storage API
+        "supabase-auth",    // Supabase Auth service
     ];
 
     for container in required_containers {
         let output = Command::new("docker")
-            .args(["ps", "--filter", &format!("name={}", container), "--filter", "status=running", "--format", "{{.Names}}"])
+            .args([
+                "ps",
+                "--filter",
+                &format!("name={}", container),
+                "--filter",
+                "status=running",
+                "--format",
+                "{{.Names}}",
+            ])
             .output();
 
         match output {
             Ok(output) => {
                 let stdout = String::from_utf8_lossy(&output.stdout);
                 if !stdout.trim().contains(container) {
-                    eprintln!("❌ Required Supabase container '{}' is not running", container);
+                    eprintln!(
+                        "❌ Required Supabase container '{}' is not running",
+                        container
+                    );
                     eprintln!("💡 To start Supabase: cd lab/docker && docker compose up -d");
                     return false;
                 }
@@ -254,13 +265,14 @@ impl StoragePerfTest {
                 if !is_supabase_docker_running().await {
                     panic!("❌ Supabase is configured but Docker containers are not running. Start them with: cd lab/docker && docker-compose up -d");
                 }
-                
+
                 // Check if Supabase is accessible
-                let url = std::env::var("SUPABASE_URL").unwrap_or_else(|_| "http://localhost:54321".to_string());
+                let url = std::env::var("SUPABASE_URL")
+                    .unwrap_or_else(|_| "http://localhost:54321".to_string());
                 if !is_supabase_accessible(&url).await {
                     panic!("❌ Supabase is configured but not accessible at {}. Check if the containers are healthy.", url);
                 }
-                
+
                 if let Ok(supabase_storage) = self.create_test_supabase_storage().await {
                     println!("✅ Testing Supabase storage adapter...");
                     results.push(

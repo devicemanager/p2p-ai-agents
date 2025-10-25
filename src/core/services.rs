@@ -7,8 +7,8 @@ use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
-use tokio::sync::RwLock;
 use thiserror::Error;
+use tokio::sync::RwLock;
 use uuid::Uuid;
 
 /// Service identifier
@@ -74,30 +74,33 @@ pub struct ServiceConfig {
 pub trait Service: Send + Sync {
     /// Get the service ID
     fn id(&self) -> ServiceId;
-    
+
     /// Get the service name
     fn name(&self) -> &str;
-    
+
     /// Get the service version
     fn version(&self) -> &str;
-    
+
     /// Initialize the service
     async fn initialize(&self) -> Result<(), ServiceError>;
-    
+
     /// Start the service
     async fn start(&self) -> Result<(), ServiceError>;
-    
+
     /// Stop the service
     async fn stop(&self) -> Result<(), ServiceError>;
-    
+
     /// Get the service status
     async fn status(&self) -> ServiceStatus;
-    
+
     /// Get the service health
     async fn health(&self) -> ServiceHealth;
-    
+
     /// Handle a service request
-    async fn handle_request(&self, request: ServiceRequest) -> Result<ServiceResponse, ServiceError>;
+    async fn handle_request(
+        &self,
+        request: ServiceRequest,
+    ) -> Result<ServiceResponse, ServiceError>;
 }
 
 /// Service request
@@ -129,6 +132,7 @@ pub struct ServiceResponse {
 }
 
 /// Service registry for managing services
+#[derive(Clone)]
 pub struct ServiceRegistry {
     services: Arc<RwLock<HashMap<ServiceId, Arc<dyn Service>>>>,
     service_configs: Arc<RwLock<HashMap<String, ServiceConfig>>>,
@@ -140,31 +144,31 @@ pub enum ServiceError {
     /// Service not found
     #[error("Service not found: {0}")]
     ServiceNotFound(String),
-    
+
     /// Service already exists
     #[error("Service already exists: {0}")]
     ServiceAlreadyExists(String),
-    
+
     /// Service initialization failed
     #[error("Service initialization failed: {0}")]
     InitializationFailed(String),
-    
+
     /// Service start failed
     #[error("Service start failed: {0}")]
     StartFailed(String),
-    
+
     /// Service stop failed
     #[error("Service stop failed: {0}")]
     StopFailed(String),
-    
+
     /// Service request failed
     #[error("Service request failed: {0}")]
     RequestFailed(String),
-    
+
     /// Service dependency not found
     #[error("Service dependency not found: {0}")]
     DependencyNotFound(String),
-    
+
     /// Service configuration error
     #[error("Service configuration error: {0}")]
     ConfigurationError(String),
@@ -183,13 +187,13 @@ impl ServiceRegistry {
     pub async fn register(&self, service: Arc<dyn Service>) -> Result<(), ServiceError> {
         let service_id = service.id();
         let service_name = service.name().to_string();
-        
+
         let mut services = self.services.write().await;
-        
+
         if services.contains_key(&service_id) {
             return Err(ServiceError::ServiceAlreadyExists(service_name));
         }
-        
+
         services.insert(service_id, service);
         Ok(())
     }
@@ -197,7 +201,7 @@ impl ServiceRegistry {
     /// Unregister a service
     pub async fn unregister(&self, service_id: &ServiceId) -> Result<(), ServiceError> {
         let mut services = self.services.write().await;
-        
+
         if let Some(service) = services.remove(service_id) {
             // Stop the service before removing
             if let Err(e) = service.stop().await {
@@ -218,7 +222,8 @@ impl ServiceRegistry {
     /// Get a service by name
     pub async fn get_service_by_name(&self, name: &str) -> Option<Arc<dyn Service>> {
         let services = self.services.read().await;
-        services.values()
+        services
+            .values()
             .find(|service| service.name() == name)
             .cloned()
     }
@@ -233,19 +238,19 @@ impl ServiceRegistry {
     pub async fn start_all(&self) -> Result<(), ServiceError> {
         let services = self.services.read().await;
         let mut results = Vec::new();
-        
+
         for service in services.values() {
             let result = service.start().await;
             results.push((service.name().to_string(), result));
         }
-        
+
         // Check for any failures
         for (name, result) in results {
             if let Err(e) = result {
                 return Err(ServiceError::StartFailed(format!("{}: {}", name, e)));
             }
         }
-        
+
         Ok(())
     }
 
@@ -253,19 +258,19 @@ impl ServiceRegistry {
     pub async fn stop_all(&self) -> Result<(), ServiceError> {
         let services = self.services.read().await;
         let mut results = Vec::new();
-        
+
         for service in services.values() {
             let result = service.stop().await;
             results.push((service.name().to_string(), result));
         }
-        
+
         // Check for any failures
         for (name, result) in results {
             if let Err(e) = result {
                 return Err(ServiceError::StopFailed(format!("{}: {}", name, e)));
             }
         }
-        
+
         Ok(())
     }
 
@@ -273,12 +278,12 @@ impl ServiceRegistry {
     pub async fn health_check(&self) -> HashMap<String, ServiceHealth> {
         let services = self.services.read().await;
         let mut health_status = HashMap::new();
-        
+
         for service in services.values() {
             let health = service.health().await;
             health_status.insert(service.name().to_string(), health);
         }
-        
+
         health_status
     }
 
@@ -340,7 +345,10 @@ impl BaseService {
     pub async fn get_uptime(&self) -> std::time::Duration {
         let start_time = self.start_time.read().await;
         if let Some(start) = *start_time {
-            chrono::Utc::now().signed_duration_since(start).to_std().unwrap_or_default()
+            chrono::Utc::now()
+                .signed_duration_since(start)
+                .to_std()
+                .unwrap_or_default()
         } else {
             std::time::Duration::ZERO
         }
@@ -368,10 +376,10 @@ impl Service for BaseService {
 
     async fn start(&self) -> Result<(), ServiceError> {
         self.set_status(ServiceStatus::Starting).await;
-        
+
         let mut start_time = self.start_time.write().await;
         *start_time = Some(chrono::Utc::now());
-        
+
         self.set_status(ServiceStatus::Running).await;
         Ok(())
     }
@@ -391,7 +399,7 @@ impl Service for BaseService {
         let status = self.status.read().await;
         let uptime = self.get_uptime().await;
         let metrics = self.metrics.read().await;
-        
+
         ServiceHealth {
             status: status.clone(),
             uptime,
@@ -400,9 +408,12 @@ impl Service for BaseService {
         }
     }
 
-    async fn handle_request(&self, request: ServiceRequest) -> Result<ServiceResponse, ServiceError> {
+    async fn handle_request(
+        &self,
+        request: ServiceRequest,
+    ) -> Result<ServiceResponse, ServiceError> {
         let start = std::time::Instant::now();
-        
+
         // Default implementation - override in derived services
         let response = ServiceResponse {
             id: request.id,
@@ -411,7 +422,7 @@ impl Service for BaseService {
             error: Some("Method not implemented".to_string()),
             duration: start.elapsed(),
         };
-        
+
         Ok(response)
     }
 }
@@ -467,7 +478,10 @@ mod tests {
             self.base.health().await
         }
 
-        async fn handle_request(&self, request: ServiceRequest) -> Result<ServiceResponse, ServiceError> {
+        async fn handle_request(
+            &self,
+            request: ServiceRequest,
+        ) -> Result<ServiceResponse, ServiceError> {
             self.base.handle_request(request).await
         }
     }
@@ -475,17 +489,17 @@ mod tests {
     #[tokio::test]
     async fn test_service_registry() {
         let registry = ServiceRegistry::new();
-        
+
         let service = Arc::new(TestService::new());
         let service_id = service.id();
-        
+
         // Register service
         registry.register(service.clone()).await.unwrap();
-        
+
         // Get service
         let retrieved = registry.get_service(&service_id).await.unwrap();
         assert_eq!(retrieved.name(), "test-service");
-        
+
         // List services
         let services = registry.list_services().await;
         assert_eq!(services.len(), 1);
@@ -495,15 +509,15 @@ mod tests {
     #[tokio::test]
     async fn test_service_lifecycle() {
         let service = TestService::new();
-        
+
         // Initialize
         service.initialize().await.unwrap();
         assert!(matches!(service.status().await, ServiceStatus::Starting));
-        
+
         // Start
         service.start().await.unwrap();
         assert!(matches!(service.status().await, ServiceStatus::Running));
-        
+
         // Stop
         service.stop().await.unwrap();
         assert!(matches!(service.status().await, ServiceStatus::Stopped));

@@ -8,8 +8,8 @@ use serde::{Deserialize, Serialize};
 use std::any::{Any, TypeId};
 use std::collections::HashMap;
 use std::sync::Arc;
-use tokio::sync::RwLock;
 use thiserror::Error;
+use tokio::sync::RwLock;
 use uuid::Uuid;
 
 /// Type alias for event handler storage to reduce complexity
@@ -78,21 +78,21 @@ pub enum EventPriority {
 pub trait Event: Send + Sync {
     /// Get the event type identifier
     fn event_type(&self) -> &'static str;
-    
+
     /// Get the event priority
     fn priority(&self) -> EventPriority {
         EventPriority::Normal
     }
-    
+
     /// Get the event ID
     fn id(&self) -> EventId;
-    
+
     /// Get the event timestamp
     fn timestamp(&self) -> chrono::DateTime<chrono::Utc>;
-    
+
     /// Get the event source
     fn source(&self) -> Option<String>;
-    
+
     /// Clone the event
     fn clone_event(&self) -> Box<dyn Event>;
 }
@@ -102,10 +102,10 @@ pub trait Event: Send + Sync {
 pub trait EventHandler<E: Event>: Send + Sync {
     /// Handle the event
     async fn handle(&self, event: &E) -> EventResult;
-    
+
     /// Get the handler name for debugging
     fn name(&self) -> &'static str;
-    
+
     /// Check if this handler can handle the event
     fn can_handle(&self, _event: &E) -> bool {
         true
@@ -128,6 +128,7 @@ pub enum EventResult {
 }
 
 /// Event bus for managing event publishing and subscription
+#[derive(Clone)]
 pub struct EventBus {
     handlers: EventHandlerMap,
 }
@@ -138,15 +139,15 @@ pub enum EventError {
     /// Event handler not found
     #[error("Event handler not found for event type: {0}")]
     HandlerNotFound(String),
-    
+
     /// Event publishing failed
     #[error("Event publishing failed: {0}")]
     PublishingFailed(String),
-    
+
     /// Event subscription failed
     #[error("Event subscription failed: {0}")]
     SubscriptionFailed(String),
-    
+
     /// Event handling failed
     #[error("Event handling failed: {0}")]
     HandlingFailed(String),
@@ -168,14 +169,14 @@ impl EventBus {
     {
         let type_id = TypeId::of::<E>();
         let mut handlers = self.handlers.write().await;
-        
+
         let handler_entry = handlers.entry(type_id).or_insert_with(Vec::new);
         let wrapped_handler = EventHandlerWrapper {
             handler,
             _phantom: std::marker::PhantomData,
         };
         handler_entry.push(Arc::new(wrapped_handler));
-        
+
         Ok(())
     }
 
@@ -187,10 +188,12 @@ impl EventBus {
         // Handle with registered handlers
         let type_id = TypeId::of::<E>();
         let handlers = self.handlers.read().await;
-        
+
         if let Some(handler_list) = handlers.get(&type_id) {
             for handler in handler_list {
-                let result = handler.handle_erased(&event as &(dyn Any + Send + Sync)).await;
+                let result = handler
+                    .handle_erased(&event as &(dyn Any + Send + Sync))
+                    .await;
                 match result {
                     EventResult::Error(err) => {
                         tracing::error!("Event handler {} failed: {}", handler.name(), err);
@@ -202,7 +205,7 @@ impl EventBus {
                 }
             }
         }
-        
+
         Ok(())
     }
 
@@ -250,27 +253,27 @@ macro_rules! define_event {
             pub payload: $payload,
         }
 
-impl Event for $name {
-    fn event_type(&self) -> &'static str {
-        stringify!($name)
-    }
+        impl Event for $name {
+            fn event_type(&self) -> &'static str {
+                stringify!($name)
+            }
 
-    fn id(&self) -> EventId {
-        self.id.clone()
-    }
+            fn id(&self) -> EventId {
+                self.id.clone()
+            }
 
-    fn timestamp(&self) -> chrono::DateTime<chrono::Utc> {
-        self.timestamp
-    }
+            fn timestamp(&self) -> chrono::DateTime<chrono::Utc> {
+                self.timestamp
+            }
 
-    fn source(&self) -> Option<String> {
-        self.source.clone()
-    }
+            fn source(&self) -> Option<String> {
+                self.source.clone()
+            }
 
-    fn clone_event(&self) -> Box<dyn Event> {
-        Box::new(self.clone())
-    }
-}
+            fn clone_event(&self) -> Box<dyn Event> {
+                Box::new(self.clone())
+            }
+        }
 
         impl $name {
             /// Create a new event
@@ -323,14 +326,17 @@ mod tests {
     async fn test_event_bus_subscription_and_publishing() {
         let event_bus = EventBus::new();
         let handled_events = Arc::new(RwLock::new(Vec::new()));
-        
+
         let handler = TestEventHandler {
             name: "test".to_string(),
             handled_events: handled_events.clone(),
         };
 
         // Subscribe to events
-        event_bus.subscribe::<AgentStarted, _>(handler).await.unwrap();
+        event_bus
+            .subscribe::<AgentStarted, _>(handler)
+            .await
+            .unwrap();
 
         // Publish an event
         let event = AgentStarted::new("agent-1".to_string(), Some("test-source".to_string()));
@@ -348,20 +354,26 @@ mod tests {
     #[tokio::test]
     async fn test_event_bus_handler_count() {
         let event_bus = EventBus::new();
-        
+
         let handler1 = TestEventHandler {
             name: "handler1".to_string(),
             handled_events: Arc::new(RwLock::new(Vec::new())),
         };
-        
+
         let handler2 = TestEventHandler {
             name: "handler2".to_string(),
             handled_events: Arc::new(RwLock::new(Vec::new())),
         };
 
         // Subscribe two handlers
-        event_bus.subscribe::<AgentStarted, _>(handler1).await.unwrap();
-        event_bus.subscribe::<AgentStarted, _>(handler2).await.unwrap();
+        event_bus
+            .subscribe::<AgentStarted, _>(handler1)
+            .await
+            .unwrap();
+        event_bus
+            .subscribe::<AgentStarted, _>(handler2)
+            .await
+            .unwrap();
 
         // Check handler count
         assert_eq!(event_bus.handler_count::<AgentStarted>().await, 2);

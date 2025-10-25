@@ -8,30 +8,30 @@
 #![warn(rustdoc::missing_crate_level_docs)]
 
 pub mod agent;
+/// Application layer
+pub mod application;
+/// Core architectural components
+pub mod core;
 pub mod network;
 /// The storage module provides the pluggable storage layer for the system.
 pub mod storage;
-/// Core architectural components
-pub mod core;
-/// Application layer
-pub mod application;
 // pub mod cli;
 
 /// Re-exports of commonly used types
 pub mod prelude {
     pub use crate::agent::{Agent, AgentConfig, AgentId};
+    pub use crate::application::{Application, ApplicationError, ApplicationState};
+    pub use crate::core::{
+        config::{Config, ConfigError, ConfigManager},
+        container::Container,
+        events::{Event, EventBus, EventHandler, EventResult},
+        services::{Service, ServiceError, ServiceRegistry},
+    };
     pub use crate::network::{
         discovery::{DiscoveryManager, PeerInfo},
         transport::{TransportError, TransportType},
         NetworkConfig, NetworkError, NetworkManager, NetworkMessage, NetworkResult,
     };
-    pub use crate::core::{
-        container::Container,
-        events::{Event, EventBus, EventHandler, EventResult},
-        services::{Service, ServiceRegistry, ServiceError},
-        config::{Config, ConfigError, ConfigManager},
-    };
-    pub use crate::application::{Application, ApplicationError, ApplicationState};
     // Removed broken storage re-exports
 }
 

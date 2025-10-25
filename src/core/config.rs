@@ -7,8 +7,8 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::Path;
 use std::sync::Arc;
-use tokio::sync::RwLock;
 use thiserror::Error;
+use tokio::sync::RwLock;
 
 /// Configuration value types
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -149,23 +149,23 @@ pub enum ConfigError {
     /// Configuration file not found
     #[error("Configuration file not found: {0}")]
     FileNotFound(String),
-    
+
     /// Configuration parsing error
     #[error("Configuration parsing error: {0}")]
     ParseError(String),
-    
+
     /// Configuration validation error
     #[error("Configuration validation error: {0}")]
     ValidationError(String),
-    
+
     /// Configuration key not found
     #[error("Configuration key not found: {0}")]
     KeyNotFound(String),
-    
+
     /// Configuration type mismatch
     #[error("Configuration type mismatch for key {0}: expected {1}, got {2}")]
     TypeMismatch(String, String, String),
-    
+
     /// Configuration source error
     #[error("Configuration source error: {0}")]
     SourceError(String),
@@ -187,12 +187,15 @@ impl ConfigManager {
     /// Load configuration from a file
     pub async fn load_from_file<P: AsRef<Path>>(&self, path: P) -> Result<(), ConfigError> {
         let path = path.as_ref();
-        
+
         if !path.exists() {
-            return Err(ConfigError::FileNotFound(path.to_string_lossy().to_string()));
+            return Err(ConfigError::FileNotFound(
+                path.to_string_lossy().to_string(),
+            ));
         }
 
-        let content = tokio::fs::read_to_string(path).await
+        let content = tokio::fs::read_to_string(path)
+            .await
             .map_err(|e| ConfigError::SourceError(e.to_string()))?;
 
         let config: Config = match path.extension().and_then(|s| s.to_str()) {
@@ -200,26 +203,31 @@ impl ConfigManager {
                 .map_err(|e| ConfigError::ParseError(e.to_string()))?,
             Some("yaml") | Some("yml") => serde_yaml::from_str(&content)
                 .map_err(|e| ConfigError::ParseError(e.to_string()))?,
-            Some("toml") => toml::from_str(&content)
-                .map_err(|e| ConfigError::ParseError(e.to_string()))?,
-            _ => return Err(ConfigError::ParseError("Unsupported file format".to_string())),
+            Some("toml") => {
+                toml::from_str(&content).map_err(|e| ConfigError::ParseError(e.to_string()))?
+            }
+            _ => {
+                return Err(ConfigError::ParseError(
+                    "Unsupported file format".to_string(),
+                ))
+            }
         };
 
         let mut current_config = self.config.write().await;
         *current_config = config;
-        
+
         Ok(())
     }
 
     /// Load configuration from environment variables
     pub async fn load_from_env(&self, prefix: &str) -> Result<(), ConfigError> {
         let mut config = self.config.write().await;
-        
+
         for (key, value) in std::env::vars() {
             if key.starts_with(prefix) {
                 let config_key = key.strip_prefix(prefix).unwrap().to_lowercase();
                 let config_value = self.parse_env_value(&value)?;
-                
+
                 let entry = ConfigEntry {
                     key: config_key.clone(),
                     value: config_value,
@@ -228,20 +236,22 @@ impl ConfigManager {
                     required: false,
                     sensitive: false,
                 };
-                
+
                 // Add to default section if no section specified
                 let section_name = "default".to_string();
-                let section = config.sections.entry(section_name.clone())
+                let section = config
+                    .sections
+                    .entry(section_name.clone())
                     .or_insert_with(|| ConfigSection {
                         name: section_name,
                         entries: HashMap::new(),
                         description: None,
                     });
-                
+
                 section.entries.insert(config_key, entry);
             }
         }
-        
+
         Ok(())
     }
 
@@ -251,15 +261,15 @@ impl ConfigManager {
         if let Ok(int_val) = value.parse::<i64>() {
             return Ok(ConfigValue::Integer(int_val));
         }
-        
+
         if let Ok(float_val) = value.parse::<f64>() {
             return Ok(ConfigValue::Float(float_val));
         }
-        
+
         if let Ok(bool_val) = value.parse::<bool>() {
             return Ok(ConfigValue::Boolean(bool_val));
         }
-        
+
         // Default to string
         Ok(ConfigValue::String(value.to_string()))
     }
@@ -267,34 +277,38 @@ impl ConfigManager {
     /// Get a configuration value
     pub async fn get(&self, key: &str) -> Result<ConfigValue, ConfigError> {
         let config = self.config.read().await;
-        
+
         // Try to find the key in any section
         for section in config.sections.values() {
             if let Some(entry) = section.entries.get(key) {
                 return Ok(entry.value.clone());
             }
         }
-        
+
         Err(ConfigError::KeyNotFound(key.to_string()))
     }
 
     /// Get a configuration value from a specific section
-    pub async fn get_from_section(&self, section: &str, key: &str) -> Result<ConfigValue, ConfigError> {
+    pub async fn get_from_section(
+        &self,
+        section: &str,
+        key: &str,
+    ) -> Result<ConfigValue, ConfigError> {
         let config = self.config.read().await;
-        
+
         if let Some(section) = config.sections.get(section) {
             if let Some(entry) = section.entries.get(key) {
                 return Ok(entry.value.clone());
             }
         }
-        
+
         Err(ConfigError::KeyNotFound(format!("{}.{}", section, key)))
     }
 
     /// Set a configuration value
     pub async fn set(&self, key: &str, value: ConfigValue) -> Result<(), ConfigError> {
         let mut config = self.config.write().await;
-        
+
         // Find existing entry to preserve metadata
         let mut entry = None;
         for section in config.sections.values() {
@@ -303,7 +317,7 @@ impl ConfigManager {
                 break;
             }
         }
-        
+
         let entry = entry.unwrap_or_else(|| ConfigEntry {
             key: key.to_string(),
             value: ConfigValue::String("".to_string()),
@@ -312,29 +326,31 @@ impl ConfigManager {
             required: false,
             sensitive: false,
         });
-        
+
         let mut new_entry = entry;
         let old_value = new_entry.value.clone();
         new_entry.value = value.clone();
         new_entry.source = ConfigSource::Runtime;
-        
+
         // Add to default section
         let section_name = "default".to_string();
-        let section = config.sections.entry(section_name.clone())
+        let section = config
+            .sections
+            .entry(section_name.clone())
             .or_insert_with(|| ConfigSection {
                 name: section_name,
                 entries: HashMap::new(),
                 description: None,
             });
-        
+
         section.entries.insert(key.to_string(), new_entry);
-        
+
         // Notify watchers
         let watchers = self.watchers.read().await;
         for watcher in watchers.iter() {
             watcher.on_config_change(key, &old_value, &value);
         }
-        
+
         Ok(())
     }
 
@@ -348,35 +364,42 @@ impl ConfigManager {
     pub async fn get_all(&self) -> HashMap<String, ConfigValue> {
         let config = self.config.read().await;
         let mut result = HashMap::new();
-        
+
         for section in config.sections.values() {
             for (key, entry) in &section.entries {
                 result.insert(key.clone(), entry.value.clone());
             }
         }
-        
+
         result
     }
 
     /// Validate configuration
     pub async fn validate(&self) -> Result<(), ConfigError> {
         let config = self.config.read().await;
-        
+
         for section in config.sections.values() {
             for (key, entry) in &section.entries {
-                if entry.required && matches!(entry.value, ConfigValue::String(ref s) if s.is_empty()) {
-                    return Err(ConfigError::ValidationError(
-                        format!("Required configuration key '{}' is empty", key)
-                    ));
+                if entry.required
+                    && matches!(entry.value, ConfigValue::String(ref s) if s.is_empty())
+                {
+                    return Err(ConfigError::ValidationError(format!(
+                        "Required configuration key '{}' is empty",
+                        key
+                    )));
                 }
             }
         }
-        
+
         Ok(())
     }
 
     /// Export configuration to a file
-    pub async fn export_to_file<P: AsRef<Path>>(&self, path: P, format: &str) -> Result<(), ConfigError> {
+    pub async fn export_to_file<P: AsRef<Path>>(
+        &self,
+        path: P,
+        format: &str,
+    ) -> Result<(), ConfigError> {
         let config = self.config.read().await;
         let content = match format {
             "json" => serde_json::to_string_pretty(&*config)
@@ -385,12 +408,17 @@ impl ConfigManager {
                 .map_err(|e| ConfigError::ParseError(e.to_string()))?,
             "toml" => toml::to_string_pretty(&*config)
                 .map_err(|e| ConfigError::ParseError(e.to_string()))?,
-            _ => return Err(ConfigError::ParseError("Unsupported export format".to_string())),
+            _ => {
+                return Err(ConfigError::ParseError(
+                    "Unsupported export format".to_string(),
+                ))
+            }
         };
 
-        tokio::fs::write(path, content).await
+        tokio::fs::write(path, content)
+            .await
             .map_err(|e| ConfigError::SourceError(e.to_string()))?;
-        
+
         Ok(())
     }
 }
@@ -429,10 +457,13 @@ mod tests {
     #[tokio::test]
     async fn test_config_manager_basic_operations() {
         let manager = ConfigManager::new();
-        
+
         // Set a value
-        manager.set("test_key", ConfigValue::String("test_value".to_string())).await.unwrap();
-        
+        manager
+            .set("test_key", ConfigValue::String("test_value".to_string()))
+            .await
+            .unwrap();
+
         // Get the value
         let value = manager.get("test_key").await.unwrap();
         assert_eq!(value, ConfigValue::String("test_value".to_string()));
@@ -442,19 +473,22 @@ mod tests {
     async fn test_config_manager_watchers() {
         let manager = ConfigManager::new();
         let changes = Arc::new(RwLock::new(Vec::new()));
-        
+
         let watcher = TestConfigWatcher {
             changes: changes.clone(),
         };
-        
+
         manager.add_watcher(Box::new(watcher)).await;
-        
+
         // Set a value
-        manager.set("test_key", ConfigValue::String("new_value".to_string())).await.unwrap();
-        
+        manager
+            .set("test_key", ConfigValue::String("new_value".to_string()))
+            .await
+            .unwrap();
+
         // Wait a bit for the async watcher to process
         tokio::time::sleep(tokio::time::Duration::from_millis(10)).await;
-        
+
         // Check if watcher was notified
         let changes = changes.read().await;
         assert_eq!(changes.len(), 1);
@@ -464,10 +498,13 @@ mod tests {
     #[tokio::test]
     async fn test_config_manager_validation() {
         let manager = ConfigManager::new();
-        
+
         // Set a required empty value
-        manager.set("required_key", ConfigValue::String("".to_string())).await.unwrap();
-        
+        manager
+            .set("required_key", ConfigValue::String("".to_string()))
+            .await
+            .unwrap();
+
         // Mark it as required
         let mut config = manager.config.write().await;
         if let Some(section) = config.sections.get_mut("default") {
@@ -476,7 +513,7 @@ mod tests {
             }
         }
         drop(config);
-        
+
         // This should fail validation
         let result = manager.validate().await;
         assert!(matches!(result, Err(ConfigError::ValidationError(_))));

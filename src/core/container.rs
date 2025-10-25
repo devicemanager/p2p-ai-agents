@@ -6,8 +6,8 @@
 use std::any::{Any, TypeId};
 use std::collections::HashMap;
 use std::sync::Arc;
-use tokio::sync::RwLock;
 use thiserror::Error;
+use tokio::sync::RwLock;
 
 /// Error types for dependency injection operations
 #[derive(Debug, Error)]
@@ -15,15 +15,15 @@ pub enum ContainerError {
     /// Service not found
     #[error("Service not found: {0}")]
     ServiceNotFound(String),
-    
+
     /// Service already registered
     #[error("Service already registered: {0}")]
     ServiceAlreadyRegistered(String),
-    
+
     /// Service registration failed
     #[error("Service registration failed: {0}")]
     RegistrationFailed(String),
-    
+
     /// Service resolution failed
     #[error("Service resolution failed: {0}")]
     ResolutionFailed(String),
@@ -54,6 +54,7 @@ struct ServiceRegistration {
 }
 
 /// Dependency injection container
+#[derive(Clone)]
 pub struct Container {
     services: Arc<RwLock<HashMap<TypeId, ServiceRegistration>>>,
     scoped_instances: Arc<RwLock<HashMap<TypeId, Box<dyn Any + Send + Sync>>>>,
@@ -69,17 +70,21 @@ impl Container {
     }
 
     /// Register a service with the container
-    pub async fn register<T, F>(&self, factory: F, lifetime: ServiceLifetime) -> Result<(), ContainerError>
+    pub async fn register<T, F>(
+        &self,
+        factory: F,
+        lifetime: ServiceLifetime,
+    ) -> Result<(), ContainerError>
     where
         T: 'static + Send + Sync,
         F: ServiceFactory + 'static,
     {
         let type_id = TypeId::of::<T>();
         let mut services = self.services.write().await;
-        
+
         if services.contains_key(&type_id) {
             return Err(ContainerError::ServiceAlreadyRegistered(
-                std::any::type_name::<T>().to_string()
+                std::any::type_name::<T>().to_string(),
             ));
         }
 
@@ -99,7 +104,8 @@ impl Container {
         T: 'static + Send + Sync,
         F: ServiceFactory + 'static,
     {
-        self.register::<T, F>(factory, ServiceLifetime::Singleton).await
+        self.register::<T, F>(factory, ServiceLifetime::Singleton)
+            .await
     }
 
     /// Register a scoped service
@@ -108,7 +114,8 @@ impl Container {
         T: 'static + Send + Sync,
         F: ServiceFactory + 'static,
     {
-        self.register::<T, F>(factory, ServiceLifetime::Scoped).await
+        self.register::<T, F>(factory, ServiceLifetime::Scoped)
+            .await
     }
 
     /// Register a transient service
@@ -117,7 +124,8 @@ impl Container {
         T: 'static + Send + Sync,
         F: ServiceFactory + 'static,
     {
-        self.register::<T, F>(factory, ServiceLifetime::Transient).await
+        self.register::<T, F>(factory, ServiceLifetime::Transient)
+            .await
     }
 
     /// Resolve a service from the container
@@ -127,28 +135,29 @@ impl Container {
     {
         let type_id = TypeId::of::<T>();
         let mut services = self.services.write().await;
-        
-        let registration = services.get_mut(&type_id)
-            .ok_or_else(|| ContainerError::ServiceNotFound(
-                std::any::type_name::<T>().to_string()
-            ))?;
+
+        let registration = services.get_mut(&type_id).ok_or_else(|| {
+            ContainerError::ServiceNotFound(std::any::type_name::<T>().to_string())
+        })?;
 
         match registration.lifetime {
             ServiceLifetime::Singleton => {
                 if let Some(instance) = &registration.instance {
                     // Return existing singleton instance
-                    let instance = instance.downcast_ref::<Arc<T>>()
-                        .ok_or_else(|| ContainerError::ResolutionFailed(
-                            "Failed to downcast singleton instance".to_string()
-                        ))?;
+                    let instance = instance.downcast_ref::<Arc<T>>().ok_or_else(|| {
+                        ContainerError::ResolutionFailed(
+                            "Failed to downcast singleton instance".to_string(),
+                        )
+                    })?;
                     Ok(instance.clone())
                 } else {
                     // Create new singleton instance
                     let instance = registration.factory.create(self)?;
-                    let instance = instance.downcast::<Arc<T>>()
-                        .map_err(|_| ContainerError::ResolutionFailed(
-                            "Failed to downcast new instance".to_string()
-                        ))?;
+                    let instance = instance.downcast::<Arc<T>>().map_err(|_| {
+                        ContainerError::ResolutionFailed(
+                            "Failed to downcast new instance".to_string(),
+                        )
+                    })?;
                     let instance_clone = (*instance).clone();
                     registration.instance = Some(instance as Box<dyn Any + Send + Sync>);
                     Ok(instance_clone)
@@ -157,17 +166,19 @@ impl Container {
             ServiceLifetime::Scoped => {
                 let mut scoped_instances = self.scoped_instances.write().await;
                 if let Some(instance) = scoped_instances.get(&type_id) {
-                    let instance = instance.downcast_ref::<Arc<T>>()
-                        .ok_or_else(|| ContainerError::ResolutionFailed(
-                            "Failed to downcast scoped instance".to_string()
-                        ))?;
+                    let instance = instance.downcast_ref::<Arc<T>>().ok_or_else(|| {
+                        ContainerError::ResolutionFailed(
+                            "Failed to downcast scoped instance".to_string(),
+                        )
+                    })?;
                     Ok(instance.clone())
                 } else {
                     let instance = registration.factory.create(self)?;
-                    let instance = instance.downcast::<Arc<T>>()
-                        .map_err(|_| ContainerError::ResolutionFailed(
-                            "Failed to downcast new scoped instance".to_string()
-                        ))?;
+                    let instance = instance.downcast::<Arc<T>>().map_err(|_| {
+                        ContainerError::ResolutionFailed(
+                            "Failed to downcast new scoped instance".to_string(),
+                        )
+                    })?;
                     let instance_clone = instance.clone();
                     scoped_instances.insert(type_id, Box::new(instance));
                     Ok(*instance_clone)
@@ -175,10 +186,11 @@ impl Container {
             }
             ServiceLifetime::Transient => {
                 let instance = registration.factory.create(self)?;
-                let instance = instance.downcast::<Arc<T>>()
-                    .map_err(|_| ContainerError::ResolutionFailed(
-                        "Failed to downcast new transient instance".to_string()
-                    ))?;
+                let instance = instance.downcast::<Arc<T>>().map_err(|_| {
+                    ContainerError::ResolutionFailed(
+                        "Failed to downcast new transient instance".to_string(),
+                    )
+                })?;
                 Ok(*instance)
             }
         }
@@ -203,7 +215,8 @@ impl Container {
     /// Get all registered service types
     pub async fn registered_services(&self) -> Vec<String> {
         let services = self.services.read().await;
-        services.keys()
+        services
+            .keys()
             .map(|_| "Service".to_string()) // In a real implementation, you'd store type names
             .collect()
     }
@@ -221,7 +234,11 @@ macro_rules! service_factory {
     ($factory_fn:expr) => {{
         struct ServiceFactoryImpl;
         impl $crate::core::container::ServiceFactory for ServiceFactoryImpl {
-            fn create(&self, container: &$crate::core::container::Container) -> Result<Box<dyn Any + Send + Sync>, $crate::core::container::ContainerError> {
+            fn create(
+                &self,
+                container: &$crate::core::container::Container,
+            ) -> Result<Box<dyn Any + Send + Sync>, $crate::core::container::ContainerError>
+            {
                 let instance = $factory_fn(container)?;
                 Ok(Box::new(instance))
             }
@@ -248,11 +265,14 @@ mod tests {
     #[tokio::test]
     async fn test_container_registration_and_resolution() {
         let container = Container::new();
-        
+
         // Register a singleton service
-        container.register_singleton::<TestService, _>(service_factory!(|_| {
-            Ok(Arc::new(TestService::new("test".to_string())))
-        })).await.unwrap();
+        container
+            .register_singleton::<TestService, _>(service_factory!(|_| {
+                Ok(Arc::new(TestService::new("test".to_string())))
+            }))
+            .await
+            .unwrap();
 
         // Resolve the service
         let service = container.resolve::<TestService>().await.unwrap();
@@ -266,7 +286,7 @@ mod tests {
     #[tokio::test]
     async fn test_container_service_not_found() {
         let container = Container::new();
-        
+
         let result = container.resolve::<TestService>().await;
         assert!(matches!(result, Err(ContainerError::ServiceNotFound(_))));
     }
@@ -274,15 +294,23 @@ mod tests {
     #[tokio::test]
     async fn test_container_already_registered() {
         let container = Container::new();
-        
-        container.register_singleton::<TestService, _>(service_factory!(|_| {
-            Ok(Arc::new(TestService::new("test1".to_string())))
-        })).await.unwrap();
 
-        let result = container.register_singleton::<TestService, _>(service_factory!(|_| {
-            Ok(Arc::new(TestService::new("test2".to_string())))
-        })).await;
+        container
+            .register_singleton::<TestService, _>(service_factory!(|_| {
+                Ok(Arc::new(TestService::new("test1".to_string())))
+            }))
+            .await
+            .unwrap();
 
-        assert!(matches!(result, Err(ContainerError::ServiceAlreadyRegistered(_))));
+        let result = container
+            .register_singleton::<TestService, _>(service_factory!(|_| {
+                Ok(Arc::new(TestService::new("test2".to_string())))
+            }))
+            .await;
+
+        assert!(matches!(
+            result,
+            Err(ContainerError::ServiceAlreadyRegistered(_))
+        ));
     }
 }

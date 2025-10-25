@@ -282,7 +282,17 @@ mod tests {
     use std::collections::HashMap;
     use tokio::time::Duration;
 
-    // TaskId specific tests
+    /// Test TaskId generation uniqueness
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use p2p_ai_agents::agent::TaskId;
+    ///
+    /// let id1 = TaskId::new();
+    /// let id2 = TaskId::new();
+    /// assert_ne!(id1, id2); // Each ID is unique
+    /// ```
     #[test]
     fn test_task_id_new() {
         let id1 = TaskId::new();
@@ -297,6 +307,16 @@ mod tests {
         assert!(uuid::Uuid::parse_str(id2.as_str()).is_ok());
     }
 
+    /// Test TaskId creation from string
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use p2p_ai_agents::agent::TaskId;
+    ///
+    /// let task_id = TaskId::from_string("my-custom-id".to_string());
+    /// assert_eq!(task_id.as_str(), "my-custom-id");
+    /// ```
     #[test]
     fn test_task_id_from_string() {
         let test_id = "test-task-id-123";
@@ -306,6 +326,15 @@ mod tests {
         assert_eq!(task_id.to_string(), test_id);
     }
 
+    /// Test TaskId default creation
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use p2p_ai_agents::agent::TaskId;
+    ///
+    /// let task_id = TaskId::default(); // Creates a new unique ID
+    /// ```
     #[test]
     fn test_task_id_default() {
         let id1 = TaskId::default();
@@ -316,12 +345,158 @@ mod tests {
         assert!(uuid::Uuid::parse_str(id1.as_str()).is_ok());
     }
 
+    /// Test TaskId display formatting
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use p2p_ai_agents::agent::TaskId;
+    ///
+    /// let task_id = TaskId::from_string("example-id".to_string());
+    /// println!("{}", task_id); // Prints: example-id
+    /// ```
     #[test]
     fn test_task_id_display() {
         let test_str = "display-test-id";
         let task_id = TaskId::from_string(test_str.to_string());
 
         assert_eq!(format!("{}", task_id), test_str);
+    }
+
+    /// Test TaskId equality comparison
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use p2p_ai_agents::agent::TaskId;
+    ///
+    /// let id1 = TaskId::from_string("same".to_string());
+    /// let id2 = TaskId::from_string("same".to_string());
+    /// let id3 = TaskId::from_string("different".to_string());
+    ///
+    /// assert_eq!(id1, id2);
+    /// assert_ne!(id1, id3);
+    /// ```
+    #[test]
+    fn test_task_id_equality() {
+        let id1 = TaskId::from_string("same-id".to_string());
+        let id2 = TaskId::from_string("same-id".to_string());
+        let id3 = TaskId::from_string("different-id".to_string());
+
+        // Same string should be equal
+        assert_eq!(id1, id2);
+        // Different string should not be equal
+        assert_ne!(id1, id3);
+    }
+
+    /// Test TaskId cloning
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use p2p_ai_agents::agent::TaskId;
+    ///
+    /// let original = TaskId::from_string("my-id".to_string());
+    /// let cloned = original.clone();
+    /// assert_eq!(original, cloned);
+    /// ```
+    #[test]
+    fn test_task_id_clone() {
+        let original = TaskId::from_string("clone-test".to_string());
+        let cloned = original.clone();
+
+        assert_eq!(original, cloned);
+        assert_eq!(original.as_str(), cloned.as_str());
+    }
+
+    /// Test TaskId hashing for use in collections
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use p2p_ai_agents::agent::TaskId;
+    /// use std::collections::HashMap;
+    ///
+    /// let mut tasks = HashMap::new();
+    /// let task_id = TaskId::new();
+    /// tasks.insert(task_id.clone(), "task data");
+    /// ```
+    #[test]
+    fn test_task_id_hash() {
+        use std::collections::HashSet;
+
+        let id1 = TaskId::from_string("hash-test-1".to_string());
+        let id2 = TaskId::from_string("hash-test-2".to_string());
+        let id1_dup = TaskId::from_string("hash-test-1".to_string());
+
+        let mut set = HashSet::new();
+        set.insert(id1.clone());
+        set.insert(id2.clone());
+        set.insert(id1_dup.clone());
+
+        // Should only have 2 unique items (id1 and id2)
+        assert_eq!(set.len(), 2);
+        assert!(set.contains(&id1));
+        assert!(set.contains(&id2));
+    }
+
+    /// Test TaskId serialization for storage and communication
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use p2p_ai_agents::agent::TaskId;
+    /// use serde_json;
+    ///
+    /// let task_id = TaskId::from_string("serializable-id".to_string());
+    /// let json = serde_json::to_string(&task_id).unwrap();
+    /// // json contains: "\"serializable-id\""
+    /// ```
+    #[test]
+    fn test_task_id_serialization() {
+        let original = TaskId::from_string("serialize-test".to_string());
+
+        // Serialize to JSON
+        let json = serde_json::to_string(&original).unwrap();
+        assert_eq!(json, "\"serialize-test\"");
+
+        // Deserialize from JSON
+        let deserialized: TaskId = serde_json::from_str(&json).unwrap();
+        assert_eq!(original, deserialized);
+    }
+
+    /// Test TaskId with empty string
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use p2p_ai_agents::agent::TaskId;
+    ///
+    /// let empty_id = TaskId::from_string("".to_string());
+    /// assert_eq!(empty_id.as_str(), "");
+    /// ```
+    #[test]
+    fn test_task_id_empty_string() {
+        let empty_id = TaskId::from_string("".to_string());
+        assert_eq!(empty_id.as_str(), "");
+        assert_eq!(empty_id.to_string(), "");
+    }
+
+    /// Test TaskId with special characters
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use p2p_ai_agents::agent::TaskId;
+    ///
+    /// let special_id = TaskId::from_string("task-123_special!".to_string());
+    /// // TaskId accepts any string content
+    /// ```
+    #[test]
+    fn test_task_id_special_characters() {
+        let special = "!@#$%^&*()_+-=[]{}|;:,.<>?";
+        let task_id = TaskId::from_string(special.to_string());
+        assert_eq!(task_id.as_str(), special);
     }
 
     // TaskPriority tests

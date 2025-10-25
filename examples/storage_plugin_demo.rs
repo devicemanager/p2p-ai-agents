@@ -3,20 +3,27 @@ use p2p_ai_agents::storage::{BackendConfig, StorageConfig, StorageManager, Stora
 
 /// Check if Supabase Docker containers are running
 /// Returns true if all required containers are running, false otherwise
-#[allow(dead_code)]
 async fn is_supabase_docker_running() -> bool {
     use std::process::Command;
 
     let required_containers = vec![
-        "supabase-lab-db",      // PostgreSQL database
-        "supabase-lab-auth",    // Supabase Auth service
-        "supabase-lab-studio",  // Supabase Studio UI
-        "supabase-lab-meta",    // Supabase Meta API
+        "supabase-lab-db",     // PostgreSQL database
+        "supabase-lab-auth",   // Supabase Auth service
+        "supabase-lab-studio", // Supabase Studio UI
+        "supabase-lab-meta",   // Supabase Meta API
     ];
 
     for container in required_containers {
         let output = Command::new("docker")
-            .args(["ps", "--filter", &format!("name={}", container), "--filter", "status=running", "--format", "{{.Names}}"])
+            .args([
+                "ps",
+                "--filter",
+                &format!("name={}", container),
+                "--filter",
+                "status=running",
+                "--format",
+                "{{.Names}}",
+            ])
             .output();
 
         match output {
@@ -47,25 +54,25 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         enabled: true,
         priority: 1,
     };
-    manager.add_backend(local_config).await?;    // 3. Add Supabase storage backend (if available)
+    manager.add_backend(local_config).await?; // 3. Add Supabase storage backend (if available)
     #[cfg(feature = "storage-supabase")]
     {
         println!("Attempting to add Supabase backend...");
-        
+
         // Check if Supabase Docker containers are running
         let docker_running = is_supabase_docker_running().await;
         if !docker_running {
             println!("ℹ️  Supabase Docker containers are not running. Start them with:");
             println!("    cd lab/docker && docker-compose up -d");
         }
-        
+
         // Use environment variables if available, otherwise use demo values that will gracefully fail
-        let supabase_url = std::env::var("SUPABASE_URL")
-            .unwrap_or_else(|_| "http://localhost:54321".to_string());
+        let supabase_url =
+            std::env::var("SUPABASE_URL").unwrap_or_else(|_| "http://localhost:54321".to_string());
         let supabase_anon_key = std::env::var("SUPABASE_ANON_KEY")
             .unwrap_or_else(|_| "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0".to_string());
         let supabase_service_key = std::env::var("SUPABASE_SERVICE_ROLE_KEY").ok();
-        
+
         let supabase_config = BackendConfig {
             name: "supabase".to_string(),
             storage_config: StorageConfig::Supabase {
@@ -85,9 +92,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             Ok(_) => println!("✅ Supabase backend added successfully"),
             Err(e) => {
                 if docker_running {
-                    println!("❌ Supabase backend failed to initialize despite containers running: {}", e);
+                    println!(
+                        "❌ Supabase backend failed to initialize despite containers running: {}",
+                        e
+                    );
                 } else {
-                    println!("⚠️  Supabase backend failed to initialize (containers not running): {}", e);
+                    println!(
+                        "⚠️  Supabase backend failed to initialize (containers not running): {}",
+                        e
+                    );
                 }
             }
         }
