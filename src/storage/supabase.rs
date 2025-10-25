@@ -6,11 +6,11 @@
 use crate::storage::local::{Storage, StorageError};
 use crate::storage::plugin::StoragePlugin;
 use async_trait::async_trait;
+use reqwest::Client;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
-use reqwest::Client;
 
 /// Configuration for Supabase storage
 #[derive(Debug, Clone, Serialize, Deserialize)]

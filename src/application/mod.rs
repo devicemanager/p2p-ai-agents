@@ -3,18 +3,18 @@
 //! This module provides the main application architecture that orchestrates
 //! all system components using dependency injection and event-driven patterns.
 
+use crate::agent::Agent;
 use crate::core::{
+    config::{ConfigError, ConfigManager},
     container::Container,
     events::{EventBus, EventHandler, EventResult},
-    services::{Service, ServiceRegistry, ServiceError},
-    config::{ConfigManager, ConfigError},
+    services::{Service, ServiceError, ServiceRegistry},
 };
-use crate::agent::Agent;
-use crate::network::{NetworkManager, NetworkConfig};
+use crate::network::{NetworkConfig, NetworkManager};
 use crate::storage::{StorageManager, StoragePolicy};
 use std::sync::Arc;
-use tokio::sync::RwLock;
 use thiserror::Error;
+use tokio::sync::RwLock;
 
 /// Application error types
 #[derive(Debug, Error)]
@@ -22,35 +22,35 @@ pub enum ApplicationError {
     /// Configuration error
     #[error("Configuration error: {0}")]
     Config(#[from] ConfigError),
-    
+
     /// Service error
     #[error("Service error: {0}")]
     Service(#[from] ServiceError),
-    
+
     /// Agent error
     #[error("Agent error: {0}")]
     Agent(#[from] crate::agent::Error),
-    
+
     /// Network error
     #[error("Network error: {0}")]
     Network(#[from] crate::network::NetworkError),
-    
+
     /// Storage error
     #[error("Storage error: {0}")]
     Storage(#[from] crate::storage::ManagerError),
-    
+
     /// Event error
     #[error("Event error: {0}")]
     Event(#[from] crate::core::events::EventError),
-    
+
     /// Application initialization failed
     #[error("Application initialization failed: {0}")]
     InitializationFailed(String),
-    
+
     /// Application startup failed
     #[error("Application startup failed: {0}")]
     StartupFailed(String),
-    
+
     /// Application shutdown failed
     #[error("Application shutdown failed: {0}")]
     ShutdownFailed(String),
@@ -126,9 +126,10 @@ impl Application {
     pub async fn start(&self) -> Result<(), ApplicationError> {
         let state = self.state.read().await;
         if *state != ApplicationState::Running {
-            return Err(ApplicationError::StartupFailed(
-                format!("Application is not in running state: {:?}", *state)
-            ));
+            return Err(ApplicationError::StartupFailed(format!(
+                "Application is not in running state: {:?}",
+                *state
+            )));
         }
 
         // Start all services
@@ -225,11 +226,15 @@ impl Application {
     async fn register_core_services(&self) -> Result<(), ApplicationError> {
         // Register event bus as a service
         let event_bus_service = EventBusService::new(self.event_bus.clone());
-        self.service_registry.register(Arc::new(event_bus_service)).await?;
+        self.service_registry
+            .register(Arc::new(event_bus_service))
+            .await?;
 
         // Register config manager as a service
         let config_service = ConfigService::new(self.config_manager.clone());
-        self.service_registry.register(Arc::new(config_service)).await?;
+        self.service_registry
+            .register(Arc::new(config_service))
+            .await?;
 
         Ok(())
     }
@@ -237,10 +242,18 @@ impl Application {
     /// Initialize event handlers
     async fn initialize_event_handlers(&self) -> Result<(), ApplicationError> {
         let app_handler = ApplicationEventHandler::new(self.clone());
-        self.event_bus.subscribe::<crate::core::events::AgentStarted, _>(app_handler.clone()).await?;
-        self.event_bus.subscribe::<crate::core::events::AgentStopped, _>(app_handler.clone()).await?;
-        self.event_bus.subscribe::<crate::core::events::TaskCompleted, _>(app_handler.clone()).await?;
-        self.event_bus.subscribe::<crate::core::events::TaskFailed, _>(app_handler).await?;
+        self.event_bus
+            .subscribe::<crate::core::events::AgentStarted, _>(app_handler.clone())
+            .await?;
+        self.event_bus
+            .subscribe::<crate::core::events::AgentStopped, _>(app_handler.clone())
+            .await?;
+        self.event_bus
+            .subscribe::<crate::core::events::TaskCompleted, _>(app_handler.clone())
+            .await?;
+        self.event_bus
+            .subscribe::<crate::core::events::TaskFailed, _>(app_handler)
+            .await?;
 
         Ok(())
     }
@@ -248,7 +261,7 @@ impl Application {
     /// Initialize storage
     async fn initialize_storage(&self) -> Result<(), ApplicationError> {
         let mut storage_manager = StorageManager::new();
-        
+
         // Configure storage based on configuration
         let storage_policy = self.get_storage_policy().await?;
         storage_manager.set_policy(storage_policy);
@@ -286,7 +299,7 @@ impl Application {
             max_peers: 100,
             protocol_config: crate::network::ProtocolConfig {},
             resource_limits: crate::network::ResourceLimits {
-                max_bandwidth: 1024 * 1024, // 1MB/s
+                max_bandwidth: 1024 * 1024,     // 1MB/s
                 max_memory: 1024 * 1024 * 1024, // 1GB
                 max_connections: 100,
             },
@@ -367,7 +380,10 @@ impl Service for EventBusService {
         }
     }
 
-    async fn handle_request(&self, request: crate::core::services::ServiceRequest) -> Result<crate::core::services::ServiceResponse, ServiceError> {
+    async fn handle_request(
+        &self,
+        request: crate::core::services::ServiceRequest,
+    ) -> Result<crate::core::services::ServiceResponse, ServiceError> {
         Ok(crate::core::services::ServiceResponse {
             id: request.id,
             success: true,
@@ -429,7 +445,10 @@ impl Service for ConfigService {
         }
     }
 
-    async fn handle_request(&self, request: crate::core::services::ServiceRequest) -> Result<crate::core::services::ServiceResponse, ServiceError> {
+    async fn handle_request(
+        &self,
+        request: crate::core::services::ServiceRequest,
+    ) -> Result<crate::core::services::ServiceResponse, ServiceError> {
         Ok(crate::core::services::ServiceResponse {
             id: request.id,
             success: true,

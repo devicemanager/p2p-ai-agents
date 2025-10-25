@@ -38,6 +38,7 @@ This project aims to democratize AI by building a distributed, peer-to-peer (P2P
 3. [Development](docs/development/)
    - [Development Guide](docs/development/README.md)
    - [Testing Guide](docs/development/testing-guide.md)
+   - [Code Formatting](docs/code-formatting.md)
    - [Implementation Docs](docs/implementation/)
 
 4. [Documentation](docs/)

@@ -23,7 +23,7 @@ async fn test_protocol_state_transitions() {
 #[test]
 fn test_metrics_collector_usage() {
     let mut metrics = MetricsCollector::new();
-    
+
     // Test increment
     metrics.increment("messages_sent");
     metrics.increment("messages_sent");

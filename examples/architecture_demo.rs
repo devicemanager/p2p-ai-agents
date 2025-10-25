@@ -3,13 +3,13 @@
 //! This example demonstrates the improved architectural patterns including
 //! dependency injection, event-driven architecture, and service management.
 
-use p2p_ai_agents::prelude::*;
+use p2p_ai_agents::agent::{DefaultAgent, ResourceLimits};
 use p2p_ai_agents::core::config::ConfigValue;
 use p2p_ai_agents::core::events::{AgentStarted, TaskCompleted};
-use p2p_ai_agents::agent::{DefaultAgent, ResourceLimits};
+use p2p_ai_agents::prelude::*;
 use p2p_ai_agents::service_factory;
-use std::sync::Arc;
 use std::any::Any;
+use std::sync::Arc;
 use tokio::time::{sleep, Duration};
 
 #[tokio::main]
@@ -22,7 +22,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Create the application
     let app = Application::new();
-    
+
     // Initialize the application
     println!("📋 Initializing application...");
     app.initialize().await?;
@@ -31,16 +31,19 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Demonstrate configuration management
     println!("\n🔧 Configuration Management Demo");
     println!("-------------------------------");
-    
+
     // Set some configuration values
     app.config_manager()
-        .set("demo.message", ConfigValue::String("Hello from architecture demo!".to_string()))
+        .set(
+            "demo.message",
+            ConfigValue::String("Hello from architecture demo!".to_string()),
+        )
         .await?;
-    
+
     app.config_manager()
         .set("demo.number", ConfigValue::Integer(42))
         .await?;
-    
+
     app.config_manager()
         .set("demo.enabled", ConfigValue::Boolean(true))
         .await?;
@@ -57,10 +60,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Demonstrate event system
     println!("\n📡 Event System Demo");
     println!("--------------------");
-    
+
     // Create a custom event handler
     let event_handler = DemoEventHandler::new();
-    app.event_bus().subscribe::<AgentStarted, _>(event_handler).await?;
+    app.event_bus()
+        .subscribe::<AgentStarted, _>(event_handler)
+        .await?;
 
     // Publish some events
     let agent_started = AgentStarted::new("demo-agent-1".to_string(), Some("demo".to_string()));
@@ -72,7 +77,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Demonstrate service registry
     println!("\n🔧 Service Registry Demo");
     println!("------------------------");
-    
+
     // Get service health
     let health = app.service_registry().health_check().await;
     for (service_name, health) in health {
@@ -82,13 +87,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Demonstrate dependency injection
     println!("\n💉 Dependency Injection Demo");
     println!("-----------------------------");
-    
+
     let container = Container::new();
-    
+
     // Register a service
-    container.register_singleton::<DemoService, _>(service_factory!(|_| {
-        Ok(Arc::new(DemoService::new("Hello from DI!".to_string())))
-    })).await?;
+    container
+        .register_singleton::<DemoService, _>(service_factory!(|_| {
+            Ok(Arc::new(DemoService::new("Hello from DI!".to_string())))
+        }))
+        .await?;
 
     // Resolve the service
     let service = container.resolve::<DemoService>().await?;
@@ -97,21 +104,21 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Demonstrate agent management
     println!("\n🤖 Agent Management Demo");
     println!("-------------------------");
-    
+
     // Create a demo agent
     let agent_config = AgentConfig {
         id: AgentId::new(),
         resource_limits: ResourceLimits {
             max_cpu: 0.5,
-            max_memory: 512 * 1024 * 1024, // 512MB
+            max_memory: 512 * 1024 * 1024,       // 512MB
             max_storage: 5 * 1024 * 1024 * 1024, // 5GB
-            max_bandwidth: 512 * 1024, // 512KB/s
+            max_bandwidth: 512 * 1024,           // 512KB/s
         },
     };
-    
+
     let agent = Arc::new(DefaultAgent::new(agent_config).await?);
     app.add_agent(agent.clone()).await?;
-    
+
     println!("Added agent: {}", agent.id());
     println!("Agent status: {:?}", agent.status().await?);
 
@@ -124,11 +131,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Demonstrate event publishing during runtime
     println!("\n📡 Runtime Event Publishing");
     println!("----------------------------");
-    
+
     for i in 1..=3 {
         let event = AgentStarted::new(
             format!("runtime-agent-{}", i),
-            Some("runtime-demo".to_string())
+            Some("runtime-demo".to_string()),
         );
         app.event_bus().publish(event).await?;
         sleep(Duration::from_millis(100)).await;
@@ -137,11 +144,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Demonstrate configuration updates
     println!("\n🔄 Configuration Updates");
     println!("------------------------");
-    
+
     app.config_manager()
         .set("demo.counter", ConfigValue::Integer(100))
         .await?;
-    
+
     let counter = app.config_manager().get("demo.counter").await?;
     println!("Updated counter: {:?}", counter);
 
