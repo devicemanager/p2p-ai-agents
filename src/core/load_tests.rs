@@ -10,15 +10,10 @@ use std::time::{Duration, Instant};
 use tokio::sync::Barrier;
 use tokio::task;
 
-use crate::core::events::EventId;
-use crate::core::services::{
-    ServiceHealth, ServiceId, ServiceRequest, ServiceResponse, ServiceStatus,
-};
+use crate::core::services::{ServiceError, ServiceHealth, ServiceStatus};
 use crate::core::{
-    AccessControlManager, AuthResult, Authenticator, Authorizer, AuthzResult, Container,
-    DefaultAuthenticator, DefaultAuthorizer, Event, EventBus, EventHandler, EventResult,
-    Permission, Principal, PrincipalId, Resource, Role, RoleId, Service, ServiceError,
-    ServiceRegistry,
+    Event, EventBus, EventHandler, EventResult, Permission, Principal, PrincipalId, Resource, Role,
+    RoleId, Service, ServiceRegistry,
 };
 use crate::service_factory;
 
@@ -336,16 +331,14 @@ pub mod event_load_tests {
         id: EventId,
         timestamp: chrono::DateTime<chrono::Utc>,
         source: Option<String>,
-        data: String,
     }
 
     impl TestEvent {
-        fn new(data: String, source: Option<String>) -> Self {
+        fn new(source: Option<String>) -> Self {
             Self {
                 id: EventId::new(),
                 timestamp: chrono::Utc::now(),
                 source,
-                data,
             }
         }
     }
@@ -412,7 +405,7 @@ pub mod event_load_tests {
             let event_bus = event_bus_clone.clone();
 
             async move {
-                let event = TestEvent::new("test data".to_string(), None);
+                let event = TestEvent::new(None);
                 event_bus.publish(event).await?;
                 Ok(())
             }
