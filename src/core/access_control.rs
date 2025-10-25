@@ -557,4 +557,366 @@ mod tests {
         assert!(retrieved.is_some());
         assert_eq!(retrieved.unwrap().name, "Test User");
     }
+
+    #[tokio::test]
+    async fn test_policy_creation_and_validation() {
+        // Test creating valid policies
+        let policy = Policy {
+            id: "test-policy".to_string(),
+            name: "Test Policy".to_string(),
+            roles: HashSet::from([RoleId::new("admin".to_string())]),
+            permissions: {
+                let mut perms = HashMap::new();
+                let mut resource_perms = HashSet::new();
+                resource_perms.insert(Permission::new("read".to_string()));
+                resource_perms.insert(Permission::new("write".to_string()));
+                perms.insert(Resource::new("documents".to_string()), resource_perms);
+                perms
+            },
+            effect: PolicyEffect::Allow,
+        };
+
+        assert_eq!(policy.id, "test-policy");
+        assert_eq!(policy.name, "Test Policy");
+        assert!(policy.roles.contains(&RoleId::new("admin".to_string())));
+        assert_eq!(policy.effect, PolicyEffect::Allow);
+
+        // Check permissions
+        let doc_permissions = policy.permissions.get(&Resource::new("documents".to_string())).unwrap();
+        assert!(doc_permissions.contains(&Permission::new("read".to_string())));
+        assert!(doc_permissions.contains(&Permission::new("write".to_string())));
+    }
+
+    #[tokio::test]
+    async fn test_policy_deny_effect() {
+        let authorizer = DefaultAuthorizer::new();
+
+        // Create a deny policy (documenting expected behavior for future implementation)
+        let _deny_policy = Policy {
+            id: "deny-policy".to_string(),
+            name: "Deny Policy".to_string(),
+            roles: HashSet::from([RoleId::new("guest".to_string())]),
+            permissions: {
+                let mut perms = HashMap::new();
+                let mut resource_perms = HashSet::new();
+                resource_perms.insert(Permission::new("write".to_string()));
+                perms.insert(Resource::new("sensitive".to_string()), resource_perms);
+                perms
+            },
+            effect: PolicyEffect::Deny,
+        };
+
+        // Set up role with permissions that would normally allow
+        let mut permissions = HashMap::new();
+        let mut resource_perms = HashSet::new();
+        resource_perms.insert(Permission::new("write".to_string()));
+        permissions.insert(Resource::new("sensitive".to_string()), resource_perms);
+
+        authorizer.update_role_permissions(
+            RoleId::new("guest".to_string()),
+            permissions
+        ).await;
+
+        let principal = Principal {
+            id: PrincipalId::new("guest-user".to_string()),
+            name: "Guest User".to_string(),
+            roles: HashSet::from([RoleId::new("guest".to_string())]),
+            attributes: HashMap::new(),
+        };
+
+        // Even though the role has permission, explicit deny policy should take precedence
+        // Note: In our current implementation, we don't have explicit deny policy enforcement
+        // This test documents the expected behavior for future policy engine implementation
+        let result = authorizer.check_permission(
+            &principal,
+            &Resource::new("sensitive".to_string()),
+            &Permission::new("write".to_string())
+        ).await;
+
+        // Currently allows because we don't have deny policy logic yet
+        assert_eq!(result, AuthzResult::Allow);
+    }
+
+    #[tokio::test]
+    async fn test_policy_role_assignment() {
+        let acm = AccessControlManager::new(
+            Arc::new(DefaultAuthenticator),
+            Arc::new(DefaultAuthorizer::new()),
+        );
+
+        // Create a policy
+        let policy = Policy {
+            id: "user-policy".to_string(),
+            name: "User Access Policy".to_string(),
+            roles: HashSet::from([
+                RoleId::new("user".to_string()),
+                RoleId::new("editor".to_string())
+            ]),
+            permissions: HashMap::new(),
+            effect: PolicyEffect::Allow,
+        };
+
+        acm.add_policy(policy).await;
+
+        // Create roles
+        let user_role = Role {
+            id: RoleId::new("user".to_string()),
+            name: "User".to_string(),
+            description: "Basic user role".to_string(),
+            permissions: HashMap::new(),
+        };
+
+        let editor_role = Role {
+            id: RoleId::new("editor".to_string()),
+            name: "Editor".to_string(),
+            description: "Content editor role".to_string(),
+            permissions: HashMap::new(),
+        };
+
+        acm.add_role(user_role).await;
+        acm.add_role(editor_role).await;
+
+        // Verify roles exist
+        let retrieved_user_role = acm.get_role(&RoleId::new("user".to_string())).await;
+        assert!(retrieved_user_role.is_some());
+        assert_eq!(retrieved_user_role.unwrap().name, "User");
+
+        let retrieved_editor_role = acm.get_role(&RoleId::new("editor".to_string())).await;
+        assert!(retrieved_editor_role.is_some());
+        assert_eq!(retrieved_editor_role.unwrap().name, "Editor");
+    }
+
+    #[tokio::test]
+    async fn test_policy_principal_role_verification() {
+        let acm = AccessControlManager::new(
+            Arc::new(DefaultAuthenticator),
+            Arc::new(DefaultAuthorizer::new()),
+        );
+
+        // Create roles
+        let admin_role = Role {
+            id: RoleId::new("admin".to_string()),
+            name: "Administrator".to_string(),
+            description: "Full system access".to_string(),
+            permissions: HashMap::new(),
+        };
+
+        let user_role = Role {
+            id: RoleId::new("user".to_string()),
+            name: "User".to_string(),
+            description: "Basic user access".to_string(),
+            permissions: HashMap::new(),
+        };
+
+        acm.add_role(admin_role).await;
+        acm.add_role(user_role).await;
+
+        // Create principals with different role assignments
+        let admin_principal = Principal {
+            id: PrincipalId::new("admin-user".to_string()),
+            name: "Admin User".to_string(),
+            roles: HashSet::from([RoleId::new("admin".to_string())]),
+            attributes: HashMap::new(),
+        };
+
+        let regular_principal = Principal {
+            id: PrincipalId::new("regular-user".to_string()),
+            name: "Regular User".to_string(),
+            roles: HashSet::from([RoleId::new("user".to_string())]),
+            attributes: HashMap::new(),
+        };
+
+        let multi_role_principal = Principal {
+            id: PrincipalId::new("multi-user".to_string()),
+            name: "Multi Role User".to_string(),
+            roles: HashSet::from([
+                RoleId::new("user".to_string()),
+                RoleId::new("admin".to_string())
+            ]),
+            attributes: HashMap::new(),
+        };
+
+        acm.add_principal(admin_principal).await;
+        acm.add_principal(regular_principal).await;
+        acm.add_principal(multi_role_principal).await;
+
+        // Verify role assignments
+        let retrieved_admin = acm.get_principal(&PrincipalId::new("admin-user".to_string())).await.unwrap();
+        assert!(retrieved_admin.roles.contains(&RoleId::new("admin".to_string())));
+        assert!(!retrieved_admin.roles.contains(&RoleId::new("user".to_string())));
+
+        let retrieved_regular = acm.get_principal(&PrincipalId::new("regular-user".to_string())).await.unwrap();
+        assert!(retrieved_regular.roles.contains(&RoleId::new("user".to_string())));
+        assert!(!retrieved_regular.roles.contains(&RoleId::new("admin".to_string())));
+
+        let retrieved_multi = acm.get_principal(&PrincipalId::new("multi-user".to_string())).await.unwrap();
+        assert!(retrieved_multi.roles.contains(&RoleId::new("user".to_string())));
+        assert!(retrieved_multi.roles.contains(&RoleId::new("admin".to_string())));
+    }
+
+    #[tokio::test]
+    async fn test_policy_conflict_resolution() {
+        let authorizer = DefaultAuthorizer::new();
+
+        // Set up conflicting permissions - one role allows, another doesn't have permission
+        let mut admin_permissions = HashMap::new();
+        let mut admin_resource_perms = HashSet::new();
+        admin_resource_perms.insert(Permission::new("delete".to_string()));
+        admin_permissions.insert(Resource::new("system".to_string()), admin_resource_perms);
+
+        let mut user_permissions = HashMap::new();
+        let mut user_resource_perms = HashSet::new();
+        user_resource_perms.insert(Permission::new("read".to_string()));
+        user_permissions.insert(Resource::new("system".to_string()), user_resource_perms);
+
+        authorizer.update_role_permissions(RoleId::new("admin".to_string()), admin_permissions).await;
+        authorizer.update_role_permissions(RoleId::new("user".to_string()), user_permissions).await;
+
+        // Principal with both roles
+        let principal = Principal {
+            id: PrincipalId::new("power-user".to_string()),
+            name: "Power User".to_string(),
+            roles: HashSet::from([
+                RoleId::new("user".to_string()),
+                RoleId::new("admin".to_string())
+            ]),
+            attributes: HashMap::new(),
+        };
+
+        // Should have delete permission from admin role
+        let result = authorizer.check_permission(
+            &principal,
+            &Resource::new("system".to_string()),
+            &Permission::new("delete".to_string())
+        ).await;
+        assert_eq!(result, AuthzResult::Allow);
+
+        // Should have read permission from user role
+        let result = authorizer.check_permission(
+            &principal,
+            &Resource::new("system".to_string()),
+            &Permission::new("read".to_string())
+        ).await;
+        assert_eq!(result, AuthzResult::Allow);
+
+        // Should not have write permission (neither role has it)
+        let result = authorizer.check_permission(
+            &principal,
+            &Resource::new("system".to_string()),
+            &Permission::new("write".to_string())
+        ).await;
+        assert!(matches!(result, AuthzResult::Deny(_)));
+    }
+
+    #[tokio::test]
+    async fn test_policy_empty_permissions() {
+        let authorizer = DefaultAuthorizer::new();
+
+        // Create role with empty permissions
+        authorizer.update_role_permissions(RoleId::new("empty".to_string()), HashMap::new()).await;
+
+        let principal = Principal {
+            id: PrincipalId::new("empty-user".to_string()),
+            name: "Empty User".to_string(),
+            roles: HashSet::from([RoleId::new("empty".to_string())]),
+            attributes: HashMap::new(),
+        };
+
+        // Any permission check should fail
+        let result = authorizer.check_permission(
+            &principal,
+            &Resource::new("any-resource".to_string()),
+            &Permission::new("any-permission".to_string())
+        ).await;
+
+        assert!(matches!(result, AuthzResult::Deny(_)));
+    }
+
+    #[tokio::test]
+    async fn test_policy_permission_inheritance() {
+        let authorizer = DefaultAuthorizer::new();
+
+        // Set up hierarchical permissions
+        let mut permissions = HashMap::new();
+        let mut resource_perms = HashSet::new();
+        resource_perms.insert(Permission::new("read".to_string()));
+        resource_perms.insert(Permission::new("write".to_string()));
+        resource_perms.insert(Permission::new("delete".to_string()));
+        permissions.insert(Resource::new("documents".to_string()), resource_perms);
+
+        authorizer.update_role_permissions(RoleId::new("manager".to_string()), permissions).await;
+
+        let principal = Principal {
+            id: PrincipalId::new("manager-user".to_string()),
+            name: "Manager User".to_string(),
+            roles: HashSet::from([RoleId::new("manager".to_string())]),
+            attributes: HashMap::new(),
+        };
+
+        // Test all permissions are available
+        let available_permissions = authorizer.get_permissions(
+            &principal,
+            &Resource::new("documents".to_string())
+        ).await;
+
+        assert!(available_permissions.contains(&Permission::new("read".to_string())));
+        assert!(available_permissions.contains(&Permission::new("write".to_string())));
+        assert!(available_permissions.contains(&Permission::new("delete".to_string())));
+        assert_eq!(available_permissions.len(), 3);
+    }
+
+    #[tokio::test]
+    async fn test_policy_resource_isolation() {
+        let authorizer = DefaultAuthorizer::new();
+
+        // Set up permissions for different resources in a single call
+        let mut permissions = HashMap::new();
+
+        let mut file_perms = HashSet::new();
+        file_perms.insert(Permission::new("read".to_string()));
+        permissions.insert(Resource::new("files".to_string()), file_perms);
+
+        let mut db_perms = HashSet::new();
+        db_perms.insert(Permission::new("write".to_string()));
+        permissions.insert(Resource::new("database".to_string()), db_perms);
+
+        authorizer.update_role_permissions(RoleId::new("specialist".to_string()), permissions).await;
+
+        let principal = Principal {
+            id: PrincipalId::new("specialist-user".to_string()),
+            name: "Specialist User".to_string(),
+            roles: HashSet::from([RoleId::new("specialist".to_string())]),
+            attributes: HashMap::new(),
+        };
+
+        // Should have read on files but not write
+        let file_read_result = authorizer.check_permission(
+            &principal,
+            &Resource::new("files".to_string()),
+            &Permission::new("read".to_string())
+        ).await;
+        assert_eq!(file_read_result, AuthzResult::Allow);
+
+        let file_write_result = authorizer.check_permission(
+            &principal,
+            &Resource::new("files".to_string()),
+            &Permission::new("write".to_string())
+        ).await;
+        assert!(matches!(file_write_result, AuthzResult::Deny(_)));
+
+        // Should have write on database but not read
+        let db_write_result = authorizer.check_permission(
+            &principal,
+            &Resource::new("database".to_string()),
+            &Permission::new("write".to_string())
+        ).await;
+        assert_eq!(db_write_result, AuthzResult::Allow);
+
+        let db_read_result = authorizer.check_permission(
+            &principal,
+            &Resource::new("database".to_string()),
+            &Permission::new("read".to_string())
+        ).await;
+        assert!(matches!(db_read_result, AuthzResult::Deny(_)));
+    }
 }

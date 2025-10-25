@@ -30,6 +30,7 @@ Welcome to the **P2P AI Agents** documentation system. This dashboard provides s
 - [**Core Components**](core/) - Foundational architectural components
   - [Access Control](core/access-control.md) - Authentication and authorization
   - [Load Testing](core/load-testing.md) - Performance testing framework
+  - [Policy Verification](core/policy-verification.md) - Security policy testing
 
 ### 👩‍💻 **Implementation & Development**
 - [Getting Started](user-guides/getting-started.md) - Quick start guide for new users
