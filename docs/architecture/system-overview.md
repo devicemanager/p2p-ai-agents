@@ -50,6 +50,15 @@ graph TD
         API[REST API]
     end
 
+    subgraph Core Layer
+        DI[Dependency Injection]
+        ES[Event System]
+        SR[Service Registry]
+        AC[Access Control]
+        CFG[Configuration]
+        LT[Load Testing]
+    end
+
     subgraph Agent Layer
         LA[Local Agent]
         TA[Task Manager]
@@ -70,9 +79,13 @@ graph TD
         ST[Storage]
     end
 
-    UI --> LA
-    CLI --> LA
-    API --> LA
+    UI --> AC
+    CLI --> AC
+    API --> AC
+    AC --> DI
+    DI --> ES
+    ES --> SR
+    SR --> LA
     LA --> TA
     LA --> RM
     LA --> CM
@@ -83,9 +96,29 @@ graph TD
     TA --> ML
     TA --> VS
     TA --> ST
+    CFG -.-> DI
+    LT -.-> SR
 ```
 
 ## Core Components
+
+### 0. Core Architecture Layer
+The foundation layer providing essential architectural patterns and utilities.
+
+#### Components:
+- **Dependency Injection Container**: Manages service lifetimes and dependencies
+- **Event System**: Async event-driven communication between components
+- **Service Registry**: Centralized service management and health monitoring
+- **Access Control**: Authentication, authorization, and RBAC security
+- **Configuration Management**: Multi-source configuration with validation
+- **Load Testing Framework**: Performance testing and benchmarking tools
+
+#### Key Features:
+- **Type Safety**: Compile-time dependency resolution
+- **Async-First**: Built on tokio for high performance
+- **Modular Design**: Pluggable components and providers
+- **Security Integration**: Built-in access control and audit trails
+- **Performance Monitoring**: Comprehensive load testing capabilities
 
 ### 1. Agent Core
 The central orchestrator managing local operations and peer communications.
@@ -179,13 +212,17 @@ The central orchestrator managing local operations and peer communications.
 ```mermaid
 sequenceDiagram
     participant User
+    participant AccessControl
+    participant Core
     participant LocalAgent
     participant TaskManager
     participant Network
     participant Processing
     participant Storage
 
-    User->>LocalAgent: Submit Task
+    User->>AccessControl: Authenticate & Authorize
+    AccessControl->>Core: Validate Access
+    Core->>LocalAgent: Submit Task
     LocalAgent->>TaskManager: Queue Task
     TaskManager->>Network: Find Peers
     Network-->>TaskManager: Peer List
@@ -193,33 +230,34 @@ sequenceDiagram
     Processing->>Storage: Store Results
     Processing-->>TaskManager: Return Results
     TaskManager-->>LocalAgent: Aggregate
-    LocalAgent-->>User: Final Result
+    LocalAgent-->>Core: Results
+    Core-->>User: Final Result
 ```
 
 ## System Interactions
 
 ### 1. Task Processing Flow
-1. User submits task
-2. Local agent validates and queues
-3. Task manager distributes work
-4. Peers process subtasks
-5. Results are aggregated
-6. User receives response
+1. User authenticates through access control layer
+2. Core layer validates permissions and manages dependencies
+3. Local agent validates and queues task
+4. Task manager distributes work across network
+5. Peers process subtasks with resource monitoring
+6. Results are aggregated and stored
+7. User receives response through secure channels
 
-### 2. Peer Communication
-1. Peer discovery
-2. Connection establishment
-3. Protocol negotiation
-4. Secure communication
-5. Task distribution
-6. Result sharing
+### 2. Component Communication
+1. Access control secures all external interactions
+2. Event system enables async component communication
+3. Service registry provides health monitoring and discovery
+4. Dependency injection manages component lifecycles
+5. Configuration management handles runtime adjustments
 
 ### 3. Resource Management
-1. Resource monitoring
-2. Load balancing
-3. Task processing
-4. Energy optimization
-5. Performance tracking
+1. Resource monitoring tracks all system components
+2. Load balancing distributes work efficiently
+3. Access control enforces resource usage policies
+4. Performance testing validates system capacity
+5. Energy optimization considers environmental impact
 
 ## Design Considerations
 

@@ -27,6 +27,9 @@ Welcome to the **P2P AI Agents** documentation system. This dashboard provides s
 - [**Security Architecture**](architecture/security.md) - Security model and practices  
 - [**Networking**](architecture/networking.md) - P2P protocols and communication
 - [**Data Flow**](architecture/data-flow.md) - Data processing and storage patterns
+- [**Core Components**](core/) - Foundational architectural components
+  - [Access Control](core/access-control.md) - Authentication and authorization
+  - [Load Testing](core/load-testing.md) - Performance testing framework
 
 ### 👩‍💻 **Implementation & Development**
 - [Getting Started](user-guides/getting-started.md) - Quick start guide for new users
@@ -34,11 +37,13 @@ Welcome to the **P2P AI Agents** documentation system. This dashboard provides s
 - [Performance & Benchmarking](user-guides/performance-benchmarking-guide.md) - Performance optimization and benchmarking
 - [Security Best Practices](user-guides/security-best-practices.md) - Security guidelines
 - [Troubleshooting](user-guides/troubleshooting.md) - Common issues and solutions
+- [Code Formatting](code-formatting.md) - Code style and formatting guidelines
 
 ### 🔌 Implementation & API Reference
 
 - [Implementation Guides](implementation/README.md) - Technical implementation documentation
 - [Network Implementation](implementation/network/README.md) - P2P networking details
+- [Supabase Storage Integration](storage/supabase-integration.md) - Cloud storage setup and usage
 
 *Note: Full API reference documentation is planned for future releases.*
 

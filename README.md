@@ -12,7 +12,12 @@
 > **⚠️ WORK IN PROGRESS DISCLAIMER**
 > 
 > This project is currently in early development and serves as a foundational boilerplate for building distributed peer-to-peer AI agents. The current implementation provides basic structure and components, but many features are still being developed. This is not yet ready for production use.
-> Developed by AI for those who are enthusiastic about to develop AI for AI and AI developers and enthusiasts.
+> 
+> **Recent Major Updates:**
+> - ✅ **Core Architecture**: Complete dependency injection, event system, service registry, and access control
+> - ✅ **Security Framework**: RBAC authentication and authorization with pluggable providers
+> - ✅ **Load Testing**: Comprehensive performance testing framework with metrics collection
+> - ✅ **Documentation**: Extensive guides for implementation and best practices
 > 
 > We welcome contributions and feedback as we work toward a fully functional system!
 
@@ -41,7 +46,11 @@ This project aims to democratize AI by building a distributed, peer-to-peer (P2P
    - [Code Formatting](docs/code-formatting.md)
    - [Implementation Docs](docs/implementation/)
 
-4. [Documentation](docs/)
+4. [Core Architecture](docs/core/)
+   - [Access Control](docs/core/access-control.md)
+   - [Load Testing](docs/core/load-testing.md)
+
+5. [Documentation](docs/)
    - [Documentation Index](docs/INDEX.md)
    - [Quick Reference](docs/QUICK_REFERENCE.md)
    - [Glossary](docs/GLOSSARY.md)
