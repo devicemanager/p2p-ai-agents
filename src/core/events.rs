@@ -13,7 +13,36 @@ use thiserror::Error;
 use uuid::Uuid;
 
 /// Type alias for event handler storage to reduce complexity
-type EventHandlerMap = Arc<RwLock<HashMap<TypeId, Vec<Arc<dyn Any + Send + Sync>>>>>;
+/// Wrapper for type-erased event handlers
+#[async_trait]
+trait ErasedEventHandler: Send + Sync {
+    async fn handle_erased(&self, event: &(dyn Any + Send + Sync)) -> EventResult;
+    fn name(&self) -> &'static str;
+}
+
+/// Wrapper to convert a concrete event handler to a type-erased one
+struct EventHandlerWrapper<E: Event, H: EventHandler<E>> {
+    handler: H,
+    _phantom: std::marker::PhantomData<E>,
+}
+
+#[async_trait]
+impl<E: Event + 'static, H: EventHandler<E>> ErasedEventHandler for EventHandlerWrapper<E, H> {
+    async fn handle_erased(&self, event: &(dyn Any + Send + Sync)) -> EventResult {
+        if let Some(typed_event) = event.downcast_ref::<E>() {
+            self.handler.handle(typed_event).await
+        } else {
+            EventResult::Error("Event type mismatch".to_string())
+        }
+    }
+
+    fn name(&self) -> &'static str {
+        self.handler.name()
+    }
+}
+
+/// Type alias for event handler map
+type EventHandlerMap = Arc<RwLock<HashMap<TypeId, Vec<Arc<dyn ErasedEventHandler>>>>>;
 
 /// Event identifier
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -141,7 +170,11 @@ impl EventBus {
         let mut handlers = self.handlers.write().await;
         
         let handler_entry = handlers.entry(type_id).or_insert_with(Vec::new);
-        handler_entry.push(Arc::new(handler));
+        let wrapped_handler = EventHandlerWrapper {
+            handler,
+            _phantom: std::marker::PhantomData,
+        };
+        handler_entry.push(Arc::new(wrapped_handler));
         
         Ok(())
     }
@@ -157,17 +190,15 @@ impl EventBus {
         
         if let Some(handler_list) = handlers.get(&type_id) {
             for handler in handler_list {
-                if let Some(typed_handler) = handler.downcast_ref::<Arc<dyn EventHandler<E>>>() {
-                    let result = typed_handler.handle(&event).await;
-                    match result {
-                        EventResult::Error(err) => {
-                            tracing::error!("Event handler {} failed: {}", typed_handler.name(), err);
-                        }
-                        EventResult::Warning(warn) => {
-                            tracing::warn!("Event handler {} warning: {}", typed_handler.name(), warn);
-                        }
-                        _ => {}
+                let result = handler.handle_erased(&event as &(dyn Any + Send + Sync)).await;
+                match result {
+                    EventResult::Error(err) => {
+                        tracing::error!("Event handler {} failed: {}", handler.name(), err);
                     }
+                    EventResult::Warning(warn) => {
+                        tracing::warn!("Event handler {} warning: {}", handler.name(), warn);
+                    }
+                    _ => {}
                 }
             }
         }
