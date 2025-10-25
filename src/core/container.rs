@@ -149,9 +149,9 @@ impl Container {
                         .map_err(|_| ContainerError::ResolutionFailed(
                             "Failed to downcast new instance".to_string()
                         ))?;
-                    let instance_clone = instance.clone();
-                    registration.instance = Some(Box::new(instance));
-                    Ok(*instance_clone)
+                    let instance_clone = (*instance).clone();
+                    registration.instance = Some(instance as Box<dyn Any + Send + Sync>);
+                    Ok(instance_clone)
                 }
             }
             ServiceLifetime::Scoped => {

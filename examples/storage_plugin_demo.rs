@@ -3,6 +3,7 @@ use p2p_ai_agents::storage::{BackendConfig, StorageConfig, StorageManager, Stora
 
 /// Check if Supabase Docker containers are running
 /// Returns true if all required containers are running, false otherwise
+#[allow(dead_code)]
 async fn is_supabase_docker_running() -> bool {
     use std::process::Command;
 
