@@ -216,16 +216,6 @@ Enable debug logging:
 RUST_LOG=debug cargo test --features storage-supabase test_supabase_storage_performance -- --nocapture
 ```
 
-## Integration with YOLO Mode
-
-The Supabase storage tests integrate with the YOLO mode validation pipeline:
-
-```bash
-# Run task with performance validation
-./scripts/tasks.sh --yolo --strict implement-supabase-storage-adapter
-```
-
-This ensures performance tests are automatically executed as part of the development workflow.
 
 ## Continuous Integration
 

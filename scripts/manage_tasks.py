@@ -972,7 +972,7 @@ def main():
     
     args = parser.parse_args()
     
-    root_dir = "/workspaces/p2p-ai-agents"
+    root_dir = str(Path(__file__).parent.parent)
     task_manager = TaskManager(root_dir)
     
     if args.action == 'generate':

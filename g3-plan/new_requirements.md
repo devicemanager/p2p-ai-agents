@@ -1,0 +1,3 @@
+{{ORIGINAL USER REQUIREMENTS -- THIS SECTION WILL BE IGNORED BY THE IMPLEMENTATION}}
+
+Check the docs folder and suggest improvements.

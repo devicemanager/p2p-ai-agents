@@ -582,7 +582,10 @@ mod tests {
         assert_eq!(policy.effect, PolicyEffect::Allow);
 
         // Check permissions
-        let doc_permissions = policy.permissions.get(&Resource::new("documents".to_string())).unwrap();
+        let doc_permissions = policy
+            .permissions
+            .get(&Resource::new("documents".to_string()))
+            .unwrap();
         assert!(doc_permissions.contains(&Permission::new("read".to_string())));
         assert!(doc_permissions.contains(&Permission::new("write".to_string())));
     }
@@ -612,10 +615,9 @@ mod tests {
         resource_perms.insert(Permission::new("write".to_string()));
         permissions.insert(Resource::new("sensitive".to_string()), resource_perms);
 
-        authorizer.update_role_permissions(
-            RoleId::new("guest".to_string()),
-            permissions
-        ).await;
+        authorizer
+            .update_role_permissions(RoleId::new("guest".to_string()), permissions)
+            .await;
 
         let principal = Principal {
             id: PrincipalId::new("guest-user".to_string()),
@@ -627,11 +629,13 @@ mod tests {
         // Even though the role has permission, explicit deny policy should take precedence
         // Note: In our current implementation, we don't have explicit deny policy enforcement
         // This test documents the expected behavior for future policy engine implementation
-        let result = authorizer.check_permission(
-            &principal,
-            &Resource::new("sensitive".to_string()),
-            &Permission::new("write".to_string())
-        ).await;
+        let result = authorizer
+            .check_permission(
+                &principal,
+                &Resource::new("sensitive".to_string()),
+                &Permission::new("write".to_string()),
+            )
+            .await;
 
         // Currently allows because we don't have deny policy logic yet
         assert_eq!(result, AuthzResult::Allow);
@@ -650,7 +654,7 @@ mod tests {
             name: "User Access Policy".to_string(),
             roles: HashSet::from([
                 RoleId::new("user".to_string()),
-                RoleId::new("editor".to_string())
+                RoleId::new("editor".to_string()),
             ]),
             permissions: HashMap::new(),
             effect: PolicyEffect::Allow,
@@ -731,7 +735,7 @@ mod tests {
             name: "Multi Role User".to_string(),
             roles: HashSet::from([
                 RoleId::new("user".to_string()),
-                RoleId::new("admin".to_string())
+                RoleId::new("admin".to_string()),
             ]),
             attributes: HashMap::new(),
         };
@@ -741,17 +745,38 @@ mod tests {
         acm.add_principal(multi_role_principal).await;
 
         // Verify role assignments
-        let retrieved_admin = acm.get_principal(&PrincipalId::new("admin-user".to_string())).await.unwrap();
-        assert!(retrieved_admin.roles.contains(&RoleId::new("admin".to_string())));
-        assert!(!retrieved_admin.roles.contains(&RoleId::new("user".to_string())));
+        let retrieved_admin = acm
+            .get_principal(&PrincipalId::new("admin-user".to_string()))
+            .await
+            .unwrap();
+        assert!(retrieved_admin
+            .roles
+            .contains(&RoleId::new("admin".to_string())));
+        assert!(!retrieved_admin
+            .roles
+            .contains(&RoleId::new("user".to_string())));
 
-        let retrieved_regular = acm.get_principal(&PrincipalId::new("regular-user".to_string())).await.unwrap();
-        assert!(retrieved_regular.roles.contains(&RoleId::new("user".to_string())));
-        assert!(!retrieved_regular.roles.contains(&RoleId::new("admin".to_string())));
+        let retrieved_regular = acm
+            .get_principal(&PrincipalId::new("regular-user".to_string()))
+            .await
+            .unwrap();
+        assert!(retrieved_regular
+            .roles
+            .contains(&RoleId::new("user".to_string())));
+        assert!(!retrieved_regular
+            .roles
+            .contains(&RoleId::new("admin".to_string())));
 
-        let retrieved_multi = acm.get_principal(&PrincipalId::new("multi-user".to_string())).await.unwrap();
-        assert!(retrieved_multi.roles.contains(&RoleId::new("user".to_string())));
-        assert!(retrieved_multi.roles.contains(&RoleId::new("admin".to_string())));
+        let retrieved_multi = acm
+            .get_principal(&PrincipalId::new("multi-user".to_string()))
+            .await
+            .unwrap();
+        assert!(retrieved_multi
+            .roles
+            .contains(&RoleId::new("user".to_string())));
+        assert!(retrieved_multi
+            .roles
+            .contains(&RoleId::new("admin".to_string())));
     }
 
     #[tokio::test]
@@ -769,8 +794,12 @@ mod tests {
         user_resource_perms.insert(Permission::new("read".to_string()));
         user_permissions.insert(Resource::new("system".to_string()), user_resource_perms);
 
-        authorizer.update_role_permissions(RoleId::new("admin".to_string()), admin_permissions).await;
-        authorizer.update_role_permissions(RoleId::new("user".to_string()), user_permissions).await;
+        authorizer
+            .update_role_permissions(RoleId::new("admin".to_string()), admin_permissions)
+            .await;
+        authorizer
+            .update_role_permissions(RoleId::new("user".to_string()), user_permissions)
+            .await;
 
         // Principal with both roles
         let principal = Principal {
@@ -778,33 +807,39 @@ mod tests {
             name: "Power User".to_string(),
             roles: HashSet::from([
                 RoleId::new("user".to_string()),
-                RoleId::new("admin".to_string())
+                RoleId::new("admin".to_string()),
             ]),
             attributes: HashMap::new(),
         };
 
         // Should have delete permission from admin role
-        let result = authorizer.check_permission(
-            &principal,
-            &Resource::new("system".to_string()),
-            &Permission::new("delete".to_string())
-        ).await;
+        let result = authorizer
+            .check_permission(
+                &principal,
+                &Resource::new("system".to_string()),
+                &Permission::new("delete".to_string()),
+            )
+            .await;
         assert_eq!(result, AuthzResult::Allow);
 
         // Should have read permission from user role
-        let result = authorizer.check_permission(
-            &principal,
-            &Resource::new("system".to_string()),
-            &Permission::new("read".to_string())
-        ).await;
+        let result = authorizer
+            .check_permission(
+                &principal,
+                &Resource::new("system".to_string()),
+                &Permission::new("read".to_string()),
+            )
+            .await;
         assert_eq!(result, AuthzResult::Allow);
 
         // Should not have write permission (neither role has it)
-        let result = authorizer.check_permission(
-            &principal,
-            &Resource::new("system".to_string()),
-            &Permission::new("write".to_string())
-        ).await;
+        let result = authorizer
+            .check_permission(
+                &principal,
+                &Resource::new("system".to_string()),
+                &Permission::new("write".to_string()),
+            )
+            .await;
         assert!(matches!(result, AuthzResult::Deny(_)));
     }
 
@@ -813,7 +848,9 @@ mod tests {
         let authorizer = DefaultAuthorizer::new();
 
         // Create role with empty permissions
-        authorizer.update_role_permissions(RoleId::new("empty".to_string()), HashMap::new()).await;
+        authorizer
+            .update_role_permissions(RoleId::new("empty".to_string()), HashMap::new())
+            .await;
 
         let principal = Principal {
             id: PrincipalId::new("empty-user".to_string()),
@@ -823,11 +860,13 @@ mod tests {
         };
 
         // Any permission check should fail
-        let result = authorizer.check_permission(
-            &principal,
-            &Resource::new("any-resource".to_string()),
-            &Permission::new("any-permission".to_string())
-        ).await;
+        let result = authorizer
+            .check_permission(
+                &principal,
+                &Resource::new("any-resource".to_string()),
+                &Permission::new("any-permission".to_string()),
+            )
+            .await;
 
         assert!(matches!(result, AuthzResult::Deny(_)));
     }
@@ -844,7 +883,9 @@ mod tests {
         resource_perms.insert(Permission::new("delete".to_string()));
         permissions.insert(Resource::new("documents".to_string()), resource_perms);
 
-        authorizer.update_role_permissions(RoleId::new("manager".to_string()), permissions).await;
+        authorizer
+            .update_role_permissions(RoleId::new("manager".to_string()), permissions)
+            .await;
 
         let principal = Principal {
             id: PrincipalId::new("manager-user".to_string()),
@@ -854,10 +895,9 @@ mod tests {
         };
 
         // Test all permissions are available
-        let available_permissions = authorizer.get_permissions(
-            &principal,
-            &Resource::new("documents".to_string())
-        ).await;
+        let available_permissions = authorizer
+            .get_permissions(&principal, &Resource::new("documents".to_string()))
+            .await;
 
         assert!(available_permissions.contains(&Permission::new("read".to_string())));
         assert!(available_permissions.contains(&Permission::new("write".to_string())));
@@ -880,7 +920,9 @@ mod tests {
         db_perms.insert(Permission::new("write".to_string()));
         permissions.insert(Resource::new("database".to_string()), db_perms);
 
-        authorizer.update_role_permissions(RoleId::new("specialist".to_string()), permissions).await;
+        authorizer
+            .update_role_permissions(RoleId::new("specialist".to_string()), permissions)
+            .await;
 
         let principal = Principal {
             id: PrincipalId::new("specialist-user".to_string()),
@@ -890,33 +932,41 @@ mod tests {
         };
 
         // Should have read on files but not write
-        let file_read_result = authorizer.check_permission(
-            &principal,
-            &Resource::new("files".to_string()),
-            &Permission::new("read".to_string())
-        ).await;
+        let file_read_result = authorizer
+            .check_permission(
+                &principal,
+                &Resource::new("files".to_string()),
+                &Permission::new("read".to_string()),
+            )
+            .await;
         assert_eq!(file_read_result, AuthzResult::Allow);
 
-        let file_write_result = authorizer.check_permission(
-            &principal,
-            &Resource::new("files".to_string()),
-            &Permission::new("write".to_string())
-        ).await;
+        let file_write_result = authorizer
+            .check_permission(
+                &principal,
+                &Resource::new("files".to_string()),
+                &Permission::new("write".to_string()),
+            )
+            .await;
         assert!(matches!(file_write_result, AuthzResult::Deny(_)));
 
         // Should have write on database but not read
-        let db_write_result = authorizer.check_permission(
-            &principal,
-            &Resource::new("database".to_string()),
-            &Permission::new("write".to_string())
-        ).await;
+        let db_write_result = authorizer
+            .check_permission(
+                &principal,
+                &Resource::new("database".to_string()),
+                &Permission::new("write".to_string()),
+            )
+            .await;
         assert_eq!(db_write_result, AuthzResult::Allow);
 
-        let db_read_result = authorizer.check_permission(
-            &principal,
-            &Resource::new("database".to_string()),
-            &Permission::new("read".to_string())
-        ).await;
+        let db_read_result = authorizer
+            .check_permission(
+                &principal,
+                &Resource::new("database".to_string()),
+                &Permission::new("read".to_string()),
+            )
+            .await;
         assert!(matches!(db_read_result, AuthzResult::Deny(_)));
     }
 }

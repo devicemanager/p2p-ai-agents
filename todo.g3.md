@@ -1,0 +1,15 @@
+- [ ] Document and implement document naming standard
+  - [x] Create document naming standard document
+  - [x] Rename files from underscores to hyphens
+  - [x] Update references to renamed files
+  - [x] Verify all references are correct
+- [x] Remove YOLO mode specification from task management system
+  - [x] Delete YOLO mode specification document
+  - [x] Remove YOLO-related completed tasks
+  - [x] Remove YOLO references from lab documentation
+  - [x] Remove YOLO references from security task
+- [ ] Adopt and start working on tasks from docs/development/task-management.md
+  - [x] Review task management system documentation
+  - [x] Generate tasks from implementation checklists
+  - [x] Organize tasks into appropriate directories
+  - [ ] Start working on high-priority tasks
