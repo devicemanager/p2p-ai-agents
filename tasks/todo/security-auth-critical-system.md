@@ -21,5 +21,4 @@ Implement a critical security authentication system with database migration and 
 - [ ] Breaking changes documented
 
 ---
-
-*This task should NOT be suitable for YOLO mode*
+---

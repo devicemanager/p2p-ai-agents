@@ -2,7 +2,7 @@
 //!
 //! This module provides the foundational architectural patterns including
 //! dependency injection, event handling, service management, access control,
-//! and load testing utilities.
+//! load testing, and system integration testing utilities.
 
 pub mod access_control;
 pub mod config;
@@ -10,6 +10,7 @@ pub mod container;
 pub mod events;
 pub mod load_tests;
 pub mod services;
+pub mod system_tests;
 
 pub use access_control::{
     AccessControlManager, AuthResult, AuthToken, Authenticator, Authorizer, AuthzResult,
