@@ -1,6 +1,6 @@
 # Task Management Index
 
-*Last updated: 2025-12-14 23:25:44*
+*Last updated: 2025-12-14 23:25:45*
 
 ## Overview
 
@@ -10,15 +10,15 @@ This directory contains all implementation tasks for the P2P AI Agents project, 
 
 - **Total Tasks**: 370
 - **Completed**: 11 (3.0%)
-- **In Progress**: 2
-- **TODO**: 357
+- **In Progress**: 3
+- **TODO**: 356
 
 ## Task Directories
 
-### 📋 [TODO Tasks](./todo/) (357 tasks)
+### 📋 [TODO Tasks](./todo/) (356 tasks)
 Tasks that are planned but not yet started.
 
-### 🚧 [In Progress Tasks](./in-progress/) (2 tasks)
+### 🚧 [In Progress Tasks](./in-progress/) (3 tasks)
 Tasks that are currently being worked on.
 
 ### ✅ [Completed Tasks](./completed/) (11 tasks)
@@ -212,7 +212,6 @@ Each task follows a standardized Markdown format with:
 - [Stress testing](./todo/core-implementation-core-implementation-stress-tes.md)
 - [System integration](./todo/core-implementation-core-implementation-system-int.md)
 - [Task execution](./todo/core-implementation-core-implementation-task-execu.md)
-- [Task manager implementation](./todo/core-implementation-core-implementation-task-manag.md)
 - [Task scheduling](./todo/core-implementation-core-implementation-task-sched.md)
 - [Task types and definitions](./todo/core-implementation-core-implementation-task-types.md)
 - [Test coverage meets requirements](./todo/core-implementation-core-implementation-test-cover.md)
@@ -427,6 +426,7 @@ Each task follows a standardized Markdown format with:
 
 - [Access control](./in-progress/core-implementation-core-implementation-access-con.md)
 - [Base agent trait and types](./in-progress/core-implementation-core-implementation-base-agent.md)
+- [Task manager implementation](./in-progress/core-implementation-core-implementation-task-manag.md)
 
 ### Completed Tasks
 
