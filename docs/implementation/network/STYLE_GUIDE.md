@@ -72,11 +72,11 @@
 2. **Directory Structure**
    ```
    docs/implementation/network/
-   ├── README.md
-   ├── INDEX.md
-   ├── TEMPLATE.md
-   ├── STYLE_GUIDE.md
-   ├── CHECKLIST.md
+   ├── readme.md
+   ├── index.md
+   ├── template.md
+   ├── style_guide.md
+   ├── checklist.md
    ├── types/
    ├── examples/
    ├── testing/

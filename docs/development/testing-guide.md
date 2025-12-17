@@ -462,7 +462,7 @@ def verify_production_readiness():
 
 ## Related Documentation
 
-- [Development Guide](README.md)
+- [Development Guide](readme.md)
 - [Architecture Overview](../architecture/system-overview.md)
 - [Security Guide](../user-guides/security-best-practices.md)
 - [Troubleshooting Guide](../user-guides/troubleshooting.md)

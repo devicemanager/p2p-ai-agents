@@ -369,11 +369,11 @@ cargo test --release -- --bench
 
 3. **Read Documentation**
    - [Architecture Overview](../architecture/system-overview.md)
-   - [Development Guide](../development/README.md)
-   - [Implementation Docs](../implementation/README.md)
+   - [Development Guide](../development/readme.md)
+   - [Implementation Docs](../implementation/readme.md)
 
 4. **Contributing**
-   - See [CONTRIBUTING.md](../CONTRIBUTING.md)
+   - See [contributing.md](../contributing.md)
    - Check out [GitHub Issues](https://github.com/p2p-ai-agents/p2p-ai-agents/issues)
 
 ## Development Resources

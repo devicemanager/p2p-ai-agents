@@ -601,10 +601,10 @@ fn get_performance_stats() -> (u64, Duration) {
 ## Related Documentation
 
 - [Architecture Overview](../architecture/system-overview.md) - System architecture and design
-- [Development Guide](../development/README.md) - Development setup and guidelines  
+- [Development Guide](../development/readme.md) - Development setup and guidelines  
 - [Troubleshooting Guide](troubleshooting.md) - General troubleshooting information
 - [Security Best Practices](security-best-practices.md) - Security considerations
-- [Network Implementation](../implementation/network/README.md) - Network layer details
+- [Network Implementation](../implementation/network/readme.md) - Network layer details
 
 ---
 

@@ -26,11 +26,11 @@ This document outlines the comprehensive architecture, design decisions, and imp
 
 ## 📖 Related Documentation
 
-- **[Documentation Index](INDEX.md)** - Complete documentation overview
-- **[README](README.md)** - Project overview and getting started
-- **[Quick Reference](QUICK_REFERENCE.md)** - Commands and configuration
-- **[Agent Protocol](AGENT_PROTOCOL.md)** - Communication protocol specification
-- **[Contributing Guide](CONTRIBUTING.md)** - Development guidelines
+- **[Documentation Index](index.md)** - Complete documentation overview
+- **[README](readme.md)** - Project overview and getting started
+- **[Quick Reference](quick-reference.md)** - Commands and configuration
+- **[Agent Protocol](agent-protocol.md)** - Communication protocol specification
+- **[Contributing Guide](contributing.md)** - Development guidelines
 
 ---
 

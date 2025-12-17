@@ -223,4 +223,4 @@ security:
 
 ---
 
-*Note: This is a quick reference guide. For detailed documentation, see the [full documentation](INDEX.md).*
+*Note: This is a quick reference guide. For detailed documentation, see the [full documentation](index.md).*

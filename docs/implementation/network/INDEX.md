@@ -3,8 +3,8 @@
 ## Quick Links
 
 ### Core Documentation
-- [README.md](README.md) - Main documentation
-- [CHECKLIST.md](CHECKLIST.md) - Documentation improvement checklist
+- [readme.md](readme.md) - Main documentation
+- [checklist.md](checklist.md) - Documentation improvement checklist
 - [network-types.md](network-types.md) - Network type definitions
 - [network-manager.md](network-manager.md) - Network manager implementation
 - [protocols.md](protocols.md) - Protocol implementations
@@ -113,7 +113,7 @@ NetworkManager
 - [Security Architecture](../../architecture/security.md)
 
 ## Navigation Structure
-1. Start with [README.md](README.md) for overview
+1. Start with [readme.md](readme.md) for overview
 2. Review [network-types.md](network-types.md) for type definitions
 3. Study [network-manager.md](network-manager.md) for implementation
 4. Explore [protocols.md](protocols.md) for protocol details

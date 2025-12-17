@@ -3,7 +3,7 @@
 This checklist tracks the progress of documentation improvements for the network implementation.
 
 ## Phase 1: Structure and Organization
-- [x] Update README.md
+- [x] Update readme.md
   - [x] Fix file references (network-protocols.md → protocols.md)
   - [x] Add version information and compatibility matrix
   - [x] Update implementation status
@@ -15,7 +15,7 @@ This checklist tracks the progress of documentation improvements for the network
   - [x] Add security considerations
   - [x] Add testing strategies
 
-- [x] Create Documentation Index (docs/implementation/network/INDEX.md)
+- [x] Create Documentation Index (docs/implementation/network/index.md)
   - [x] List all available documentation files
   - [x] Provide quick links to common topics
   - [x] Include a dependency graph of components

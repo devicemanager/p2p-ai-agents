@@ -626,7 +626,7 @@ python scripts/manage_tasks.py index
 """
         
         # Write the index file
-        index_file = self.tasks_dir / "README.md"
+        index_file = self.tasks_dir / "readme.md"
         with open(index_file, 'w', encoding='utf-8') as f:
             f.write(index_content)
         

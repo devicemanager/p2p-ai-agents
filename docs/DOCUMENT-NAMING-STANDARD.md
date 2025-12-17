@@ -30,20 +30,20 @@ This document establishes the naming convention for all documentation files in t
 ### Files to Rename
 The following files should be renamed to comply with the standard:
 
-1. `AGENT_PROTOCOL.md` → `agent-protocol.md`
-2. `CHANGELOG.md` → `changelog.md`
-3. `CODE_OF_CONDUCT.md` → `code-of-conduct.md`
-4. `CONTRIBUTING.md` → `contributing.md`
+1. `agent-protocol.md` → `agent-protocol.md`
+2. `changelog.md` → `changelog.md`
+3. `code-of-conduct.md` → `code-of-conduct.md`
+4. `contributing.md` → `contributing.md`
 5. `DOCUMENTATION_MIGRATION_COMPLETE.md` → `documentation-migration-complete.md`
-6. `GITHUB_WORKFLOWS_INTEGRATION.md` → `github-workflows-integration.md`
+6. `github-workflows-integration.md` → `github-workflows-integration.md`
 7. `GITHUB_WORKFLOWS_VALIDATION_COMPLETE.md` → `github-workflows-validation-complete.md`
-8. `GLOSSARY.md` → `glossary.md`
-9. `HIGH_LEVEL_DESIGN.md` → `high-level-design.md`
-10. `PLUGIN_SYSTEM_IMPLEMENTATION_COMPLETE.md` → `plugin-system-implementation-complete.md`
-11. `ROADMAP.md` → `roadmap.md`
-12. `SECURITY.md` → `security.md`
-13. `SUPABASE_SETUP_COMPLETE.md` → `supabase-setup-complete.md`
-14. `TEMPLATE.md` → `template.md`
+8. `glossary.md` → `glossary.md`
+9. `high-level-design.md` → `high-level-design.md`
+10. `plugin-system-implementation-complete.md` → `plugin-system-implementation-complete.md`
+11. `roadmap.md` → `roadmap.md`
+12. `security.md` → `security.md`
+13. `supabase-setup-complete.md` → `supabase-setup-complete.md`
+14. `template.md` → `template.md`
 
 ### Updating References
 After renaming files, update all references to these files in:

@@ -13,7 +13,7 @@ The P2P AI Agents project uses a Markdown-based task management system to track 
 
 ```
 tasks/
-├── README.md           # Main index with task statistics
+├── readme.md           # Main index with task statistics
 ├── todo/              # Tasks that haven't been started
 ├── in-progress/       # Tasks currently being worked on
 └── completed/         # Finished and verified tasks
@@ -168,7 +168,7 @@ Output example:
 
 ## Task Index
 
-The main task index (`tasks/README.md`) provides:
+The main task index (`tasks/readme.md`) provides:
 
 - Real-time task statistics
 - Progress percentage

@@ -99,6 +99,37 @@ match authenticator.authenticate(&principal_id, &credentials).await {
 }
 ```
 
+### Using the SimpleAuthenticator
+
+For basic password-based authentication (in-memory), you can use `SimpleAuthenticator`:
+
+```rust
+use p2p_ai_agents::core::{Authenticator, AuthResult, SimpleAuthenticator, PrincipalId};
+
+let authenticator = SimpleAuthenticator::new();
+let principal_id = PrincipalId::new("user-123".to_string());
+
+// Register a user
+authenticator.add_user(principal_id.clone(), "secret".to_string()).await;
+
+// Authenticate
+let credentials = HashMap::from([
+    ("password".to_string(), "secret".to_string())
+]);
+
+match authenticator.authenticate(&principal_id, &credentials).await {
+    AuthResult::Success(token) => {
+        println!("Authenticated: {}", token.principal_id.as_str());
+    }
+    AuthResult::Failed(reason) => {
+        println!("Authentication failed: {}", reason);
+    }
+    AuthResult::Expired => {
+        println!("Token expired");
+    }
+}
+```
+
 ### Token Validation
 
 ```rust

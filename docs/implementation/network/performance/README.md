@@ -8,9 +8,9 @@ This directory contains network performance documentation for the P2P AI Agents 
 
 ## Related Documentation
 
-- [Main Documentation](../../README.md)
+- [Main Documentation](../../readme.md)
 - [Architecture Overview](../../../architecture/system-overview.md)
-- [Development Guide](../../../development/README.md)
+- [Development Guide](../../../development/readme.md)
 
 ---
 Last updated: 2025-01-27

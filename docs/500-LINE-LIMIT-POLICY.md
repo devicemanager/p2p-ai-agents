@@ -128,10 +128,10 @@ feature_config.rs         # Configuration handling
 ### Documentation Split Example
 ```markdown
 # main-topic.md (Table of Contents)
-1. [Introduction](README.md)
-2. [Architecture](architecture/README.md)
-3. [Implementation](user-guides/README.md)
-4. [Examples](implementation/README.md)
+1. [Introduction](readme.md)
+2. [Architecture](architecture/readme.md)
+3. [Implementation](user-guides/readme.md)
+4. [Examples](implementation/readme.md)
 ```
 
 ### Code Module Split Example

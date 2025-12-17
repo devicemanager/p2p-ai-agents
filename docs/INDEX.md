@@ -16,9 +16,9 @@ Welcome to the **P2P AI Agents** documentation system. This dashboard provides s
 | For... | Go to... | Description |
 |--------|----------|-------------|
 | **New Users** | [Getting Started](user-guides/getting-started.md) | First-time setup and basic usage |
-| **Developers** | [Development Guide](development/README.md) | Development environment setup |
-| **Quick Lookup** | [GLOSSARY](GLOSSARY.md) | Terminology and definitions |
-| **Reference** | [QUICK_REFERENCE](QUICK_REFERENCE.md) | Fast navigation and links |
+| **Developers** | [Development Guide](development/readme.md) | Development environment setup |
+| **Quick Lookup** | [GLOSSARY](glossary.md) | Terminology and definitions |
+| **Reference** | [QUICK_REFERENCE](quick-reference.md) | Fast navigation and links |
 
 ## 📚 **Core Documentation**
 
@@ -42,8 +42,8 @@ Welcome to the **P2P AI Agents** documentation system. This dashboard provides s
 
 ### 🔌 Implementation & API Reference
 
-- [Implementation Guides](implementation/README.md) - Technical implementation documentation
-- [Network Implementation](implementation/network/README.md) - P2P networking details
+- [Implementation Guides](implementation/readme.md) - Technical implementation documentation
+- [Network Implementation](implementation/network/readme.md) - P2P networking details
 - [Supabase Storage Integration](storage/supabase-integration.md) - Cloud storage setup and usage
 
 *Note: Full API reference documentation is planned for future releases.*
@@ -54,11 +54,11 @@ Welcome to the **P2P AI Agents** documentation system. This dashboard provides s
 
 ## 🎯 Quick Links
 
-- [Quick Reference](QUICK_REFERENCE.md) - Common commands and configurations
-- [Glossary](GLOSSARY.md) - Terminology and definitions
-- [Documentation Template](TEMPLATE.md) - Template for new documentation
+- [Quick Reference](quick-reference.md) - Common commands and configurations
+- [Glossary](glossary.md) - Terminology and definitions
+- [Documentation Template](template.md) - Template for new documentation
 
-*Note: Project-level documentation (ROADMAP.md, SECURITY.md, etc.) is located in the repository root.*
+*Note: Project-level documentation (roadmap.md, security.md, etc.) is located in the repository root.*
 
 ## 📖 Documentation Standards
 
@@ -120,7 +120,7 @@ Our documentation system includes powerful automation tools:
 - Fixed all broken cross-references and completed documentation items
 - Implemented smart consistency checking
 - Created automated maintenance system
-- Standardized terminology via GLOSSARY.md
+- Standardized terminology via glossary.md
 - Added template-driven documentation generation
 
 ## 💡 **Smart Features**
@@ -135,16 +135,16 @@ Our documentation system includes powerful automation tools:
 
 1. **Use the tools**: Run `./scripts/maintain_docs.sh` before committing
 2. **Follow templates**: Generate new docs with the template system
-3. **Check terminology**: Refer to [GLOSSARY.md](GLOSSARY.md) for standard terms
+3. **Check terminology**: Refer to [glossary.md](glossary.md) for standard terms
 4. **Validate changes**: Tools will catch issues automatically
 
 ---
 
 ## 📞 **Need Help?**
 
-- **Quick Questions**: Check [QUICK_REFERENCE.md](QUICK_REFERENCE.md)
+- **Quick Questions**: Check [quick-reference.md](quick-reference.md)
 - **Issues**: See [Troubleshooting](user-guides/troubleshooting.md)
-- **Contributing**: Read [Development Guide](development/README.md)
+- **Contributing**: Read [Development Guide](development/readme.md)
 
 ---
 *This dashboard is maintained by our smart documentation system.*
