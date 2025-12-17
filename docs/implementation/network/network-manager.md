@@ -1146,8 +1146,8 @@ mod tests {
 - [Network Types](network-types.md)
 - [Protocol Implementation](protocols.md)
 - [Metrics Collection](metrics.md)
-- [Security Implementation](security/README.md)
-- [Performance Guide](performance/README.md)
+- [Security Implementation](security/readme.md)
+- [Performance Guide](performance/readme.md)
 
 ## Contributing
 Please refer to the main project documentation for contribution guidelines.

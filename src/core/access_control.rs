@@ -332,6 +332,72 @@ impl Authenticator for DefaultAuthenticator {
     }
 }
 
+/// Simple authenticator implementation with in-memory credentials
+pub struct SimpleAuthenticator {
+    credentials: RwLock<HashMap<PrincipalId, String>>,
+}
+
+impl SimpleAuthenticator {
+    /// Create a new simple authenticator
+    pub fn new() -> Self {
+        Self {
+            credentials: RwLock::new(HashMap::new()),
+        }
+    }
+
+    /// Add a user with password
+    pub async fn add_user(&self, principal_id: PrincipalId, password: String) {
+        let mut creds = self.credentials.write().await;
+        creds.insert(principal_id, password);
+    }
+}
+
+impl Default for SimpleAuthenticator {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+#[async_trait]
+impl Authenticator for SimpleAuthenticator {
+    async fn authenticate(
+        &self,
+        principal_id: &PrincipalId,
+        credentials: &HashMap<String, String>,
+    ) -> AuthResult {
+        let creds = self.credentials.read().await;
+        if let Some(stored_password) = creds.get(principal_id) {
+            if let Some(password) = credentials.get("password") {
+                if stored_password == password {
+                    return AuthResult::Success(AuthToken {
+                        principal_id: principal_id.clone(),
+                        expires_at: Some(chrono::Utc::now() + chrono::Duration::hours(1)),
+                        claims: HashMap::new(),
+                    });
+                }
+            }
+        }
+        AuthResult::Failed("Invalid credentials".to_string())
+    }
+
+    async fn validate_token(&self, token: &AuthToken) -> AuthResult {
+        if let Some(expires_at) = token.expires_at {
+            if chrono::Utc::now() > expires_at {
+                return AuthResult::Expired;
+            }
+        }
+        AuthResult::Success(token.clone())
+    }
+
+    async fn create_token(&self, principal_id: &PrincipalId) -> Result<AuthToken, String> {
+        Ok(AuthToken {
+            principal_id: principal_id.clone(),
+            expires_at: Some(chrono::Utc::now() + chrono::Duration::hours(1)),
+            claims: HashMap::new(),
+        })
+    }
+}
+
 /// Default authorizer implementation
 pub struct DefaultAuthorizer {
     /// Role permissions cache
@@ -903,6 +969,32 @@ mod tests {
         assert!(available_permissions.contains(&Permission::new("write".to_string())));
         assert!(available_permissions.contains(&Permission::new("delete".to_string())));
         assert_eq!(available_permissions.len(), 3);
+    }
+
+    #[tokio::test]
+    async fn test_simple_authenticator() {
+        let authenticator = SimpleAuthenticator::new();
+        let principal_id = PrincipalId::new("user1".to_string());
+        authenticator.add_user(principal_id.clone(), "password123".to_string()).await;
+
+        // Test valid credentials
+        let mut credentials = HashMap::new();
+        credentials.insert("password".to_string(), "password123".to_string());
+        let result = authenticator.authenticate(&principal_id, &credentials).await;
+        assert!(matches!(result, AuthResult::Success(_)));
+
+        // Test invalid password
+        let mut credentials = HashMap::new();
+        credentials.insert("password".to_string(), "wrongpassword".to_string());
+        let result = authenticator.authenticate(&principal_id, &credentials).await;
+        assert!(matches!(result, AuthResult::Failed(_)));
+
+        // Test non-existent user
+        let other_id = PrincipalId::new("user2".to_string());
+        let mut credentials = HashMap::new();
+        credentials.insert("password".to_string(), "password123".to_string());
+        let result = authenticator.authenticate(&other_id, &credentials).await;
+        assert!(matches!(result, AuthResult::Failed(_)));
     }
 
     #[tokio::test]

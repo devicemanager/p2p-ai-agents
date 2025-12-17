@@ -239,11 +239,11 @@ Each component must pass the following test categories before being marked as co
   - [ ] Encryption/decryption
   - [ ] Digital signatures
   - [ ] Hash functions
-- [ ] Access control
-  - [ ] Authentication
-  - [ ] Authorization
-  - [ ] Role-based access
-  - [ ] Permission management
+'- [x] Access control
+  - [x] Authentication
+  - [x] Authorization
+  - [x] Role-based access
+  - [x] Permission management
 - [ ] Secure communication
   - [ ] TLS implementation
   - [ ] Certificate management

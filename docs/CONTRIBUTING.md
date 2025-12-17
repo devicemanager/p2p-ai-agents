@@ -19,17 +19,17 @@ Thank you for your interest in contributing! This project is written in Rust. Pl
 
 ## 📖 Related Documentation
 
-- **[Documentation Index](INDEX.md)** - Complete documentation overview
-- **[README](../README.md)** - Project overview and getting started
-- **[Quick Reference](QUICK_REFERENCE.md)** - Commands and configuration
-- **[High Level Design](HIGH_LEVEL_DESIGN.md)** - Technical architecture
-- **[Agent Protocol](AGENT_PROTOCOL.md)** - Communication protocol specification
+- **[Documentation Index](index.md)** - Complete documentation overview
+- **[README](../readme.md)** - Project overview and getting started
+- **[Quick Reference](quick-reference.md)** - Commands and configuration
+- **[High Level Design](high-level-design.md)** - Technical architecture
+- **[Agent Protocol](agent-protocol.md)** - Communication protocol specification
 
 ---
 
 ## Code of Conduct
 
-This project adheres to our [Code of Conduct](CODE_OF_CONDUCT.md). By participating, you agree to uphold these standards and create a welcoming environment for all contributors.
+This project adheres to our [Code of Conduct](code-of-conduct.md). By participating, you agree to uphold these standards and create a welcoming environment for all contributors.
 
 ## Getting Started
 
@@ -290,8 +290,8 @@ New contributors can request mentorship through:
 
 ### Resources
 
-- [Architecture Overview](HIGH_LEVEL_DESIGN.md)
-- [Protocol Specification](AGENT_PROTOCOL.md)
+- [Architecture Overview](high-level-design.md)
+- [Protocol Specification](agent-protocol.md)
 - [User Guides](user-guides/)
 - [Troubleshooting](user-guides/troubleshooting.md)
 
@@ -351,6 +351,6 @@ pre-commit run --all-files
 find . -name "*.py" -o -name "*.md" | xargs wc -l | awk '$1 > 500'
 ```
 
-See **[500-Line Limit Policy](500_LINE_LIMIT_POLICY.md)** for complete guidelines.
+See **[500-Line Limit Policy](500-line-limit-policy.md)** for complete guidelines.
 
 *Note: This contributing guide is continuously updated. Check the [documentation](https://p2p-agent.readthedocs.io/) for the latest contribution guidelines.*

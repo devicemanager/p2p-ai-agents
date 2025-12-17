@@ -299,11 +299,11 @@ The protocol supports custom message types through extension mechanism:
 
 ## 📖 Related Documentation
 
-- **[Documentation Index](INDEX.md)** - Complete documentation overview
-- **[README](README.md)** - Project overview and getting started
-- **[Quick Reference](QUICK_REFERENCE.md)** - Commands and configuration
-- **[High Level Design](HIGH_LEVEL_DESIGN.md)** - Technical architecture
-- **[Contributing Guide](CONTRIBUTING.md)** - Development guidelines
+- **[Documentation Index](index.md)** - Complete documentation overview
+- **[README](readme.md)** - Project overview and getting started
+- **[Quick Reference](quick-reference.md)** - Commands and configuration
+- **[High Level Design](high-level-design.md)** - Technical architecture
+- **[Contributing Guide](contributing.md)** - Development guidelines
 
 ---
 

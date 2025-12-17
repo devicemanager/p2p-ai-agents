@@ -9,7 +9,7 @@ Successfully validated that all GitHub documentation workflows are working corre
 ### ✅ Documentation Quality Check Workflow
 - **File**: `.github/workflows/documentation-check.yml` 
 - **Status**: ✅ Ready to run
-- **Triggers**: Changes to `docs/**`, `README.md`, `CHANGELOG.md`, and any `*.md` files
+- **Triggers**: Changes to `docs/**`, `readme.md`, `changelog.md`, and any `*.md` files
 - **Validation Script**: `scripts/validate_docs.py` ✅ Working perfectly
 
 ### ✅ Documentation Maintenance Workflow  
@@ -20,11 +20,11 @@ Successfully validated that all GitHub documentation workflows are working corre
 
 ### ✅ All Broken Links Fixed
 The documentation validation found and we fixed 15 broken links:
-- Fixed references from moved files (AGENT_PROTOCOL.md, HIGH_LEVEL_DESIGN.md)
+- Fixed references from moved files (agent-protocol.md, high-level-design.md)
 - Updated internal docs/ references to use relative paths
-- Corrected CONTRIBUTING.md links to point to existing files
-- Fixed SECURITY.md links to point to actual security documentation
-- Updated docs/README.md references for moved files
+- Corrected contributing.md links to point to existing files
+- Fixed security.md links to point to actual security documentation
+- Updated docs/readme.md references for moved files
 
 ### ✅ Validation Script Working
 - **Script**: `scripts/validate_docs.py`
@@ -55,7 +55,7 @@ The documentation validation found and we fixed 15 broken links:
 ## Documentation Structure Verified
 
 ✅ **62 documentation files** found in docs folder  
-✅ **All required files present**: INDEX.md, README.md, GLOSSARY.md  
+✅ **All required files present**: index.md, readme.md, glossary.md  
 ✅ **All references updated** to reflect new file locations  
 ✅ **No broken internal links** remaining  
 ✅ **GitHub workflows configured** to trigger on docs changes  

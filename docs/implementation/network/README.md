@@ -45,9 +45,9 @@ The network implementation provides a robust peer-to-peer networking layer for t
 ## Documentation Structure
 ```
 docs/implementation/network/
-├── README.md                 # This file
-├── CHECKLIST.md             # Documentation improvement checklist
-├── INDEX.md                 # Documentation index and quick links
+├── readme.md                 # This file
+├── checklist.md             # Documentation improvement checklist
+├── index.md                 # Documentation index and quick links
 ├── network-types.md         # Network type definitions
 ├── network-manager.md       # Network manager implementation
 ├── protocols.md             # Protocol implementations

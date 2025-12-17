@@ -56,7 +56,7 @@ I've successfully integrated all the documentation tools with GitHub workflows! 
 
 ### **Quality Assurance** ✅
 - **100% link validation** - No more broken cross-references
-- **Consistent terminology** - GLOSSARY.md enforcement
+- **Consistent terminology** - glossary.md enforcement
 - **Standardized structure** - Templates ensure consistency
 - **Version synchronization** - Never out-of-date version info
 

@@ -46,7 +46,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## Release Process
 
 1. Update version in `pyproject.toml`
-2. Update this CHANGELOG.md with new version
+2. Update this changelog.md with new version
 3. Create git tag: `git tag -a v0.1.0 -m "Release v0.1.0"`
 4. Push tag: `git push origin v0.1.0`
 5. Create GitHub release with release notes

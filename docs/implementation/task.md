@@ -20,7 +20,7 @@ The task processing component handles the distribution, execution, and managemen
 ## Related Documentation
 
 - [Agent Implementation](agent.md)
-- [Network Implementation](network/README.md)
+- [Network Implementation](network/readme.md)
 - [Storage Implementation](storage.md)
 
 ---

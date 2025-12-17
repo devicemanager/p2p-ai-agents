@@ -3,7 +3,7 @@
 <!-- 
 This template ensures consistency across all P2P AI Agents documentation.
 Copy this template for new documentation files and fill in the sections.
-See GLOSSARY.md for standardized terminology.
+See glossary.md for standardized terminology.
 -->
 
 # [Document Title]
@@ -180,11 +180,11 @@ cargo test --test performance -- --ignored
 
 - [Architecture Overview](architecture/system-overview.md)
 - [Security Architecture](architecture/security.md)
-- [Contributing Guide](CONTRIBUTING.md)
-- [Glossary](GLOSSARY.md)
+- [Contributing Guide](contributing.md)
+- [Glossary](glossary.md)
 
 ---
 
 *Last updated: 2025-06-14*
 
-*This document follows the [P2P AI Agents Documentation Standards](TEMPLATE.md).*
+*This document follows the [P2P AI Agents Documentation Standards](template.md).*

@@ -14,15 +14,15 @@ This directory contains detailed implementation guides for the P2P AI Agents sys
 
 - [Agent Implementation](agent.md) - Core agent types and behaviors
 - [Task Processing](task.md) - Task processing and execution
-- [Network Protocol](network/README.md) - P2P networking and communication
+- [Network Protocol](network/readme.md) - P2P networking and communication
 - [Storage Layer](storage.md) - Data storage and management
 
 ### Specialized Components
-- [Processing Agents](README.md) - Data processing implementations
-- [Vector Agents](README.md) - Vector operations and search
-- [Storage Agents](README.md) - Distributed storage
-- [Coordinator Agents](README.md) - Workflow management
-- [Gateway Agents](README.md) - External service integration
+- [Processing Agents](readme.md) - Data processing implementations
+- [Vector Agents](readme.md) - Vector operations and search
+- [Storage Agents](readme.md) - Distributed storage
+- [Coordinator Agents](readme.md) - Workflow management
+- [Gateway Agents](readme.md) - External service integration
 
 ## 🛠 Implementation Guidelines
 
