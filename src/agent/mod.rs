@@ -15,7 +15,9 @@ use thiserror::Error;
 
 pub use identity::{Identity, IdentityError};
 pub use resource::{ResourceError, ResourceMonitor, ResourceUsage};
-pub use task::{Task, TaskError, TaskId, TaskStatus};
+pub use task::{
+    Task, TaskError, TaskId, TaskPayload, TaskPriority, TaskResult, TaskStatus, TaskType,
+};
 
 /// Agent identifier type
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]

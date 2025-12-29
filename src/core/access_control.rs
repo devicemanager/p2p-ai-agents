@@ -13,6 +13,9 @@ use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 use tokio::sync::RwLock;
 
+/// Type alias for complex role permissions structure to reduce type complexity
+pub type RolePermissionsMap = HashMap<RoleId, HashMap<Resource, HashSet<Permission>>>;
+
 /// Unique identifier for users/agents
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct PrincipalId(String);
@@ -401,7 +404,13 @@ impl Authenticator for SimpleAuthenticator {
 /// Default authorizer implementation
 pub struct DefaultAuthorizer {
     /// Role permissions cache
-    role_permissions: Arc<RwLock<HashMap<RoleId, HashMap<Resource, HashSet<Permission>>>>>,
+    role_permissions: Arc<RwLock<RolePermissionsMap>>,
+}
+
+impl Default for DefaultAuthorizer {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl DefaultAuthorizer {
@@ -975,18 +984,24 @@ mod tests {
     async fn test_simple_authenticator() {
         let authenticator = SimpleAuthenticator::new();
         let principal_id = PrincipalId::new("user1".to_string());
-        authenticator.add_user(principal_id.clone(), "password123".to_string()).await;
+        authenticator
+            .add_user(principal_id.clone(), "password123".to_string())
+            .await;
 
         // Test valid credentials
         let mut credentials = HashMap::new();
         credentials.insert("password".to_string(), "password123".to_string());
-        let result = authenticator.authenticate(&principal_id, &credentials).await;
+        let result = authenticator
+            .authenticate(&principal_id, &credentials)
+            .await;
         assert!(matches!(result, AuthResult::Success(_)));
 
         // Test invalid password
         let mut credentials = HashMap::new();
         credentials.insert("password".to_string(), "wrongpassword".to_string());
-        let result = authenticator.authenticate(&principal_id, &credentials).await;
+        let result = authenticator
+            .authenticate(&principal_id, &credentials)
+            .await;
         assert!(matches!(result, AuthResult::Failed(_)));
 
         // Test non-existent user

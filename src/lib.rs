@@ -30,7 +30,8 @@ pub mod prelude {
     pub use crate::network::{
         discovery::{DiscoveryManager, PeerInfo},
         transport::{TransportError, TransportType},
-        NetworkConfig, NetworkError, NetworkManager, NetworkMessage, NetworkResult,
+        NetworkConfig, NetworkError, NetworkManager, NetworkMessage, NetworkResult, ProtocolConfig,
+        ResourceLimits, SecurityConfig,
     };
     // Removed broken storage re-exports
 }

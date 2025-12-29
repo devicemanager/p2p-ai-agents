@@ -26,7 +26,10 @@ p2p-agent security-scan
 #### Code Coverage
 ```bash
 # Run tests with coverage
-pytest --cov=p2p_ai_agents --cov-report=html
+cargo llvm-cov --all-features --workspace --lcov --output-path lcov.info
+
+# Generate HTML coverage report
+cargo llvm-cov --all-features --workspace --html
 
 # Minimum coverage requirements:
 # - Overall: 90%
@@ -37,29 +40,30 @@ pytest --cov=p2p_ai_agents --cov-report=html
 ### 2. Unit Testing
 
 #### Test Structure
-```python
-# Example test structure
-def test_agent_initialization():
-    """Test agent initialization with valid configuration."""
-    # Arrange
-    config = load_test_config()
+```rust
+// Example test structure
+#[test]
+fn test_agent_initialization() {
+    // Arrange
+    let config = load_test_config();
     
-    # Act
-    agent = Agent(config)
+    // Act
+    let agent = Agent::new(config).unwrap();
     
-    # Assert
-    assert agent.is_initialized
-    assert agent.identity is not None
-    assert agent.network.is_connected
+    // Assert
+    assert!(agent.is_initialized());
+    assert!(agent.identity().is_some());
+    assert!(agent.network().is_connected());
+}
 
-def test_agent_initialization_invalid_config():
-    """Test agent initialization with invalid configuration."""
-    # Arrange
-    config = load_invalid_config()
+#[test]
+fn test_agent_initialization_invalid_config() {
+    // Arrange
+    let config = load_invalid_config();
     
-    # Act & Assert
-    with pytest.raises(ConfigurationError):
-        Agent(config)
+    // Act & Assert
+    assert!(Agent::new(config).is_err());
+}
 ```
 
 #### Test Categories
@@ -94,193 +98,206 @@ def test_agent_initialization_invalid_config():
 ### 3. Integration Testing
 
 #### Component Integration
-```python
-# Test agent-network integration
-def test_agent_network_integration():
-    """Test agent integration with network layer."""
-    # Setup test network
-    network = TestNetwork()
-    agent = Agent(network=network)
+```rust
+// Test agent-network integration
+#[test]
+fn test_agent_network_integration() {
+    // Setup test network
+    let network = TestNetwork::new();
+    let agent = Agent::with_network(network).unwrap();
     
-    # Test peer discovery
-    peers = agent.discover_peers()
-    assert len(peers) > 0
+    // Test peer discovery
+    let peers = agent.discover_peers().unwrap();
+    assert!(!peers.is_empty());
     
-    # Test message exchange
-    response = agent.send_message(peers[0], "test")
-    assert response.status == "success"
+    // Test message exchange
+    let response = agent.send_message(&peers[0], "test").unwrap();
+    assert_eq!(response.status(), "success");
+}
 
-# Test agent-storage integration
-def test_agent_storage_integration():
-    """Test agent integration with storage layer."""
-    # Setup test storage
-    storage = TestStorage()
-    agent = Agent(storage=storage)
+// Test agent-storage integration
+#[test]
+fn test_agent_storage_integration() {
+    // Setup test storage
+    let storage = TestStorage::new();
+    let agent = Agent::with_storage(storage).unwrap();
     
-    # Test data persistence
-    data = {"test": "data"}
-    agent.store_data(data)
-    retrieved = agent.retrieve_data(data["id"])
-    assert retrieved == data
+    // Test data persistence
+    let data = json!({"test": "data"});
+    let id = agent.store_data(&data).unwrap();
+    let retrieved = agent.retrieve_data(&id).unwrap();
+    assert_eq!(retrieved, data);
+}
 ```
 
 #### End-to-End Testing
-```python
-# Test complete workflow
-def test_complete_workflow():
-    """Test complete agent workflow from task submission to completion."""
-    # Setup test environment
-    env = TestEnvironment()
-    agent = env.create_agent()
+```rust
+// Test complete workflow
+#[test]
+fn test_complete_workflow() {
+    // Setup test environment
+    let env = TestEnvironment::new();
+    let agent = env.create_agent().unwrap();
     
-    # Submit task
-    task = agent.submit_task("process_document", "test.txt")
-    assert task.status == "queued"
+    // Submit task
+    let task = agent.submit_task("process_document", "test.txt").unwrap();
+    assert_eq!(task.status(), "queued");
     
-    # Process task
-    result = agent.wait_for_task(task.id)
-    assert result.status == "completed"
-    assert result.data is not None
+    // Process task
+    let result = agent.wait_for_task(task.id()).unwrap();
+    assert_eq!(result.status(), "completed");
+    assert!(result.data().is_some());
+}
 ```
 
 ### 4. Performance Testing
 
 #### Load Testing
-```python
-# Test under load
-def test_agent_under_load():
-    """Test agent performance under load."""
-    agent = TestAgent()
+```rust
+// Test under load
+#[test]
+fn test_agent_under_load() {
+    let agent = TestAgent::new().unwrap();
     
-    # Generate load
-    tasks = generate_test_tasks(1000)
-    results = agent.process_tasks(tasks)
+    // Generate load
+    let tasks = generate_test_tasks(1000);
+    let results = agent.process_tasks(tasks).unwrap();
     
-    # Verify performance
-    assert results.throughput >= 100  # tasks/second
-    assert results.latency <= 100     # milliseconds
-    assert results.error_rate <= 0.01 # 1%
+    // Verify performance
+    assert!(results.throughput() >= 100.0);  // tasks/second
+    assert!(results.latency() <= 100.0);     // milliseconds
+    assert!(results.error_rate() <= 0.01);   // 1%
+}
 ```
 
 #### Stress Testing
-```python
-# Test under stress
-def test_agent_under_stress():
-    """Test agent behavior under stress conditions."""
-    agent = TestAgent()
+```rust
+// Test under stress
+#[test]
+fn test_agent_under_stress() {
+    let agent = TestAgent::new().unwrap();
     
-    # Generate stress
-    stress = generate_stress_conditions()
-    results = agent.handle_stress(stress)
+    // Generate stress
+    let stress = generate_stress_conditions();
+    let results = agent.handle_stress(stress).unwrap();
     
-    # Verify stability
-    assert results.is_stable
-    assert results.recovery_time <= 30  # seconds
-    assert results.data_integrity
+    // Verify stability
+    assert!(results.is_stable());
+    assert!(results.recovery_time() <= Duration::from_secs(30));
+    assert!(results.data_integrity());
+}
 ```
 
 ### 5. Security Testing
 
 #### Penetration Testing
-```python
-# Test security
-def test_agent_security():
-    """Test agent security measures."""
-    agent = TestAgent()
+```rust
+// Test security
+#[test]
+fn test_agent_security() {
+    let agent = TestAgent::new().unwrap();
     
-    # Test authentication
-    auth_result = test_authentication(agent)
-    assert auth_result.is_secure
+    // Test authentication
+    let auth_result = test_authentication(&agent).unwrap();
+    assert!(auth_result.is_secure());
     
-    # Test encryption
-    crypto_result = test_encryption(agent)
-    assert crypto_result.is_secure
+    // Test encryption
+    let crypto_result = test_encryption(&agent).unwrap();
+    assert!(crypto_result.is_secure());
     
-    # Test access control
-    acl_result = test_access_control(agent)
-    assert acl_result.is_secure
+    // Test access control
+    let acl_result = test_access_control(&agent).unwrap();
+    assert!(acl_result.is_secure());
+}
 ```
 
 #### Vulnerability Testing
-```python
-# Test vulnerabilities
-def test_agent_vulnerabilities():
-    """Test agent for known vulnerabilities."""
-    agent = TestAgent()
+```rust
+// Test vulnerabilities
+#[test]
+fn test_agent_vulnerabilities() {
+    let agent = TestAgent::new().unwrap();
     
-    # Run vulnerability scans
-    vuln_scan = scan_vulnerabilities(agent)
-    assert vuln_scan.critical_count == 0
-    assert vuln_scan.high_count == 0
+    // Run vulnerability scans
+    let vuln_scan = scan_vulnerabilities(&agent).unwrap();
+    assert_eq!(vuln_scan.critical_count(), 0);
+    assert_eq!(vuln_scan.high_count(), 0);
     
-    # Test common attacks
-    attack_result = test_common_attacks(agent)
-    assert attack_result.is_secure
+    // Test common attacks
+    let attack_result = test_common_attacks(&agent).unwrap();
+    assert!(attack_result.is_secure());
+}
 ```
 
 ### 6. Network Testing
 
 #### Protocol Testing
-```python
-# Test network protocols
-def test_network_protocols():
-    """Test network protocol implementation."""
-    network = TestNetwork()
+```rust
+// Test network protocols
+#[test]
+fn test_network_protocols() {
+    let network = TestNetwork::new();
     
-    # Test protocol compliance
-    protocol_result = test_protocol_compliance(network)
-    assert protocol_result.is_compliant
+    // Test protocol compliance
+    let protocol_result = test_protocol_compliance(&network).unwrap();
+    assert!(protocol_result.is_compliant());
     
-    # Test protocol security
-    security_result = test_protocol_security(network)
-    assert security_result.is_secure
+    // Test protocol security
+    let security_result = test_protocol_security(&network).unwrap();
+    assert!(security_result.is_secure());
+}
 ```
 
 #### Resilience Testing
-```python
-# Test network resilience
-def test_network_resilience():
-    """Test network resilience to failures."""
-    network = TestNetwork()
+```rust
+// Test network resilience
+#[test]
+fn test_network_resilience() {
+    let network = TestNetwork::new();
     
-    # Simulate failures
-    failure_result = simulate_network_failures(network)
-    assert failure_result.recovery_rate >= 0.99
-    assert failure_result.data_loss == 0
+    // Simulate failures
+    let failure_result = simulate_network_failures(&network).unwrap();
+    assert!(failure_result.recovery_rate() >= 0.99);
+    assert_eq!(failure_result.data_loss(), 0);
+}
 ```
 
 ### 7. Compatibility Testing
 
 #### Platform Testing
-```python
-# Test platform compatibility
-def test_platform_compatibility():
-    """Test agent compatibility across platforms."""
-    platforms = [
+```rust
+// Test platform compatibility
+#[test]
+fn test_platform_compatibility() {
+    let platforms = vec![
         "linux-x86_64",
         "linux-arm64",
         "macos-x86_64",
         "macos-arm64",
         "windows-x86_64"
-    ]
+    ];
     
-    for platform in platforms:
-        result = test_platform(platform)
-        assert result.is_compatible
-        assert result.performance_acceptable
+    for platform in platforms {
+        let result = test_platform(platform).unwrap();
+        assert!(result.is_compatible());
+        assert!(result.performance_acceptable());
+    }
+}
 ```
 
 #### Version Testing
-```python
-# Test version compatibility
-def test_version_compatibility():
-    """Test agent compatibility across versions."""
-    versions = ["1.0.0", "1.1.0", "2.0.0"]
+```rust
+// Test version compatibility
+#[test]
+fn test_version_compatibility() {
+    let versions = vec!["1.0.0", "1.1.0", "2.0.0"];
     
-    for version in versions:
-        result = test_version(version)
-        assert result.is_compatible
-        assert result.upgrade_path_clear
+    for version in versions {
+        let result = test_version(version).unwrap();
+        assert!(result.is_compatible());
+        assert!(result.upgrade_path_clear());
+    }
+}
 ```
 
 ## Testing Procedures
@@ -288,37 +305,39 @@ def test_version_compatibility():
 ### 1. Pre-Implementation Testing
 
 #### Requirements Validation
-```python
-# Validate requirements
-def validate_requirements():
-    """Validate implementation requirements."""
-    requirements = load_requirements()
+```rust
+// Validate requirements
+#[test]
+fn validate_requirements() {
+    let requirements = load_requirements().unwrap();
     
-    # Check completeness
-    assert requirements.is_complete
+    // Check completeness
+    assert!(requirements.is_complete());
     
-    # Check consistency
-    assert requirements.is_consistent
+    // Check consistency
+    assert!(requirements.is_consistent());
     
-    # Check testability
-    assert requirements.is_testable
+    // Check testability
+    assert!(requirements.is_testable());
+}
 ```
 
 #### Design Review
-```python
-# Review design
-def review_design():
-    """Review implementation design."""
-    design = load_design()
+```rust
+// Review design
+#[test]
+fn review_design() {
+    let design = load_design().unwrap();
     
-    # Check architecture
-    assert design.architecture_is_sound
+    // Check architecture
+    assert!(design.architecture_is_sound());
     
-    # Check security
-    assert design.security_is_sound
+    // Check security
+    assert!(design.security_is_sound());
     
-    # Check testability
-    assert design.is_testable
+    // Check testability
+    assert!(design.is_testable());
+}
 ```
 
 ### 2. Implementation Testing
@@ -358,49 +377,51 @@ def review_checklist():
 ### 3. Post-Implementation Testing
 
 #### Regression Testing
-```python
-# Test regression
-def test_regression():
-    """Test for regressions."""
-    # Run regression suite
-    results = run_regression_suite()
+```rust
+// Test regression
+#[test]
+fn test_regression() {
+    // Run regression suite
+    let results = run_regression_suite().unwrap();
     
-    # Verify no regressions
-    assert results.regression_count == 0
-    assert results.performance_unchanged
+    // Verify no regressions
+    assert_eq!(results.regression_count(), 0);
+    assert!(results.performance_unchanged());
+}
 ```
 
 #### Production Readiness
-```python
-# Verify production readiness
-def verify_production_readiness():
-    """Verify production readiness."""
-    checklist = {
-        "tests_complete": True,
-        "security_verified": True,
-        "performance_acceptable": True,
-        "documentation_complete": True,
-        "monitoring_configured": True,
-        "backup_configured": True
-    }
+```rust
+// Verify production readiness
+#[test]
+fn verify_production_readiness() {
+    let checklist = ProductionChecklist {
+        tests_complete: true,
+        security_verified: true,
+        performance_acceptable: true,
+        documentation_complete: true,
+        monitoring_configured: true,
+        backup_configured: true,
+    };
     
-    assert all(checklist.values())
+    assert!(checklist.is_complete());
+}
 ```
 
 ## Testing Tools
 
 ### 1. Test Frameworks
-- pytest for unit and integration testing
-- locust for load testing
-- bandit for security testing
-- mypy for type checking
-- coverage.py for coverage analysis
+- Built-in Rust testing framework (`cargo test`) for unit and integration testing
+- Criterion for benchmarking and performance testing
+- QuickCheck for property-based testing
+- Clippy for linting and static analysis
+- cargo-llvm-cov for coverage analysis
 
 ### 2. Test Environments
 - Docker containers for isolated testing
-- CI/CD pipelines for automated testing
+- GitHub Actions CI/CD pipelines for automated testing
+- Local test networks for integration testing
 - Staging environment for pre-production testing
-- Production-like environment for final verification
 
 ### 3. Monitoring Tools
 - Prometheus for metrics collection

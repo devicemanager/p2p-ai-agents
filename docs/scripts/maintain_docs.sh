@@ -5,7 +5,7 @@
 
 set -e
 
-DOCS_ROOT="p2p-ai-agents/docs"
+DOCS_ROOT="/Users/rene/Source/p2p-ai-agents/docs"
 echo "🔧 Running documentation maintenance..."
 
 # Function to update version information
@@ -26,7 +26,7 @@ import os
 import re
 from pathlib import Path
 
-docs_root = Path("p2p-ai-agents/docs")
+docs_root = Path("/Users/rene/Source/p2p-ai-agents/docs")
 errors = []
 
 md_files = list(docs_root.rglob("*.md"))
@@ -81,7 +81,7 @@ generate_index() {
 import os
 from pathlib import Path
 
-docs_root = Path("p2p-ai-agents/docs")
+docs_root = Path("/Users/rene/Source/p2p-ai-agents/docs")
 md_files = []
 
 for md_file in docs_root.rglob("*.md"):

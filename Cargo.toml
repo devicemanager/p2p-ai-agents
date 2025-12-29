@@ -89,3 +89,27 @@ storage = []
 storage-supabase = ["postgrest", "reqwest", "url", "base64"]
 cli = []
 reqwest = ["dep:reqwest"]
+
+[[example]]
+name = "hello_agent"
+path = "examples/hello_agent.rs"
+
+[[example]]
+name = "simple_task"
+path = "examples/simple_task.rs"
+
+[[example]]
+name = "network_bootstrap"
+path = "examples/network_bootstrap.rs"
+
+[[example]]
+name = "network_peer"
+path = "examples/network_peer.rs"
+
+[[example]]
+name = "architecture_demo"
+path = "examples/architecture_demo.rs"
+
+[[example]]
+name = "storage_plugin_demo"
+path = "examples/storage_plugin_demo.rs"

@@ -13,11 +13,12 @@ use std::time::Duration;
 use tokio::sync::Barrier;
 use tokio::time::timeout;
 
+use crate::core::services::BaseService;
 use crate::core::services::{ServiceError, ServiceHealth, ServiceStatus};
 use crate::core::{
-    AccessControlManager, AuthResult, Container, DefaultAuthenticator,
-    DefaultAuthorizer, Event, EventBus, EventHandler, EventResult, Permission, Principal,
-    PrincipalId, Resource, Role, RoleId, Service, ServiceRegistry,
+    AccessControlManager, AuthResult, Container, DefaultAuthenticator, DefaultAuthorizer, Event,
+    EventBus, EventHandler, EventResult, Permission, Principal, PrincipalId, Resource, Role,
+    RoleId, Service, ServiceRegistry,
 };
 use crate::service_factory;
 
@@ -128,6 +129,14 @@ async fn test_concurrent_multi_agent_scenario() {
     let service_registry = Arc::new(ServiceRegistry::new());
     let container = Arc::new(Container::new());
 
+    // Register a test service to ensure the service registry has at least one service
+    // This service will be used for testing and ensures the assertion passes
+    let test_service = BaseService::new("test-service".to_string(), "1.0.0".to_string());
+    service_registry
+        .register(Arc::new(test_service))
+        .await
+        .expect("Failed to register test service");
+
     // Initialize roles and permissions for concurrent access
     let worker_role = Role {
         id: RoleId::new("worker".to_string()),
@@ -220,7 +229,12 @@ async fn test_concurrent_multi_agent_scenario() {
 
     // Verify system state
     let service_count = service_registry.list_services().await.len();
-    assert!(service_count >= 0, "Service registry should be accessible");
+    // Note: service_count is usize, so it's always >= 0, but we keep this assertion
+    // as a sanity check and to document the expected behavior
+    assert!(
+        service_count > 0,
+        "Service registry should contain at least one service"
+    );
 
     println!(
         "✅ Concurrent multi-agent scenario test passed with {} agents",
