@@ -220,5 +220,5 @@ thiserror = "1.0"
 ## 📝 License
 
 Implementation documentation is licensed under the same terms as the software:
-- MIT License ([LICENSE-MIT](../LICENSE))
-- Apache License, Version 2.0 ([LICENSE-APACHE](../LICENSE)) 
+- MIT License ([../../LICENSE](../../LICENSE))
+- Apache License, Version 2.0 ([../../LICENSE](../../LICENSE)) 

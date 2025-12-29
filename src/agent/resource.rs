@@ -179,8 +179,7 @@ mod tests {
 
         // This might fail depending on system load
         let result = monitor.check_limits().await;
-        if result.is_err() {
-            let err = result.unwrap_err();
+        if let Err(err) = result {
             assert!(matches!(
                 err,
                 ResourceError::CpuLimitExceeded | ResourceError::MemoryLimitExceeded

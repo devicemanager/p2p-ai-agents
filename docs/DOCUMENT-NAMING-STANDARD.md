@@ -47,7 +47,7 @@ The following files should be renamed to comply with the standard:
 
 ### Updating References
 After renaming files, update all references to these files in:
-- Markdown links (`[text](link.md)`)
+- Markdown links
 - Documentation configuration files
 - Scripts and automation tools
 - README files
