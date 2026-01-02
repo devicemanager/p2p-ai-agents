@@ -10,6 +10,8 @@ use tokio::sync::Mutex;
 
 /// Discovery submodule for peer discovery and management.
 pub mod discovery;
+/// Service submodule for the NetworkService implementation.
+pub mod service;
 /// Transport submodule for network transport protocols.
 pub mod transport;
 
