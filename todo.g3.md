@@ -24,18 +24,21 @@
       - [x] Define associated types: Config, Request, Response
       - [x] Document the API with examples
   - [ ] Chunk 2: Implementation and Usage (Phases 3-4)
-    - [ ] Phase 3: Implement Network Service
-      - [ ] Implement NetworkServiceConstructor and registration
-      - [ ] Implement core methods: initialize, start, stop
-      - [ ] Implement status and health checks
-      - [ ] Implement request handling for network operations
-      - [ ] Implement broadcast_message and get_stats
-    - [ ] Phase 4: Use Network Service in Agent
-      - [ ] Modify DefaultAgent to use NetworkService
-      - [ ] Add network-related methods to Agent trait
-      - [ ] Implement task distribution using network
-      - [ ] Implement peer discovery for agents
-      - [ ] Update agent startup to connect to network
+    - [x] Phase 3: Implement Network Service
+      - [x] Refactor NetworkService to use BaseService pattern
+      - [x] Implement NetworkServiceConstructor and registration
+      - [x] Implement core methods: initialize, start, stop
+      - [x] Implement status and health checks
+      - [x] Implement request handling for network operations
+      - [x] Implement broadcast_message and get_stats
+      - [x] Add proper error handling and conversions
+      - [x] Write comprehensive tests
+    - [x] Phase 4: Use Network Service in Agent
+      - [x] Modify DefaultAgent to use NetworkService
+      - [x] Add network-related methods to Agent trait
+      - [x] Implement task distribution using network
+      - [x] Implement peer discovery for agents
+      - [x] Update agent startup to connect to network
   - [ ] Chunk 3: Validation and Security (Phases 5-6)
     - [ ] Phase 5: Validate Network Service
     - [ ] Phase 6: Secure Network Service
