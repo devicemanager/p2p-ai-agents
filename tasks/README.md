@@ -1,6 +1,6 @@
 # Task Management Index
 
-*Last updated: 2026-01-03 05:05:45*
+*Last updated: 2026-01-03 05:06:04*
 
 ## Overview
 
@@ -8,14 +8,14 @@ This directory contains all implementation tasks for the P2P AI Agents project, 
 
 ## Task Statistics
 
-- **Total Tasks**: 384
+- **Total Tasks**: 383
 - **Completed**: 22 (5.7%)
 - **In Progress**: 4
-- **TODO**: 358
+- **TODO**: 357
 
 ## Task Directories
 
-### 📋 [TODO Tasks](./todo/) (358 tasks)
+### 📋 [TODO Tasks](./todo/) (357 tasks)
 Tasks that are planned but not yet started.
 
 ### 🚧 [In Progress Tasks](./in-progress/) (4 tasks)
@@ -87,7 +87,6 @@ Each task follows a standardized Markdown format with:
 - [Authentication](./todo/core-implementation-core-implementation-authentica.md)
 - [Authorization](./todo/core-implementation-core-implementation-authorizat.md)
 - [Bare metal deployment](./todo/core-implementation-core-implementation-bare-metal.md)
-- [Base agent trait and types](./todo/core-implementation-core-implementation-base-agent.md)
 - [Basic operations](./todo/core-implementation-core-implementation-basic-oper.md)
 - [Batch processing](./todo/core-implementation-core-implementation-batch-proc.md)
 - [Benchmarking](./todo/core-implementation-core-implementation-benchmarki.md)
