@@ -62,6 +62,7 @@ mod metrics_tests {
 
     #[tokio::test]
     #[ignore] // Requires running Redis instance
+    #[cfg(feature = "storage-redis")]
     async fn test_redis_storage_metrics_integration() {
         use p2p_ai_agents::storage::redis::{RedisConfig, RedisStorage};
 
@@ -129,6 +130,164 @@ mod metrics_tests {
                     && line.contains(&format!("backend=\"{}\"", backend))
                     && !line.starts_with('#')
             })
+            .count()
+    }
+
+    #[tokio::test]
+    async fn test_metrics_http_endpoint() {
+        use p2p_ai_agents::metrics::prometheus_exporter::MetricsServer;
+        use std::time::Duration;
+
+        // Start metrics server
+        let config = MetricsConfig {
+            enabled: true,
+            port: 8081, // Use different port to avoid conflicts
+            path: "/metrics".to_string(),
+        };
+        let collector = MetricsCollector::new(config.clone());
+
+        // Update some metrics before starting server
+        collector.update_cpu_usage(45.5);
+        collector.update_memory_usage(1024 * 1024 * 512); // 512 MB
+        collector.update_peers_connected(5);
+
+        // Start server in background task
+        tokio::spawn(async move {
+            let _ = MetricsServer::start(config, collector).await;
+        });
+
+        // Give server time to start
+        tokio::time::sleep(Duration::from_millis(200)).await;
+
+        // Make HTTP request
+        let client = reqwest::Client::new();
+        let response = client
+            .get("http://localhost:8081/metrics")
+            .timeout(Duration::from_secs(5))
+            .send()
+            .await
+            .expect("Failed to send HTTP request to metrics endpoint");
+
+        // Verify response
+        assert_eq!(
+            response.status(),
+            200,
+            "Expected HTTP 200 response from metrics endpoint"
+        );
+
+        // Verify Content-Type header
+        let content_type = response
+            .headers()
+            .get("content-type")
+            .expect("Content-Type header missing");
+        assert!(
+            content_type.to_str().unwrap().contains("text/plain"),
+            "Expected text/plain content type, got: {:?}",
+            content_type
+        );
+
+        // Verify response body contains expected metrics
+        let body = response.text().await.expect("Failed to read response body");
+
+        assert!(
+            body.contains("process_cpu_usage"),
+            "Metrics should include process_cpu_usage"
+        );
+        assert!(
+            body.contains("process_memory_bytes"),
+            "Metrics should include process_memory_bytes"
+        );
+        assert!(
+            body.contains("agent_peers_connected"),
+            "Metrics should include agent_peers_connected"
+        );
+        assert!(
+            body.contains("messages_received_total"),
+            "Metrics should include messages_received_total"
+        );
+        assert!(
+            body.contains("storage_operations_total"),
+            "Metrics should include storage_operations_total"
+        );
+        assert!(
+            body.contains("message_processing_duration_seconds"),
+            "Metrics should include message_processing_duration_seconds"
+        );
+        assert!(
+            body.contains("storage_operation_duration_seconds"),
+            "Metrics should include storage_operation_duration_seconds"
+        );
+    }
+
+    #[tokio::test]
+    async fn test_message_metrics_integration() {
+        use p2p_ai_agents::network::{NetworkConfig, NetworkManager, NetworkMessage};
+
+        // Setup
+        let metrics_config = MetricsConfig::default();
+        let metrics = MetricsCollector::new(metrics_config);
+
+        let network_config = NetworkConfig {
+            listen_addr: "0.0.0.0:8002".parse().unwrap(),
+            bootstrap_peers: vec![],
+            max_peers: 100,
+            protocol_config: p2p_ai_agents::network::ProtocolConfig {},
+            resource_limits: p2p_ai_agents::network::ResourceLimits {
+                max_bandwidth: 1024 * 1024 * 10,
+                max_memory: 512 * 1024 * 1024,
+                max_connections: 100,
+            },
+            security_config: p2p_ai_agents::network::SecurityConfig {},
+        };
+
+        let network_manager = NetworkManager::with_metrics(network_config, metrics.clone());
+
+        // Get metrics baseline
+        let baseline = get_metrics_text();
+        let baseline_msg_count = count_messages_received(&baseline);
+
+        // Send and receive messages
+        network_manager
+            .send_message(NetworkMessage {
+                from: "test_sender".to_string(),
+                to: "test_receiver".to_string(),
+                content: b"test message 1".to_vec(),
+            })
+            .await;
+
+        network_manager
+            .send_message(NetworkMessage {
+                from: "test_sender".to_string(),
+                to: "test_receiver".to_string(),
+                content: b"test message 2".to_vec(),
+            })
+            .await;
+
+        // Receive messages to trigger metrics
+        let _msg1 = network_manager.receive_message().await;
+        let _msg2 = network_manager.receive_message().await;
+
+        // Get updated metrics
+        let updated = get_metrics_text();
+        let updated_msg_count = count_messages_received(&updated);
+
+        // Verify metrics increased
+        assert!(
+            updated_msg_count > baseline_msg_count,
+            "Message metrics should increment. Baseline: {}, Updated: {}",
+            baseline_msg_count,
+            updated_msg_count
+        );
+
+        // Verify specific metrics exist
+        assert!(updated.contains("messages_received_total"));
+        assert!(updated.contains("message_processing_duration_seconds"));
+    }
+
+    fn count_messages_received(metrics_text: &str) -> usize {
+        metrics_text
+            .lines()
+            .filter(|line| line.contains("messages_received_total") && !line.starts_with('#'))
             .count()
     }
 }

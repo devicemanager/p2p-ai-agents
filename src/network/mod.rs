@@ -191,6 +191,9 @@ pub struct NetworkManager {
     messages: Arc<Mutex<Vec<NetworkMessage>>>,
     /// Connected peers
     connected_peers: Arc<Mutex<Vec<SocketAddr>>>,
+    /// Prometheus metrics collector for recording message metrics
+    #[cfg(feature = "metrics-prometheus")]
+    prometheus_metrics: Option<crate::metrics::prometheus_exporter::MetricsCollector>,
 }
 
 impl NetworkManager {
@@ -203,6 +206,25 @@ impl NetworkManager {
             transport_type: "tcp".to_string(),
             messages: Arc::new(Mutex::new(Vec::new())),
             connected_peers: Arc::new(Mutex::new(Vec::new())),
+            #[cfg(feature = "metrics-prometheus")]
+            prometheus_metrics: None,
+        }
+    }
+
+    /// Create a new NetworkManager with Prometheus metrics collector.
+    #[cfg(feature = "metrics-prometheus")]
+    pub fn with_metrics(
+        config: NetworkConfig,
+        metrics: crate::metrics::prometheus_exporter::MetricsCollector,
+    ) -> Self {
+        Self {
+            config,
+            is_initialized: false,
+            is_running: false,
+            transport_type: "tcp".to_string(),
+            messages: Arc::new(Mutex::new(Vec::new())),
+            connected_peers: Arc::new(Mutex::new(Vec::new())),
+            prometheus_metrics: Some(metrics),
         }
     }
 
@@ -270,7 +292,21 @@ impl NetworkManager {
 
     /// Receive a message by popping from the message queue.
     pub async fn receive_message(&self) -> Option<NetworkMessage> {
-        self.messages.lock().await.pop()
+        #[cfg(feature = "metrics-prometheus")]
+        let start = std::time::Instant::now();
+
+        let result = self.messages.lock().await.pop();
+
+        #[cfg(feature = "metrics-prometheus")]
+        if result.is_some() {
+            if let Some(ref metrics) = self.prometheus_metrics {
+                metrics.record_message_received();
+                let duration_ms = start.elapsed().as_millis() as u64;
+                metrics.record_message_duration(duration_ms);
+            }
+        }
+
+        result
     }
 
     /// Get received messages.
