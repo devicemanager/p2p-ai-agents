@@ -140,7 +140,7 @@ impl Identity {
                 OsRng.fill_bytes(&mut key);
 
                 // Store in keychain (base64 encoded)
-                let encoded = general_purpose::STANDARD.encode(&key);
+                let encoded = general_purpose::STANDARD.encode(key);
                 entry
                     .set_password(&encoded)
                     .map_err(|e| IdentityError::Keychain(e.to_string()))?;
@@ -202,18 +202,20 @@ impl Identity {
             tracing::info!("Generating new identity");
             let identity = Self::new()?;
             identity.save_to_dir(&config_dir)?;
-            let peer_id = identity.peer_id();
+            let peer_id = identity.peer_id()?;
             tracing::info!("New identity created: {}", peer_id);
             Ok(identity)
         }
     }
 
     /// Derive libp2p PeerId from public key
-    pub fn peer_id(&self) -> String {
+    pub fn peer_id(&self) -> Result<String> {
         // Create Ed25519 keypair from our signing key for libp2p compatibility
         let keypair = libp2p_identity::Keypair::ed25519_from_bytes(self.signing_key.to_bytes())
-            .expect("valid ed25519 keypair");
-        PeerId::from_public_key(&keypair.public()).to_string()
+            .map_err(|e| {
+                IdentityError::InvalidKey(format!("Failed to create libp2p keypair: {}", e))
+            })?;
+        Ok(PeerId::from_public_key(&keypair.public()).to_string())
     }
 
     /// Save identity to directory (separate public/private files)
@@ -285,9 +287,8 @@ impl Identity {
         let key_id = Self::derive_key_id(&verifying_key);
 
         // Get encryption key from keychain
-        let mut encryption_key = Self::get_or_create_encryption_key(&key_id).map_err(|e| {
+        let mut encryption_key = Self::get_or_create_encryption_key(&key_id).inspect_err(|_| {
             tracing::error!("Failed to access system keychain");
-            e
         })?;
 
         // Load and decrypt private key
@@ -314,7 +315,7 @@ impl Identity {
             signing_key,
         };
 
-        let peer_id = identity.peer_id();
+        let peer_id = identity.peer_id()?;
         tracing::info!("Identity loaded: {}", peer_id);
         Ok(identity)
     }
@@ -405,7 +406,7 @@ mod tests {
         assert!(temp_dir.path().join("identity.key").exists());
 
         // Verify peer ID is valid
-        let peer_id = identity.peer_id();
+        let peer_id = identity.peer_id().unwrap();
         assert!(!peer_id.is_empty());
     }
 
@@ -415,11 +416,11 @@ mod tests {
 
         // Create first identity
         let identity1 = Identity::load_or_generate(temp_dir.path()).unwrap();
-        let peer_id1 = identity1.peer_id();
+        let peer_id1 = identity1.peer_id().unwrap();
 
         // Load existing identity
         let identity2 = Identity::load_or_generate(temp_dir.path()).unwrap();
-        let peer_id2 = identity2.peer_id();
+        let peer_id2 = identity2.peer_id().unwrap();
 
         // Should be the same identity
         assert_eq!(peer_id1, peer_id2);
@@ -433,13 +434,13 @@ mod tests {
     #[test]
     fn test_peer_id_derivation() {
         let identity = Identity::new().unwrap();
-        let peer_id = identity.peer_id();
+        let peer_id = identity.peer_id().unwrap();
 
         // PeerId should be non-empty string
         assert!(!peer_id.is_empty());
 
         // Should be consistent
-        assert_eq!(peer_id, identity.peer_id());
+        assert_eq!(peer_id, identity.peer_id().unwrap());
     }
 
     #[test]
@@ -469,14 +470,14 @@ mod tests {
         // Create and save identity
         let identity1 = Identity::new().unwrap();
         identity1.save_to_dir(temp_dir.path()).unwrap();
-        let peer_id1 = identity1.peer_id();
+        let peer_id1 = identity1.peer_id().unwrap();
 
         // Load multiple times
         let identity2 = Identity::load_from_dir(temp_dir.path()).unwrap();
-        let peer_id2 = identity2.peer_id();
+        let peer_id2 = identity2.peer_id().unwrap();
 
         let identity3 = Identity::load_from_dir(temp_dir.path()).unwrap();
-        let peer_id3 = identity3.peer_id();
+        let peer_id3 = identity3.peer_id().unwrap();
 
         // All should have same peer ID
         assert_eq!(peer_id1, peer_id2);
