@@ -42,6 +42,12 @@ pub enum StorageError {
     /// IO error
     #[error("IO error: {0}")]
     Io(#[from] std::io::Error),
+    /// Connection failed
+    #[error("Connection failed: {0}")]
+    ConnectionFailed(String),
+    /// Initialization failed
+    #[error("Initialization failed: {0}")]
+    InitializationFailed(String),
     /// Other error
     #[error("Other error: {0}")]
     Other(String),
