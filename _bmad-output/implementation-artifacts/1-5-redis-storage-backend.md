@@ -1,6 +1,6 @@
 # Story 1.5: Redis Storage Backend
 
-Status: ready-for-dev
+Status: done
 
 ## Story
 

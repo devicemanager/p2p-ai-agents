@@ -45,7 +45,7 @@ development_status:
   1-2-private-key-encryption-at-rest: done
   1-3-basic-local-storage-backend: done
   1-4-storage-consistency-model-implementation: done
-  1-5-redis-storage-backend: ready-for-dev
+  1-5-redis-storage-backend: done
   1-6-prometheus-metrics-collection: backlog
   1-7-structured-json-logging: backlog
   1-8-agent-lifecycle-management: backlog

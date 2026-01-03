@@ -5,6 +5,10 @@ pub mod local;
 #[cfg(feature = "storage-supabase")]
 pub mod supabase;
 
+/// Redis storage adapter (optional)
+#[cfg(feature = "storage-redis")]
+pub mod redis;
+
 /// Plugin system for dynamic storage backend registration
 pub mod plugin;
 
@@ -12,8 +16,12 @@ pub mod plugin;
 pub mod manager;
 
 // Re-exports for convenience
+pub use local::ConsistencyLevel;
 pub use manager::{BackendConfig, ManagerError, StorageManager, StorageMetrics, StoragePolicy};
 pub use plugin::{PluginError, StorageConfig, StoragePlugin, StorageRegistry};
+
+#[cfg(feature = "storage-redis")]
+pub use redis::{RedisConfig, RedisStorage};
 
 #[cfg(test)]
 mod tests {

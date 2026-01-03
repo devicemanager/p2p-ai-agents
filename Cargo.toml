@@ -59,6 +59,9 @@ postgrest = { version = "1.5", optional = true }
 reqwest = { version = "0.11", features = ["json"], optional = true }
 url = { version = "2.5", optional = true }
 
+# Redis (optional)
+redis = { version = "0.24", features = ["tokio-comp", "connection-manager", "aio"], optional = true }
+
 # Testing
 criterion = "0.5"
 mockall = "0.12"
@@ -94,6 +97,7 @@ full = ["network", "storage", "cli"]
 network = ["libp2p", "futures", "bytes"]
 storage = []
 storage-supabase = ["postgrest", "reqwest", "url"]
+storage-redis = ["redis"]
 cli = []
 reqwest = ["dep:reqwest"]
 
