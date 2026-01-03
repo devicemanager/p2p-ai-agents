@@ -413,7 +413,11 @@ impl Storage for StorageManager {
         }
     }
 
-    async fn delete(&self, key: &str, consistency: ConsistencyLevel) -> Result<(), StorageError> {
+    async fn delete(
+        &self,
+        key: &str,
+        consistency: ConsistencyLevel,
+    ) -> Result<(), StorageError> {
         let backends = self
             .select_backends()
             .await
@@ -491,24 +495,15 @@ mod tests {
 
         // Test put and get
         assert!(manager
-            .put("test_key", b"test_value".to_vec(), ConsistencyLevel::Strong,)
+            .put("test_key", b"test_value".to_vec())
             .await
             .is_ok());
-        let result = manager
-            .get("test_key", ConsistencyLevel::Strong)
-            .await
-            .unwrap();
+        let result = manager.get("test_key", ConsistencyLevel::Strong).await.unwrap();
         assert_eq!(result, Some(b"test_value".to_vec()));
 
         // Test delete
-        assert!(manager
-            .delete("test_key", ConsistencyLevel::Strong)
-            .await
-            .is_ok());
-        let result = manager
-            .get("test_key", ConsistencyLevel::Strong)
-            .await
-            .unwrap();
+        assert!(manager.delete("test_key", ConsistencyLevel::Strong).await.is_ok());
+        let result = manager.get("test_key", ConsistencyLevel::Strong).await.unwrap();
         assert_eq!(result, None);
     }
 
@@ -517,10 +512,7 @@ mod tests {
         let mut manager = create_test_manager().await;
         manager.set_policy(StoragePolicy::AlwaysUse("local".to_string()));
 
-        assert!(manager
-            .put("key1", b"value1".to_vec(), ConsistencyLevel::Strong)
-            .await
-            .is_ok());
+        assert!(manager.put("key1", b"value1".to_vec()).await.is_ok());
         let result = manager.get("key1", ConsistencyLevel::Strong).await.unwrap();
         assert_eq!(result, Some(b"value1".to_vec()));
     }
@@ -533,10 +525,7 @@ mod tests {
             "local".to_string(),
         ]));
 
-        assert!(manager
-            .put("key2", b"value2".to_vec(), ConsistencyLevel::Strong)
-            .await
-            .is_ok());
+        assert!(manager.put("key2", b"value2".to_vec()).await.is_ok());
         let result = manager.get("key2", ConsistencyLevel::Strong).await.unwrap();
         assert_eq!(result, Some(b"value2".to_vec()));
     }
@@ -546,9 +535,7 @@ mod tests {
         let manager = create_test_manager().await;
 
         // Perform some operations
-        let _ = manager
-            .put("key1", b"value1".to_vec(), ConsistencyLevel::Strong)
-            .await;
+        let _ = manager.put("key1", b"value1".to_vec()).await;
         let _ = manager.get("key1", ConsistencyLevel::Strong).await;
         let _ = manager.get("nonexistent", ConsistencyLevel::Strong).await;
 

@@ -196,9 +196,16 @@ impl StoragePlugin for LocalStoragePlugin {
     ) -> Result<Box<dyn Storage + Send + Sync>, PluginError> {
         match config {
             StorageConfig::Local { .. } => {
-                // For now, just create a basic LocalStorage
-                // In the future, could support different local storage modes
-                Ok(Box::new(crate::storage::local::LocalStorage::new()))
+                // Use temp directory for testing
+                let temp_dir = std::env::temp_dir().join("p2p-storage-local");
+                Ok(Box::new(
+                    crate::storage::local::LocalStorage::new(&temp_dir).map_err(|e| {
+                        PluginError::InvalidConfig(
+                            self.name().to_string(),
+                            format!("Failed to create local storage: {}", e),
+                        )
+                    })?,
+                ))
             }
             _ => Err(PluginError::InvalidConfig(
                 self.name().to_string(),

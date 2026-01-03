@@ -223,7 +223,8 @@ impl StoragePerfTest {
         let mut results = Vec::new();
 
         // Test LocalStorage
-        let local_storage = LocalStorage::new();
+        let temp_dir = tempfile::TempDir::new().unwrap();
+        let local_storage = LocalStorage::new(temp_dir.path()).unwrap();
         results.push(self.run_write_test(&local_storage, "LocalStorage").await);
         results.push(self.run_read_test(&local_storage, "LocalStorage").await);
         results.push(self.run_delete_test(&local_storage, "LocalStorage").await);
@@ -422,7 +423,8 @@ async fn test_storage_performance_large() {
 
 #[tokio::test]
 async fn test_local_storage_stress() {
-    let storage = Arc::new(LocalStorage::new());
+    let temp_dir = tempfile::TempDir::new().unwrap();
+    let storage = Arc::new(LocalStorage::new(temp_dir.path()).unwrap());
     let mut handles = Vec::new();
     let operations_per_task = 1000;
     let num_tasks = 10;
