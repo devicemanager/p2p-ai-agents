@@ -41,8 +41,8 @@ story_location: _bmad-output/implementation-artifacts
 
 development_status:
   epic-1: in-progress
-  1-1-agent-identity-generation: review
-  1-2-private-key-encryption-at-rest: backlog
+  1-1-agent-identity-generation: done
+  1-2-private-key-encryption-at-rest: review
   1-3-basic-local-storage-backend: backlog
   1-4-storage-consistency-model-implementation: backlog
   1-5-redis-storage-backend: backlog
