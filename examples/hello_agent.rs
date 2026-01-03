@@ -5,7 +5,9 @@
 //! and identity information retrieval.
 
 use p2p_ai_agents::agent::{Agent, AgentConfig, AgentId, DefaultAgent, ResourceLimits};
+use p2p_ai_agents::core::services::ServiceRegistry;
 use std::error::Error;
+use std::sync::Arc;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
@@ -19,13 +21,15 @@ async fn main() -> Result<(), Box<dyn Error>> {
             max_memory: 512 * 1024 * 1024,       // 512MB
             max_storage: 5 * 1024 * 1024 * 1024, // 5GB
             max_bandwidth: 512 * 1024,           // 512KB/s
+            max_connections: 50,
         },
     };
 
     println!("✅ Configuration created");
 
     // Step 2: Initialize the agent
-    let agent = DefaultAgent::new(config).await?;
+    let service_registry = Arc::new(ServiceRegistry::new());
+    let agent = DefaultAgent::new(config, service_registry).await?;
     println!("✅ Agent initialized");
 
     // Step 3: Start the agent

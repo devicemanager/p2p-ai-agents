@@ -8,6 +8,7 @@ use chrono::Utc;
 use p2p_ai_agents::agent::{
     Agent, AgentConfig, AgentId, DefaultAgent, ResourceLimits as AgentResourceLimits,
 };
+use p2p_ai_agents::core::services::ServiceRegistry;
 use p2p_ai_agents::network::{
     NetworkConfig, NetworkManager, NetworkMessage, ProtocolConfig,
     ResourceLimits as NetworkResourceLimits, SecurityConfig,
@@ -15,6 +16,7 @@ use p2p_ai_agents::network::{
 use std::error::Error;
 use std::net::SocketAddr;
 use std::str::FromStr;
+use std::sync::Arc;
 use tokio::time::{sleep, Duration};
 
 #[tokio::main]
@@ -46,6 +48,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         max_memory: 1024 * 1024 * 1024,
         max_storage: 2048 * 1024 * 1024,
         max_bandwidth: 2048 * 1024,
+        max_connections: 100,
     };
 
     let config = AgentConfig {
@@ -53,7 +56,8 @@ async fn main() -> Result<(), Box<dyn Error>> {
         resource_limits,
     };
 
-    let agent = DefaultAgent::new(config).await?;
+    let service_registry = Arc::new(ServiceRegistry::new());
+    let agent = DefaultAgent::new(config, service_registry).await?;
     agent.start().await?;
 
     // Create network manager

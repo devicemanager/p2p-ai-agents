@@ -15,6 +15,9 @@ pub mod service;
 /// Transport submodule for network transport protocols.
 pub mod transport;
 
+// Re-export NetworkStats from service module
+pub use service::NetworkStats;
+
 /// Errors that can occur in the network module.
 #[derive(Debug, Error)]
 pub enum NetworkError {
@@ -125,7 +128,7 @@ pub struct NetworkConfig {
 }
 
 /// Message structure for network communication.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct NetworkMessage {
     /// Sender identifier
     pub from: String,

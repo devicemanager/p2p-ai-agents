@@ -7,10 +7,12 @@ use p2p_ai_agents::agent::{
     Agent, AgentConfig, AgentId, DefaultAgent, ResourceLimits, Task, TaskPayload, TaskPriority,
     TaskStatus, TaskType,
 };
+use p2p_ai_agents::core::services::ServiceRegistry;
 use serde_json::json;
 use std::collections::HashMap;
 use std::error::Error;
 use std::process::Command;
+use std::sync::Arc;
 use std::time::Duration;
 use tokio::time::sleep;
 
@@ -83,10 +85,11 @@ async fn test_hello_agent_runs() -> Result<(), Box<dyn Error>> {
             max_memory: 256 * 1024 * 1024,
             max_storage: 512 * 1024 * 1024,
             max_bandwidth: 512 * 1024,
+            max_connections: 50,
         },
     };
 
-    let agent = DefaultAgent::new(config).await?;
+    let agent = DefaultAgent::new(config, Arc::new(ServiceRegistry::new())).await?;
     agent.start().await?;
 
     // Verify agent identity
@@ -111,10 +114,11 @@ async fn test_task_processing_workflow() -> Result<(), Box<dyn Error>> {
             max_memory: 512 * 1024 * 1024,
             max_storage: 1024 * 1024 * 1024,
             max_bandwidth: 1024 * 1024,
+            max_connections: 50,
         },
     };
 
-    let agent = DefaultAgent::new(config).await?;
+    let agent = DefaultAgent::new(config, Arc::new(ServiceRegistry::new())).await?;
     agent.start().await?;
 
     // Test text processing task
@@ -164,10 +168,11 @@ async fn test_batch_task_processing() -> Result<(), Box<dyn Error>> {
             max_memory: 512 * 1024 * 1024,
             max_storage: 1024 * 1024 * 1024,
             max_bandwidth: 1024 * 1024,
+            max_connections: 50,
         },
     };
 
-    let agent = DefaultAgent::new(config).await?;
+    let agent = DefaultAgent::new(config, Arc::new(ServiceRegistry::new())).await?;
     agent.start().await?;
 
     // Submit multiple tasks
@@ -215,10 +220,11 @@ async fn test_task_cancellation() -> Result<(), Box<dyn Error>> {
             max_memory: 256 * 1024 * 1024,
             max_storage: 512 * 1024 * 1024,
             max_bandwidth: 512 * 1024,
+            max_connections: 50,
         },
     };
 
-    let agent = DefaultAgent::new(config).await?;
+    let agent = DefaultAgent::new(config, Arc::new(ServiceRegistry::new())).await?;
     agent.start().await?;
 
     // Create a task
@@ -253,6 +259,7 @@ async fn test_network_peer_communication() -> Result<(), Box<dyn Error>> {
             max_memory: 256 * 1024 * 1024,
             max_storage: 512 * 1024 * 1024,
             max_bandwidth: 512 * 1024,
+            max_connections: 50,
         },
     };
 
@@ -264,11 +271,12 @@ async fn test_network_peer_communication() -> Result<(), Box<dyn Error>> {
             max_memory: 256 * 1024 * 1024,
             max_storage: 512 * 1024 * 1024,
             max_bandwidth: 512 * 1024,
+            max_connections: 50,
         },
     };
 
-    let agent1 = DefaultAgent::new(config1).await?;
-    let agent2 = DefaultAgent::new(config2).await?;
+    let agent1 = DefaultAgent::new(config1, Arc::new(ServiceRegistry::new())).await?;
+    let agent2 = DefaultAgent::new(config2, Arc::new(ServiceRegistry::new())).await?;
 
     agent1.start().await?;
     agent2.start().await?;
@@ -295,10 +303,11 @@ async fn test_complete_workflow_integration() -> Result<(), Box<dyn Error>> {
             max_memory: 1024 * 1024 * 1024,
             max_storage: 2048 * 1024 * 1024,
             max_bandwidth: 2048 * 1024,
+            max_connections: 50,
         },
     };
 
-    let agent = DefaultAgent::new(config).await?;
+    let agent = DefaultAgent::new(config, Arc::new(ServiceRegistry::new())).await?;
     agent.start().await?;
 
     // Create and process multiple task types

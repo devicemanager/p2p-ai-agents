@@ -16,7 +16,7 @@ use tokio::sync::RwLock;
 use tracing::info;
 use uuid::Uuid;
 
-use crate::core::services::{ServiceRegistry, ServiceId, Service, ServiceError, ServiceRequest, ServiceResponse};
+use crate::core::services::{ServiceId, ServiceRegistry, ServiceRequest};
 
 pub use identity::{Identity, IdentityError};
 pub use resource::{ResourceError, ResourceMonitor, ResourceUsage};
@@ -140,7 +140,7 @@ pub struct AgentStatus {
 }
 
 /// Network status information
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct NetworkStatus {
     /// Whether connected to the network
     pub is_connected: bool,
@@ -148,16 +148,6 @@ pub struct NetworkStatus {
     pub peer_count: usize,
     /// Last connection error (if any)
     pub last_error: Option<String>,
-}
-
-impl Default for NetworkStatus {
-    fn default() -> Self {
-        Self {
-            is_connected: false,
-            peer_count: 0,
-            last_error: None,
-        }
-    }
 }
 
 /// Peer information
@@ -252,7 +242,7 @@ impl Agent for DefaultAgent {
 
     async fn status(&self) -> Result<AgentStatus> {
         let network_status = self.network_status().await?;
-        
+
         Ok(AgentStatus {
             is_running: true,
             active_tasks: 0,
@@ -291,7 +281,7 @@ impl Agent for DefaultAgent {
                 status: crate::network::ConnectionStatus::Disconnected,
             });
         }
-        
+
         let network_config = crate::network::service::NetworkServiceConfig {
             network_config: crate::network::NetworkConfig {
                 listen_addr: "0.0.0.0:8000".parse().unwrap(),
@@ -311,7 +301,9 @@ impl Agent for DefaultAgent {
         };
 
         let constructor = crate::network::service::NetworkServiceConstructor::new(network_config);
-        let service_id = constructor.create_and_register(&*self.service_registry).await
+        let service_id = constructor
+            .create_and_register(&self.service_registry)
+            .await
             .map_err(|e| Error::Internal(format!("Failed to create network service: {}", e)))?;
 
         // Store the service ID
@@ -321,10 +313,14 @@ impl Agent for DefaultAgent {
 
         // Start the network service
         if let Some(service) = self.service_registry.get_service(&service_id).await {
-            service.start().await
+            service
+                .start()
+                .await
                 .map_err(|e| Error::Internal(format!("Failed to start network service: {}", e)))?;
         } else {
-            return Err(Error::Internal("Network service not found after registration".to_string()));
+            return Err(Error::Internal(
+                "Network service not found after registration".to_string(),
+            ));
         }
 
         info!("Agent {} connected to network", self.id().as_str());
@@ -335,15 +331,16 @@ impl Agent for DefaultAgent {
         let service_id_guard = self.network_service_id.read().await;
         if let Some(service_id) = service_id_guard.as_ref() {
             if let Some(service) = self.service_registry.get_service(service_id).await {
-                service.stop().await
-                    .map_err(|e| Error::Internal(format!("Failed to stop network service: {}", e)))?;
+                service.stop().await.map_err(|e| {
+                    Error::Internal(format!("Failed to stop network service: {}", e))
+                })?;
             }
-            
+
             // Reset service ID
             drop(service_id_guard);
             let mut service_id_guard = self.network_service_id.write().await;
             *service_id_guard = None;
-            
+
             info!("Agent {} disconnected from network", self.id().as_str());
         }
         Ok(())
@@ -353,26 +350,26 @@ impl Agent for DefaultAgent {
         let service_id_guard = self.network_service_id.read().await;
         if let Some(service_id) = service_id_guard.as_ref() {
             if let Some(service) = self.service_registry.get_service(service_id).await {
-            
-            let health = service.health().await;
-            let status = service.status().await;
-            
-            let mut network_status = NetworkStatus::default();
-            
-            // Extract network-specific metrics from health
-            if let Some(peer_count) = health.metrics.get("connected_peers") {
-                if let Some(count) = peer_count.as_u64() {
-                    network_status.peer_count = count as usize;
+                let health = service.health().await;
+                let status = service.status().await;
+
+                let mut network_status = NetworkStatus::default();
+
+                // Extract network-specific metrics from health
+                if let Some(peer_count) = health.metrics.get("connected_peers") {
+                    if let Some(count) = peer_count.as_u64() {
+                        network_status.peer_count = count as usize;
+                    }
                 }
-            }
-            
-            network_status.is_connected = matches!(status, crate::core::services::ServiceStatus::Running);
-            
-            if let Some(error_msg) = health.metrics.get("error") {
-                network_status.last_error = Some(error_msg.to_string());
-            }
-            
-            Ok(network_status)
+
+                network_status.is_connected =
+                    matches!(status, crate::core::services::ServiceStatus::Running);
+
+                if let Some(error_msg) = health.metrics.get("error") {
+                    network_status.last_error = Some(error_msg.to_string());
+                }
+
+                Ok(network_status)
             } else {
                 Ok(NetworkStatus::default())
             }
@@ -385,33 +382,45 @@ impl Agent for DefaultAgent {
         let service_id_guard = self.network_service_id.read().await;
         if let Some(service_id) = service_id_guard.as_ref() {
             if let Some(service) = self.service_registry.get_service(service_id).await {
-            
-            // Convert task to network message
-            let message = crate::network::NetworkMessage {
-                from: self.id().as_str().to_string(),
-                to: "broadcast".to_string(),
-                content: serde_json::to_vec(&task)
-                    .map_err(|e| Error::Internal(format!("Failed to serialize task: {}", e)))?,
-            };
-            
+                // Convert task to network message
+                let message = crate::network::NetworkMessage {
+                    from: self.id().as_str().to_string(),
+                    to: "broadcast".to_string(),
+                    content: serde_json::to_vec(&task)
+                        .map_err(|e| Error::Internal(format!("Failed to serialize task: {}", e)))?,
+                };
+
                 let mut params = std::collections::HashMap::new();
-                params.insert("message".to_string(), serde_json::to_value(message)
-                    .map_err(|e| Error::Internal(format!("Failed to serialize message: {}", e)))?);
-                
-                let response = service.handle_request(ServiceRequest {
-                    id: Uuid::new_v4(),
-                    method: "broadcast_message".to_string(),
-                    parameters: params,
-                    timeout: Some(std::time::Duration::from_secs(30)),
-                }).await
+                params.insert(
+                    "message".to_string(),
+                    serde_json::to_value(message).map_err(|e| {
+                        Error::Internal(format!("Failed to serialize message: {}", e))
+                    })?,
+                );
+
+                let response = service
+                    .handle_request(ServiceRequest {
+                        id: Uuid::new_v4(),
+                        method: "broadcast_message".to_string(),
+                        parameters: params,
+                        timeout: Some(std::time::Duration::from_secs(30)),
+                    })
+                    .await
                     .map_err(|e| Error::Internal(format!("Failed to broadcast task: {}", e)))?;
-            
-            if response.success {
-                info!("Agent {} broadcast task {} to network", self.id().as_str(), task.id().as_str());
-                Ok(())
+
+                if response.success {
+                    info!(
+                        "Agent {} broadcast task {} to network",
+                        self.id().as_str(),
+                        task.id().as_str()
+                    );
+                    Ok(())
                 } else {
-                Err(Error::Internal(format!("Broadcast failed: {}", response.error.unwrap_or_default())))
-            }
+                    Err(Error::Internal(format!(
+                        "Broadcast failed: {}",
+                        response.error.unwrap_or_default()
+                    )))
+                }
             } else {
                 Err(Error::Internal("Network service not found".to_string()))
             }
@@ -424,33 +433,42 @@ impl Agent for DefaultAgent {
         let service_id_guard = self.network_service_id.read().await;
         if let Some(service_id) = service_id_guard.as_ref() {
             if let Some(service) = self.service_registry.get_service(service_id).await {
-            
-                let response = service.handle_request(ServiceRequest {
-                    id: Uuid::new_v4(),
-                    method: "get_connected_peers".to_string(),
-                    parameters: std::collections::HashMap::new(),
-                    timeout: Some(std::time::Duration::from_secs(30)),
-                }).await
+                let response = service
+                    .handle_request(ServiceRequest {
+                        id: Uuid::new_v4(),
+                        method: "get_connected_peers".to_string(),
+                        parameters: std::collections::HashMap::new(),
+                        timeout: Some(std::time::Duration::from_secs(30)),
+                    })
+                    .await
                     .map_err(|e| Error::Internal(format!("Failed to discover peers: {}", e)))?;
-            
-            if response.success {
-                if let Some(data) = response.data {
-                    let peer_ids: Vec<crate::network::PeerId> = serde_json::from_value(data)
-                        .map_err(|e| Error::Internal(format!("Failed to parse peer IDs: {}", e)))?;
-                    
-                    let peers = peer_ids.iter().map(|peer_id| PeerInfo {
-                        peer_id: peer_id.0.clone(),
-                        address: "unknown".to_string(),
-                        capabilities: vec!["task_execution".to_string()],
-                    }).collect();
-                    
-                    Ok(peers)
+
+                if response.success {
+                    if let Some(data) = response.data {
+                        let peer_ids: Vec<crate::network::PeerId> = serde_json::from_value(data)
+                            .map_err(|e| {
+                                Error::Internal(format!("Failed to parse peer IDs: {}", e))
+                            })?;
+
+                        let peers = peer_ids
+                            .iter()
+                            .map(|peer_id| PeerInfo {
+                                peer_id: peer_id.0.clone(),
+                                address: "unknown".to_string(),
+                                capabilities: vec!["task_execution".to_string()],
+                            })
+                            .collect();
+
+                        Ok(peers)
+                    } else {
+                        Ok(vec![])
+                    }
                 } else {
-                    Ok(vec![])
+                    Err(Error::Internal(format!(
+                        "Peer discovery failed: {}",
+                        response.error.unwrap_or_default()
+                    )))
                 }
-            } else {
-                Err(Error::Internal(format!("Peer discovery failed: {}", response.error.unwrap_or_default())))
-            }
             } else {
                 Ok(vec![])
             }
@@ -541,7 +559,7 @@ mod tests {
                 max_connections: 100,
             },
         };
-        
+
         let registry = Arc::new(ServiceRegistry::new());
         let agent = DefaultAgent::new(config, registry).await.unwrap();
         assert_eq!(agent.id().0, "test-agent");
@@ -559,15 +577,15 @@ mod tests {
                 max_connections: 10,
             },
         };
-        
+
         let registry = Arc::new(ServiceRegistry::new());
         let agent = DefaultAgent::new(config, registry).await.unwrap();
-        
+
         // Test initial network status
         let status = agent.network_status().await.unwrap();
         assert!(!status.is_connected);
         assert_eq!(status.peer_count, 0);
-        
+
         // Test overall agent status
         let agent_status = agent.status().await.unwrap();
         assert!(agent_status.is_running);

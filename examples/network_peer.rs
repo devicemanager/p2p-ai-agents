@@ -8,6 +8,7 @@ use chrono::Utc;
 use p2p_ai_agents::agent::{
     Agent, AgentConfig, AgentId, DefaultAgent, ResourceLimits as AgentResourceLimits,
 };
+use p2p_ai_agents::core::services::ServiceRegistry;
 use p2p_ai_agents::network::{
     ConnectionStatus, Multiaddr, NetworkConfig, NetworkManager, NetworkMessage, PeerCapabilities,
     PeerId, PeerInfo, ProtocolConfig, ResourceLimits as NetworkResourceLimits, SecurityConfig,
@@ -16,6 +17,7 @@ use serde_json::json;
 use std::error::Error;
 use std::net::SocketAddr;
 use std::str::FromStr;
+use std::sync::Arc;
 use tokio::time::{sleep, Duration};
 
 #[tokio::main]
@@ -55,6 +57,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         max_memory: 768 * 1024 * 1024,
         max_storage: 1536 * 1024 * 1024,
         max_bandwidth: 1536 * 1024,
+        max_connections: 50,
     };
 
     let config = AgentConfig {
@@ -62,7 +65,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         resource_limits,
     };
 
-    let agent = DefaultAgent::new(config).await?;
+    let agent = DefaultAgent::new(config, Arc::new(ServiceRegistry::new())).await?;
     agent.start().await?;
 
     // Create network manager
@@ -223,10 +226,11 @@ mod tests {
                 max_memory: 512 * 1024 * 1024,
                 max_storage: 1024 * 1024 * 1024,
                 max_bandwidth: 1024 * 1024,
+                max_connections: 50,
             },
         };
 
-        let agent = DefaultAgent::new(config).await?;
+        let agent = DefaultAgent::new(config, Arc::new(ServiceRegistry::new())).await?;
         agent.start().await?;
 
         let network_manager = NetworkManager::new(network_config);
