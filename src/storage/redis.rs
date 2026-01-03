@@ -121,6 +121,7 @@ impl RedisStorage {
     }
 
     /// Execute an operation with retry logic and exponential backoff
+    #[allow(dead_code)]
     async fn with_retry<F, Fut, T>(&self, mut operation: F) -> Result<T, StorageError>
     where
         F: FnMut() -> Fut,
@@ -173,6 +174,7 @@ impl Storage for RedisStorage {
         let config = self.config.clone();
         let mut conn = self.connection.clone();
 
+        // Retry logic with exponential backoff
         let mut attempts = 0;
         let mut delay = config.retry_delay_ms;
 
@@ -226,6 +228,7 @@ impl Storage for RedisStorage {
         let config = self.config.clone();
         let mut conn = self.connection.clone();
 
+        // Retry logic with exponential backoff
         let mut attempts = 0;
         let mut delay = config.retry_delay_ms;
 
@@ -274,6 +277,7 @@ impl Storage for RedisStorage {
         let config = self.config.clone();
         let mut conn = self.connection.clone();
 
+        // Retry logic with exponential backoff
         let mut attempts = 0;
         let mut delay = config.retry_delay_ms;
 
@@ -373,5 +377,23 @@ mod tests {
         };
         let result = RedisStorage::new(config).await;
         assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_retry_config_defaults() {
+        let config = RedisConfig::default();
+        assert_eq!(config.max_retries, 3);
+        assert_eq!(config.retry_delay_ms, 100);
+    }
+
+    #[tokio::test]
+    async fn test_retry_config_custom() {
+        let config = RedisConfig {
+            url: "redis://localhost:6379".to_string(),
+            max_retries: 5,
+            retry_delay_ms: 200,
+        };
+        assert_eq!(config.max_retries, 5);
+        assert_eq!(config.retry_delay_ms, 200);
     }
 }

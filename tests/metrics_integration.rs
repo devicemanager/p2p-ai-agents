@@ -1,7 +1,5 @@
 /// Integration tests for metrics collection
-///
 /// Tests that storage operations correctly record metrics.
-
 #[cfg(feature = "metrics-prometheus")]
 mod metrics_tests {
     use p2p_ai_agents::metrics::prometheus_exporter::{MetricsCollector, MetricsConfig};
