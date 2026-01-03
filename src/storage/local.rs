@@ -1,7 +1,37 @@
 use async_trait::async_trait;
-use std::collections::HashMap;
-use std::sync::Arc;
-use tokio::sync::Mutex;
+use serde::{Deserialize, Serialize};
+use std::path::{Path, PathBuf};
+use tokio::fs;
+
+/// Consistency level for storage operations
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum ConsistencyLevel {
+    /// Strong consistency - read returns most recent write
+    /// Linearizable operations, highest latency
+    /// Use case: Critical data (identity, configuration)
+    Strong,
+
+    /// Eventual consistency - read may return stale data
+    /// Write returns immediately, lowest latency
+    /// Use case: Metrics, logs, non-critical data
+    Eventual,
+
+    /// Read-your-writes consistency
+    /// Session-level consistency guarantee
+    /// Use case: User-specific data
+    ReadYourWrites,
+
+    /// Causal consistency - respects causal relationships
+    /// If A causes B, all nodes see A before B
+    /// Use case: Message ordering, event logs
+    Causal,
+}
+
+impl Default for ConsistencyLevel {
+    fn default() -> Self {
+        ConsistencyLevel::Strong
+    }
+}
 
 /// Storage errors for storage backends
 #[derive(Debug, thiserror::Error)]
@@ -20,47 +50,138 @@ pub enum StorageError {
 /// Async trait for all storage backends
 #[async_trait]
 pub trait Storage: Send + Sync {
-    /// Get a value by key
-    async fn get(&self, key: &str) -> Result<Option<Vec<u8>>, StorageError>;
-    /// Put a value by key
-    async fn put(&self, key: &str, value: Vec<u8>) -> Result<(), StorageError>;
-    /// Delete a value by key
-    async fn delete(&self, key: &str) -> Result<(), StorageError>;
+    /// Get a value by key with specified consistency level
+    async fn get(
+        &self,
+        key: &str,
+        consistency: ConsistencyLevel,
+    ) -> Result<Option<Vec<u8>>, StorageError>;
+
+    /// Put a value by key with specified consistency level
+    async fn put(
+        &self,
+        key: &str,
+        value: Vec<u8>,
+        consistency: ConsistencyLevel,
+    ) -> Result<(), StorageError>;
+
+    /// Delete a value by key with specified consistency level
+    async fn delete(&self, key: &str, consistency: ConsistencyLevel) -> Result<(), StorageError>;
     // ... batch, streaming, etc.
 }
 
-/// Local storage backend (file or memory)
-#[derive(Default)]
+/// Local storage backend with file-based persistence
 pub struct LocalStorage {
-    data: Arc<Mutex<HashMap<String, Vec<u8>>>>,
+    storage_dir: PathBuf,
 }
 
 impl LocalStorage {
-    /// Create a new LocalStorage
-    pub fn new() -> Self {
-        Self {
-            data: Arc::new(Mutex::new(HashMap::new())),
+    /// Create a new LocalStorage with file-based persistence
+    pub fn new(storage_dir: impl AsRef<Path>) -> Result<Self, StorageError> {
+        let storage_dir = storage_dir.as_ref().to_path_buf();
+
+        // Create directory if it doesn't exist
+        std::fs::create_dir_all(&storage_dir)?;
+
+        // Set permissions (Unix only)
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            let perms = std::fs::Permissions::from_mode(0o700);
+            std::fs::set_permissions(&storage_dir, perms)?;
         }
+
+        Ok(Self { storage_dir })
+    }
+
+    /// Validate key name to prevent path traversal
+    fn validate_key(key: &str) -> Result<(), StorageError> {
+        if key.is_empty() {
+            return Err(StorageError::Other("Key cannot be empty".into()));
+        }
+        if key.contains('/') || key.contains('\\') {
+            return Err(StorageError::Other(format!(
+                "Invalid key '{}': path separators not allowed",
+                key
+            )));
+        }
+        if key.contains("..") {
+            return Err(StorageError::Other(format!(
+                "Invalid key '{}': parent directory reference not allowed",
+                key
+            )));
+        }
+        if key.starts_with('.') {
+            return Err(StorageError::Other(format!(
+                "Invalid key '{}': hidden files not allowed",
+                key
+            )));
+        }
+        Ok(())
+    }
+
+    /// Get file path for a key
+    fn key_to_path(&self, key: &str) -> Result<PathBuf, StorageError> {
+        Self::validate_key(key)?;
+        Ok(self.storage_dir.join(format!("{}.json", key)))
     }
 }
 
 #[async_trait]
 impl Storage for LocalStorage {
-    async fn get(&self, key: &str) -> Result<Option<Vec<u8>>, StorageError> {
-        let data = self.data.lock().await;
-        Ok(data.get(key).cloned())
+    async fn get(
+        &self,
+        key: &str,
+        _consistency: ConsistencyLevel,
+    ) -> Result<Option<Vec<u8>>, StorageError> {
+        // Local storage always provides Strong consistency
+        // Consistency parameter ignored
+        let file_path = self.key_to_path(key)?;
+
+        match fs::read(&file_path).await {
+            Ok(data) => Ok(Some(data)),
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(None),
+            Err(e) => Err(StorageError::Io(e)),
+        }
     }
 
-    async fn put(&self, key: &str, value: Vec<u8>) -> Result<(), StorageError> {
-        let mut data = self.data.lock().await;
-        data.insert(key.to_string(), value);
-        Ok(())
+    async fn put(
+        &self,
+        key: &str,
+        value: Vec<u8>,
+        _consistency: ConsistencyLevel,
+    ) -> Result<(), StorageError> {
+        // Local storage always provides Strong consistency
+        // Consistency parameter ignored
+        let file_path = self.key_to_path(key)?;
+        let temp_path = self
+            .storage_dir
+            .join(format!(".tmp_{}.json", uuid::Uuid::new_v4()));
+
+        // Write to temp file
+        fs::write(&temp_path, &value).await?;
+
+        // Atomic rename (POSIX guarantees atomicity)
+        match fs::rename(&temp_path, &file_path).await {
+            Ok(()) => Ok(()),
+            Err(e) => {
+                // Clean up temp file on error
+                let _ = fs::remove_file(&temp_path).await;
+                Err(StorageError::Io(e))
+            }
+        }
     }
 
-    async fn delete(&self, key: &str) -> Result<(), StorageError> {
-        let mut data = self.data.lock().await;
-        data.remove(key);
-        Ok(())
+    async fn delete(&self, key: &str, _consistency: ConsistencyLevel) -> Result<(), StorageError> {
+        // Local storage always provides Strong consistency
+        // Consistency parameter ignored
+        let file_path = self.key_to_path(key)?;
+
+        match fs::remove_file(&file_path).await {
+            Ok(()) => Ok(()),
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(()),
+            Err(e) => Err(StorageError::Io(e)),
+        }
     }
 }
 
@@ -81,15 +202,26 @@ impl DistributedStorage {
 
 #[async_trait]
 impl Storage for DistributedStorage {
-    async fn get(&self, _key: &str) -> Result<Option<Vec<u8>>, StorageError> {
+    async fn get(
+        &self,
+        _key: &str,
+        _consistency: ConsistencyLevel,
+    ) -> Result<Option<Vec<u8>>, StorageError> {
         // Stub: distributed get
         Ok(None)
     }
-    async fn put(&self, _key: &str, _value: Vec<u8>) -> Result<(), StorageError> {
+
+    async fn put(
+        &self,
+        _key: &str,
+        _value: Vec<u8>,
+        _consistency: ConsistencyLevel,
+    ) -> Result<(), StorageError> {
         // Stub: distributed put
         Ok(())
     }
-    async fn delete(&self, _key: &str) -> Result<(), StorageError> {
+
+    async fn delete(&self, _key: &str, _consistency: ConsistencyLevel) -> Result<(), StorageError> {
         // Stub: distributed delete
         Ok(())
     }
@@ -112,15 +244,26 @@ impl CacheStorage {
 
 #[async_trait]
 impl Storage for CacheStorage {
-    async fn get(&self, _key: &str) -> Result<Option<Vec<u8>>, StorageError> {
+    async fn get(
+        &self,
+        _key: &str,
+        _consistency: ConsistencyLevel,
+    ) -> Result<Option<Vec<u8>>, StorageError> {
         // Stub: cache get
         Ok(None)
     }
-    async fn put(&self, _key: &str, _value: Vec<u8>) -> Result<(), StorageError> {
+
+    async fn put(
+        &self,
+        _key: &str,
+        _value: Vec<u8>,
+        _consistency: ConsistencyLevel,
+    ) -> Result<(), StorageError> {
         // Stub: cache put
         Ok(())
     }
-    async fn delete(&self, _key: &str) -> Result<(), StorageError> {
+
+    async fn delete(&self, _key: &str, _consistency: ConsistencyLevel) -> Result<(), StorageError> {
         // Stub: cache delete
         Ok(())
     }
@@ -143,15 +286,26 @@ impl CustomStorage {
 
 #[async_trait]
 impl Storage for CustomStorage {
-    async fn get(&self, _key: &str) -> Result<Option<Vec<u8>>, StorageError> {
+    async fn get(
+        &self,
+        _key: &str,
+        _consistency: ConsistencyLevel,
+    ) -> Result<Option<Vec<u8>>, StorageError> {
         // Stub: custom get
         Ok(None)
     }
-    async fn put(&self, _key: &str, _value: Vec<u8>) -> Result<(), StorageError> {
+
+    async fn put(
+        &self,
+        _key: &str,
+        _value: Vec<u8>,
+        _consistency: ConsistencyLevel,
+    ) -> Result<(), StorageError> {
         // Stub: custom put
         Ok(())
     }
-    async fn delete(&self, _key: &str) -> Result<(), StorageError> {
+
+    async fn delete(&self, _key: &str, _consistency: ConsistencyLevel) -> Result<(), StorageError> {
         // Stub: custom delete
         Ok(())
     }

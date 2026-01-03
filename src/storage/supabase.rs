@@ -3,7 +3,7 @@
 /// This module provides a storage backend that uses the official Supabase Storage API
 /// for object storage. It reads configuration from environment variables and implements
 /// proper authentication and bucket management.
-use crate::storage::local::{Storage, StorageError};
+use crate::storage::local::{ConsistencyLevel, Storage, StorageError};
 use crate::storage::plugin::StoragePlugin;
 use async_trait::async_trait;
 use reqwest::Client;
@@ -189,7 +189,14 @@ impl SupabaseStorage {
 
 #[async_trait]
 impl Storage for SupabaseStorage {
-    async fn put(&self, key: &str, value: Vec<u8>) -> Result<(), StorageError> {
+    async fn put(
+        &self,
+        key: &str,
+        value: Vec<u8>,
+        _consistency: ConsistencyLevel,
+    ) -> Result<(), StorageError> {
+        // Supabase always provides Strong consistency
+        // Consistency parameter ignored
         // Ensure bucket exists
         if let Err(e) = self.ensure_bucket().await {
             println!(
@@ -236,7 +243,13 @@ impl Storage for SupabaseStorage {
         }
     }
 
-    async fn get(&self, key: &str) -> Result<Option<Vec<u8>>, StorageError> {
+    async fn get(
+        &self,
+        key: &str,
+        _consistency: ConsistencyLevel,
+    ) -> Result<Option<Vec<u8>>, StorageError> {
+        // Supabase always provides Strong consistency
+        // Consistency parameter ignored
         let url = self.storage_url(&format!("/object/{}/{}", self.config.bucket_name, key));
 
         let response = self
@@ -263,7 +276,9 @@ impl Storage for SupabaseStorage {
         }
     }
 
-    async fn delete(&self, key: &str) -> Result<(), StorageError> {
+    async fn delete(&self, key: &str, _consistency: ConsistencyLevel) -> Result<(), StorageError> {
+        // Supabase always provides Strong consistency
+        // Consistency parameter ignored
         let url = self.storage_url(&format!("/object/{}/{}", self.config.bucket_name, key));
 
         let response = self

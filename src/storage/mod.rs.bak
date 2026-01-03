@@ -12,6 +12,7 @@ pub mod plugin;
 pub mod manager;
 
 // Re-exports for convenience
+pub use local::ConsistencyLevel;
 pub use manager::{BackendConfig, ManagerError, StorageManager, StorageMetrics, StoragePolicy};
 pub use plugin::{PluginError, StorageConfig, StoragePlugin, StorageRegistry};
 
@@ -30,7 +31,7 @@ mod tests {
 
         // Test put
         storage
-            .put("foo", b"bar".to_vec(), ConsistencyLevel::Strong)
+            .put("foo", b"bar".to_vec(, ConsistencyLevel::Strong), ConsistencyLevel::Strong)
             .await
             .unwrap();
 
@@ -39,14 +40,11 @@ mod tests {
         assert!(file_path.exists());
 
         // Test get
-        let val = storage.get("foo", ConsistencyLevel::Strong).await.unwrap();
+        let val = storage.get("foo", ConsistencyLevel::Strong, ConsistencyLevel::Strong).await.unwrap();
         assert_eq!(val, Some(b"bar".to_vec()));
 
         // Test delete
-        storage
-            .delete("foo", ConsistencyLevel::Strong)
-            .await
-            .unwrap();
+        storage.delete("foo", ConsistencyLevel::Strong).await.unwrap();
         assert!(!file_path.exists());
     }
 
@@ -57,23 +55,23 @@ mod tests {
 
         // Overwrite value
         storage
-            .put("key1", b"v1".to_vec(), ConsistencyLevel::Strong)
+            .put("key1", b"v1".to_vec(, ConsistencyLevel::Strong), ConsistencyLevel::Strong)
             .await
             .unwrap();
         storage
-            .put("key1", b"v2".to_vec(), ConsistencyLevel::Strong)
+            .put("key1", b"v2".to_vec(, ConsistencyLevel::Strong), ConsistencyLevel::Strong)
             .await
             .unwrap();
-        let val = storage.get("key1", ConsistencyLevel::Strong).await.unwrap();
+        let val = storage.get("key1", ConsistencyLevel::Strong, ConsistencyLevel::Strong).await.unwrap();
         assert_eq!(val, Some(b"v2".to_vec()));
 
         // Multiple keys
         storage
-            .put("key2", b"v3".to_vec(), ConsistencyLevel::Strong)
+            .put("key2", b"v3".to_vec(, ConsistencyLevel::Strong), ConsistencyLevel::Strong)
             .await
             .unwrap();
-        let val1 = storage.get("key1", ConsistencyLevel::Strong).await.unwrap();
-        let val2 = storage.get("key2", ConsistencyLevel::Strong).await.unwrap();
+        let val1 = storage.get("key1", ConsistencyLevel::Strong, ConsistencyLevel::Strong).await.unwrap();
+        let val2 = storage.get("key2", ConsistencyLevel::Strong, ConsistencyLevel::Strong).await.unwrap();
         assert_eq!(val1, Some(b"v2".to_vec()));
         assert_eq!(val2, Some(b"v3".to_vec()));
     }
@@ -84,9 +82,7 @@ mod tests {
         let storage = LocalStorage::new(temp_dir.path()).unwrap();
 
         // Deleting a nonexistent key should not error
-        let res = storage
-            .delete("does_not_exist", ConsistencyLevel::Strong)
-            .await;
+        let res = storage.delete("does_not_exist", ConsistencyLevel::Strong).await;
         assert!(res.is_ok());
     }
 
@@ -102,9 +98,7 @@ mod tests {
         let t1 = tokio::spawn(async move {
             for i in 0..100 {
                 let key = format!("k{}", i);
-                s1.put(&key, vec![i as u8], ConsistencyLevel::Strong)
-                    .await
-                    .unwrap();
+                s1.put(&key, vec![i as u8], ConsistencyLevel::Strong).await.unwrap();
             }
         });
 
@@ -127,7 +121,7 @@ mod tests {
         {
             let storage = LocalStorage::new(temp_dir.path()).unwrap();
             storage
-                .put("persistent", b"data".to_vec(), ConsistencyLevel::Strong)
+                .put("persistent", b"data".to_vec(, ConsistencyLevel::Strong))
                 .await
                 .unwrap();
         }
@@ -135,10 +129,7 @@ mod tests {
         // Create new storage instance, verify data persists
         {
             let storage = LocalStorage::new(temp_dir.path()).unwrap();
-            let val = storage
-                .get("persistent", ConsistencyLevel::Strong)
-                .await
-                .unwrap();
+            let val = storage.get("persistent", ConsistencyLevel::Strong).await.unwrap();
             assert_eq!(val, Some(b"data".to_vec()));
         }
     }
@@ -149,10 +140,7 @@ mod tests {
         let storage = LocalStorage::new(temp_dir.path()).unwrap();
 
         // Missing key returns None
-        let val = storage
-            .get("missing_key", ConsistencyLevel::Strong)
-            .await
-            .unwrap();
+        let val = storage.get("missing_key", ConsistencyLevel::Strong).await.unwrap();
         assert_eq!(val, None);
     }
 
@@ -171,10 +159,7 @@ mod tests {
         assert!(storage_path.exists());
 
         // Should be able to write
-        storage
-            .put("test", b"value".to_vec(), ConsistencyLevel::Strong)
-            .await
-            .unwrap();
+        storage.put("test", b"value".to_vec(, ConsistencyLevel::Strong)).await.unwrap();
     }
 
     #[tokio::test]
@@ -198,40 +183,15 @@ mod tests {
         let storage = LocalStorage::new(temp_dir.path()).unwrap();
 
         // Test path traversal attempts
-        assert!(storage
-            .put("../etc/passwd", b"evil".to_vec(), ConsistencyLevel::Strong)
-            .await
-            .is_err());
-        assert!(storage
-            .put(
-                "../../etc/passwd",
-                b"evil".to_vec(),
-                ConsistencyLevel::Strong
-            )
-            .await
-            .is_err());
-        assert!(storage
-            .put("subdir/../key", b"data".to_vec(), ConsistencyLevel::Strong)
-            .await
-            .is_err());
-        assert!(storage
-            .put(".hidden", b"data".to_vec(), ConsistencyLevel::Strong)
-            .await
-            .is_err());
-        assert!(storage
-            .put("", b"data".to_vec(), ConsistencyLevel::Strong)
-            .await
-            .is_err());
+        assert!(storage.put("../etc/passwd", b"evil".to_vec(, ConsistencyLevel::Strong)).await.is_err());
+        assert!(storage.put("../../etc/passwd", b"evil".to_vec(, ConsistencyLevel::Strong)).await.is_err());
+        assert!(storage.put("subdir/../key", b"data".to_vec(, ConsistencyLevel::Strong)).await.is_err());
+        assert!(storage.put(".hidden", b"data".to_vec(, ConsistencyLevel::Strong)).await.is_err());
+        assert!(storage.put("", b"data".to_vec(, ConsistencyLevel::Strong)).await.is_err());
 
         // Test valid keys
-        assert!(storage
-            .put("valid_key", b"data".to_vec(), ConsistencyLevel::Strong)
-            .await
-            .is_ok());
-        assert!(storage
-            .put("valid-key-123", b"data".to_vec(), ConsistencyLevel::Strong)
-            .await
-            .is_ok());
+        assert!(storage.put("valid_key", b"data".to_vec(, ConsistencyLevel::Strong)).await.is_ok());
+        assert!(storage.put("valid-key-123", b"data".to_vec(, ConsistencyLevel::Strong)).await.is_ok());
     }
 
     #[tokio::test]
@@ -247,11 +207,7 @@ mod tests {
             let storage = storage.clone();
             let handle = tokio::spawn(async move {
                 storage
-                    .put(
-                        "contested_key",
-                        vec![i as u8; 100],
-                        ConsistencyLevel::Strong,
-                    )
+                    .put("contested_key", vec![i as u8; 100], ConsistencyLevel::Strong)
                     .await
                     .unwrap();
             });
@@ -263,10 +219,7 @@ mod tests {
         }
 
         // Key should exist with one of the values (last writer wins)
-        let value = storage
-            .get("contested_key", ConsistencyLevel::Strong)
-            .await
-            .unwrap();
+        let value = storage.get("contested_key", ConsistencyLevel::Strong).await.unwrap();
         assert!(value.is_some());
         assert_eq!(value.unwrap().len(), 100);
     }
@@ -275,42 +228,24 @@ mod tests {
     async fn test_distributed_storage_trait() {
         let storage = super::local::DistributedStorage::new();
         assert!(storage.get("foo", ConsistencyLevel::Strong).await.is_ok());
-        assert!(storage
-            .put("foo", b"bar".to_vec(), ConsistencyLevel::Strong)
-            .await
-            .is_ok());
-        assert!(storage
-            .delete("foo", ConsistencyLevel::Strong)
-            .await
-            .is_ok());
+        assert!(storage.put("foo", b"bar".to_vec(, ConsistencyLevel::Strong)).await.is_ok());
+        assert!(storage.delete("foo").await.is_ok());
     }
 
     #[tokio::test]
     async fn test_cache_storage_trait() {
         let storage = super::local::CacheStorage::new();
         assert!(storage.get("foo", ConsistencyLevel::Strong).await.is_ok());
-        assert!(storage
-            .put("foo", b"bar".to_vec(), ConsistencyLevel::Strong)
-            .await
-            .is_ok());
-        assert!(storage
-            .delete("foo", ConsistencyLevel::Strong)
-            .await
-            .is_ok());
+        assert!(storage.put("foo", b"bar".to_vec(, ConsistencyLevel::Strong)).await.is_ok());
+        assert!(storage.delete("foo").await.is_ok());
     }
 
     #[tokio::test]
     async fn test_custom_storage_trait() {
         let storage = super::local::CustomStorage::new();
         assert!(storage.get("foo", ConsistencyLevel::Strong).await.is_ok());
-        assert!(storage
-            .put("foo", b"bar".to_vec(), ConsistencyLevel::Strong)
-            .await
-            .is_ok());
-        assert!(storage
-            .delete("foo", ConsistencyLevel::Strong)
-            .await
-            .is_ok());
+        assert!(storage.put("foo", b"bar".to_vec(, ConsistencyLevel::Strong)).await.is_ok());
+        assert!(storage.delete("foo").await.is_ok());
     }
 
     #[tokio::test]
@@ -331,10 +266,7 @@ mod tests {
             for i in 0..n {
                 let key = format!("key_{}", i);
                 let value = vec![i as u8; 128];
-                storage
-                    .put(&key, value, ConsistencyLevel::Strong)
-                    .await
-                    .unwrap();
+                storage.put(&key, value, ConsistencyLevel::Strong).await.unwrap();
             }
             let duration = start.elapsed();
             println!("{}: Wrote {} keys in {:?}", label, n, duration);
