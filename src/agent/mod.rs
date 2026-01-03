@@ -373,6 +373,9 @@ impl Agent for DefaultAgent {
             }
             
             Ok(network_status)
+            } else {
+                Ok(NetworkStatus::default())
+            }
         } else {
             Ok(NetworkStatus::default())
         }
@@ -447,6 +450,9 @@ impl Agent for DefaultAgent {
                 }
             } else {
                 Err(Error::Internal(format!("Peer discovery failed: {}", response.error.unwrap_or_default())))
+            }
+            } else {
+                Ok(vec![])
             }
         } else {
             Ok(vec![])

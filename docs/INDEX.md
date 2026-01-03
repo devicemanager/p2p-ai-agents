@@ -5,9 +5,10 @@ Welcome to the **P2P AI Agents** documentation system. This dashboard provides s
 ## 📊 Project Status
 
 - **Current Version**: 0.1.0
-- **Last Updated**: 2025-06-14
-- **Status**: In Development
+- **Last Updated**: 2026-01-03
+- **Status**: In Development - Phase 2 (Architecture Decision Making)
 - **Documentation Health**: ✅ Excellent (100% consistency score)
+- **PRD Validation**: 🔄 Step 2 in Progress (Architecture Alignment)
 
 ## 🎯 Quick Navigation
 
@@ -17,13 +18,17 @@ Welcome to the **P2P AI Agents** documentation system. This dashboard provides s
 |--------|----------|-------------|
 | **New Users** | [Getting Started](user-guides/getting-started.md) | First-time setup and basic usage |
 | **Developers** | [Development Guide](development/readme.md) | Development environment setup |
+| **Product Team** | [PRD & Validation](PRD_VALIDATION_PROCESS.md) | Product requirements and validation process |
+| **Architects** | [Architecture Decisions](architecture/decisions/README.md) | ADRs and design decisions |
 | **Quick Lookup** | [GLOSSARY](glossary.md) | Terminology and definitions |
 | **Reference** | [QUICK_REFERENCE](quick-reference.md) | Fast navigation and links |
 
 ## 📚 **Core Documentation**
 
 ### 🏗 **Architecture & Design**
+- [**High-Level Design**](high-level-design.md) - Comprehensive system design document
 - [**System Overview**](architecture/system-overview.md) - High-level architecture and design
+- [**Architecture Decisions**](architecture/decisions/README.md) - ADRs and design rationale
 - [**Security Architecture**](architecture/security.md) - Security model and practices  
 - [**Networking**](architecture/networking.md) - P2P protocols and communication
 - [**Data Flow**](architecture/data-flow.md) - Data processing and storage patterns
@@ -31,6 +36,12 @@ Welcome to the **P2P AI Agents** documentation system. This dashboard provides s
   - [Access Control](core/access-control.md) - Authentication and authorization
   - [Load Testing](core/load-testing.md) - Performance testing framework
   - [Policy Verification](core/policy-verification.md) - Security policy testing
+
+### 📋 **Product & Planning**
+- [**PRD (Product Requirements)**](PRD.md) - Complete product requirements document
+- [**PRD Validation Process**](PRD_VALIDATION_PROCESS.md) - Step-by-step validation workflow
+- [**Documentation Validation Report**](DOC_VALIDATION_REPORT.md) - Documentation health assessment
+- [**Task Management**](development/task-management.md) - Task workflow and management
 
 ### 👩‍💻 **Implementation & Development**
 - [Getting Started](user-guides/getting-started.md) - Quick start guide for new users
@@ -148,4 +159,4 @@ Our documentation system includes powerful automation tools:
 
 ---
 *This dashboard is maintained by our smart documentation system.*
-*Last updated: 2025-06-14 | Status: All consistency checks passed ✅*
+*Last updated: 2026-01-02 | Status: All consistency checks passed ✅*
