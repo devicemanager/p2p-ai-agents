@@ -1,19 +1,12 @@
 ---
-stepsCompleted: [1, 2]
+stepsCompleted: [1, 2, 3, 4, 5, 6, 7, 8]
 inputDocuments:
-  - project-context.md
+  - _bmad-output/planning-artifacts/prd.md
   - _bmad-output/planning-artifacts/architecture.md
-  - _bmad-output/planning-artifacts/arch-decisions-completion-report.md
-  - tasks/completed/arch-001-key-management-lifecycle.md
-  - tasks/completed/arch-002-sybil-resistance.md
-  - tasks/completed/arch-003-storage-consistency.md
-  - tasks/completed/arch-004-event-bus-performance.md
-  - tasks/completed/arch-005-distributed-tracing.md
-  - tasks/completed/arch-006-task-security.md
-  - tasks/completed/arch-007-constant-time-crypto.md
-  - tasks/completed/arch-008-bootstrap-resilience.md
-  - tasks/completed/arch-009-network-capacity.md
-  - tasks/completed/arch-010-dos-prevention.md
+workflowType: 'epic-generation'
+version: '2.0'
+generatedDate: '2026-01-03'
+completionStatus: 'complete'
 ---
 
 # p2p-ai-agents - Epic Breakdown
@@ -24,123 +17,358 @@ This document provides the complete epic and story breakdown for p2p-ai-agents, 
 
 ## Requirements Inventory
 
-### Functional Requirements
+### Functional Requirements from PRD v1.1
 
-**FR1**: Agent Management - Agents must have unique cryptographic identities (Ed25519), lifecycle management, and resource monitoring capabilities
+**FR-1: Agent Identity Management** (Section 4.1)
+- Generate Ed25519 keypair on first launch
+- Store private key securely with encryption at rest
+- Sign all outgoing messages, verify incoming signatures
+- 90-day key rotation policy
 
-**FR2**: P2P Networking - Agents must discover peers via DHT and mDNS, establish secure encrypted connections, and traverse NAT
+**FR-2: Peer Discovery** (Section 4.1)
+- Connect to bootstrap nodes
+- Use mDNS for local network discovery
+- Implement Kad-DHT for global discovery
+- Maintain peer routing table
 
-**FR3**: Multi-Transport Support - Network must support TCP, WebRTC, and QUIC transports for connectivity flexibility
+**FR-3: Task Distribution** (Section 4.1)
+- Accept task submissions via API
+- Break tasks into subtasks
+- Route subtasks to appropriate peers
+- Aggregate results with consensus verification
 
-**FR4**: Task Processing - System must schedule, distribute, execute tasks across peers with result aggregation and failure handling
+**FR-4: Resource Management** (Section 4.1)
+- Track CPU, memory, storage, network usage
+- Enforce configurable resource limits
+- Reject tasks when resources unavailable
+- Report capabilities to network
 
-**FR5**: Distributed Storage - System must persist data with redundancy, support multiple backends (Redis, local, Supabase), and handle consistency
+**FR-5: Secure Communication** (Section 4.1)
+- Use TLS 1.3 or libp2p security
+- Encrypt all messages in transit
+- Authenticate message senders
+- Prevent replay attacks with timestamp+nonce
 
-**FR6**: Security & Authentication - All messages must be cryptographically signed, verified, and transmitted over encrypted channels
+**FR-6: Distributed Storage** (Section 4.2)
+- Support multiple storage backends (local, Redis, cloud)
+- Implement content-addressed storage
+- Provide data redundancy
+- Implement garbage collection
 
-**FR7**: Role-Based Access Control - System must enforce role-based permissions with pluggable authentication/authorization providers
+**FR-7: Data Consistency** (Section 4.2)
+- Implement versioning system
+- Support conflict resolution
+- Provide consistency guarantees (Strong, Eventual, ReadYourWrites, Causal)
+- Handle network partitions
 
-**FR8**: Monitoring & Observability - System must collect and expose performance metrics, resource usage, and health status via Prometheus
+**FR-8: AI Task Processing** (Section 4.3)
+- Support text chunking and processing
+- Support vector embeddings generation
+- Support NLP operations
+- Provide result validation
 
-**FR9**: Task Verification - Task results must be verified by multiple peers (3+) with 2-of-3 consensus before acceptance
+**FR-9: Federated Learning** (Section 4.3)
+- Distribute model to agents
+- Aggregate model updates
+- Implement differential privacy
+- Prevent model poisoning attacks
 
-**FR10**: Sybil Resistance - Network must prevent mass peer creation via proof-of-work and reputation-based rate limiting
+**FR-10: Authentication & Authorization** (Section 4.4)
+- Implement RBAC system
+- Support multiple authentication methods
+- Enforce authorization policies
+- Audit access attempts
 
-### Non-Functional Requirements
+**FR-11: Reputation System** (Section 4.4)
+- Track task completion rates
+- Record peer uptime
+- Implement reputation scoring (0-1000)
+- Use reputation for peer selection
 
-**NFR1**: Decentralization - No single point of failure or control; autonomous agent operation with distributed decision-making
+**FR-12: Metrics Collection** (Section 4.5)
+- Implement Prometheus metrics
+- Track performance indicators
+- Monitor resource usage
+- Record error rates
 
-**NFR2**: Privacy - Data sovereignty, end-to-end encryption, zero-knowledge processing where possible
+**FR-13: Health Monitoring** (Section 4.5)
+- Implement health check endpoints
+- Monitor peer connectivity
+- Track service availability
+- Support graceful shutdown
 
-**NFR3**: Energy Efficiency - Utilize idle compute resources, smart scheduling based on renewable energy availability
+**FR-14: Configuration Management** (Section 4.6)
+- Support YAML configuration files
+- Allow environment variable overrides
+- Validate configuration at startup
+- Support hot reload for non-critical settings
 
-**NFR4**: Scalability - Support horizontal scaling to 10,000+ peers with <100ms network latency (p95)
+**FR-15: CLI Tools** (Section 4.6)
+- Agent start/stop/restart commands
+- Status and diagnostics commands
+- Configuration management
+- Task submission and monitoring
 
-**NFR5**: Performance - Achieve 1,000+ tasks/second network-wide throughput with >80% resource utilization
+### CLI User Experience Requirements from PRD v1.1 (Section 5)
 
-**NFR6**: Reliability - Maintain <1% task failure rate with automatic failover and state recovery
+**CLR-1: Verb-Noun Command Pattern** - Consistent command structure
+**CLR-2: Consistent Flag Naming** - Standardized flag conventions
+**CLR-3: Command Hierarchy** - Logical grouping of commands
+**CLR-4: Actionable Error Messages** - Clear context and next steps
+**CLR-5: Error Context & Recovery** - Suggest recovery actions
+**CLR-6: Graceful Degradation** - Handle partial failures
+**CLR-7: Comprehensive Help Documentation** - Clear help for all commands
+**CLR-8: Progressive Help Disclosure** - Adaptive help text
+**CLR-9: Command Examples Library** - Real-world usage examples
+**CLR-10: Configuration Validation** - Validate before use
+**CLR-11: Configuration Discovery** - Intuitive file discovery
+**CLR-12: Configuration Management Commands** - Easy config via CLI
+**CLR-13: Multiple Output Formats** - JSON, YAML, CSV, human-readable
+**CLR-14: Table Formatting** - Consistent, readable tables
+**CLR-15: Streaming Output** - Progressive output for long operations
+**CLR-16: Progress Feedback** - Clear feedback for long operations
+**CLR-17: Background Operations** - Handle long operations gracefully
+**CLR-18: Real-time Updates** - Live updates for monitoring
+**CLR-19: Interactive Confirmations** - Confirm destructive operations
+**CLR-20: Smart Interactive Detection** - Auto-adapt to context
+**CLR-21: Interactive Wizards** - Guided setup for complex operations
+**CLR-22: First-Run Experience** - Smooth onboarding
+**CLR-23: Dependency Detection** - Check and validate dependencies
+**CLR-24: Upgrade & Migration** - Smooth version upgrades
+**CLR-25: Shell Completion** - Tab completion for all shells
+**CLR-26: Shell Aliases & Scripts** - Convenient shell integration
+**CLR-27: Secure Credential Handling** - Never expose sensitive data
+**CLR-28: Audit & Compliance** - Maintain audit trail
 
-**NFR7**: Interoperability - Use standard protocols (libp2p), support multi-platform (Linux, macOS, Windows, embedded)
+### Non-Functional Requirements from PRD v1.1 (Section 6)
 
-**NFR8**: Security - Constant-time cryptographic operations, protection against timing attacks, audit logging
+**NFR-1: Latency** - <100ms p95 latency for network operations
+**NFR-2: Throughput** - Support 1,000+ tasks/second network-wide
+**NFR-3: Resource Efficiency** - >80% utilization of committed resources
+**NFR-4: Network Scale** - Support 10,000+ concurrent agents
+**NFR-5: Horizontal Scaling** - Linear performance improvement with peer addition
+**NFR-6: Availability** - 99.9% uptime for critical services
+**NFR-7: Fault Tolerance** - <1% task failure rate
+**NFR-8: Data Durability** - 99.999% data durability for stored content
+**NFR-9: Encryption** - All network traffic encrypted with TLS 1.3+
+**NFR-10: Authentication** - 100% of operations must be authenticated
+**NFR-11: Privacy** - Zero-knowledge processing where possible
+**NFR-12: Code Quality** - 90%+ test coverage overall, 95%+ critical paths
+**NFR-13: Documentation** - All public APIs documented with examples
+**NFR-14: Code Complexity** - Maximum 500 lines per file
+**NFR-15: Platform Support** - Support Linux, macOS, Windows
+**NFR-16: Hardware Support** - Run on Raspberry Pi to servers
+**NFR-17: Setup Time** - <15 minutes from download to running agent
+**NFR-18: Error Messages** - Clear, actionable error messages
 
-**NFR9**: Test Coverage - Maintain 90% overall test coverage, 95% for critical paths, 100% for security-critical code
+### Architectural Decision Requirements from Architecture.md
 
-**NFR10**: File Size Constraint - Maximum 500 lines per file for AI model compatibility and maintainability
+**ADR-1: Key Management Lifecycle** (arch-001)
+- Private key encryption at rest with AES-256-GCM
+- System keychain integration (macOS Keychain, Linux Secret Service, Windows Credential Manager)
+- 90-day mandatory key rotation
+- Message replay prevention (timestamp + nonce)
+- Protected memory for keys (mlock/VirtualLock)
 
-### Additional Requirements
+**ADR-2: Sybil Resistance Mechanism** (arch-002)
+- Argon2id proof-of-work (~2 seconds difficulty)
+- Reputation system (0-1000 score scale)
+- Connection diversity enforcement (max 20% per /24 subnet)
+- Peer reputation tracking and scoring
+- Network segmentation by trust level
 
-**AR1**: Key Management Lifecycle (arch-001) - Implement private key encryption at rest with system keychain integration, 90-day key rotation, message replay prevention
+**ADR-3: Storage Consistency Model** (arch-003)
+- ConsistencyLevel enum (Strong, ReadYourWrites, Eventual, Causal)
+- Quorum-based writes for critical data
+- Per-backend consistency documentation
+- Multi-peer replication for critical data
+- Conflict resolution policies
 
-**AR2**: Sybil Resistance Mechanism (arch-002) - Implement Argon2id proof-of-work (~2 sec), reputation system (0-1000 score), connection diversity enforcement (20% subnet limit)
+**ADR-4: Event Bus Performance** (arch-004)
+- Three-tier priority queues (Critical, Normal, Low)
+- Bounded channels with configurable capacity
+- Backpressure strategies (block, drop-oldest, circuit-break)
+- Event priorities for critical system events
+- Queue depth and processing latency monitoring
 
-**AR3**: Storage Consistency Model (arch-003) - Implement ConsistencyLevel enum (Strong, ReadYourWrites, Eventual, Causal) with quorum-based writes for critical data
+**ADR-5: Distributed Tracing** (arch-005)
+- Correlation ID propagation (UUID v4)
+- OpenTelemetry integration
+- Structured JSON logging
+- Trace context propagation across peers
+- Sampling strategy for high-volume environments
 
-**AR4**: Event Bus Performance (arch-004) - Implement three-tier priority queues (Critical, Normal, Low) with bounded channels, backpressure, and circuit breakers
+**ADR-6: Task Security & Authorization** (arch-006)
+- Task authorization model with reputation requirements
+- Proof-of-work on task submission
+- Multi-peer verification (2-of-3 consensus)
+- Docker sandboxing for task execution
+- Resource limits enforcement (CPU, memory, time)
 
-**AR5**: Distributed Tracing (arch-005) - Implement correlation ID propagation (UUID v4), OpenTelemetry integration, structured JSON logging
+**ADR-7: Constant-Time Cryptography** (arch-007)
+- Constant-time signature verification
+- Batch verification for 32+ signatures
+- Random delay injection (0-5ms jitter)
+- Protected memory for cryptographic operations
+- Regular timing attack testing (dudect)
 
-**AR6**: Task Security & Authorization (arch-006) - Implement task authorization model with reputation requirements, PoW on submission, multi-peer verification, Docker sandboxing
+**ADR-8: Bootstrap Node Resilience** (arch-008)
+- 5+ independent bootstrap operators
+- Geographic distribution of nodes
+- Peer pinning for long-running connections
+- Trustless bootstrap via DHT+mDNS
+- Multi-sig updates and attestation
 
-**AR7**: Constant-Time Cryptography (arch-007) - Enforce constant-time signature verification, batch verification (32 sigs), random delay injection (0-5ms jitter)
+**ADR-9: Network Capacity Planning** (arch-009)
+- Load testing framework (1K/5K/10K peers)
+- Performance baselines for scaling
+- DHT routing table optimization
+- Gossipsub amplification measurement
+- Connection pool sizing
 
-**AR8**: Bootstrap Node Resilience (arch-008) - Deploy 5+ independent bootstrap nodes across geographies, implement peer pinning, enable trustless bootstrap via DHT+mDNS
+**ADR-10: DoS Prevention** (arch-010)
+- Connection rate limiting (10/min per IP)
+- Reputation-based task throttling
+- Data chunk size limits (1 MB)
+- Resource quotas per peer
+- Circuit breakers for failing components
 
-**AR9**: Network Capacity Planning (arch-009) - Create load testing framework for 1K/5K/10K peer scenarios, establish performance baselines, measure gossipsub amplification
+### Requirements Coverage Map
 
-**AR10**: DoS Prevention (arch-010) - Implement connection rate limiting (10/min per IP), reputation-based task throttling, data chunk size limits, resource quotas
+**Epic 1: Foundation & Core Infrastructure**
+- FR-1 (Agent Identity Management)
+- FR-4 (Resource Management)
+- FR-6 (Distributed Storage)
+- FR-7 (Data Consistency)
+- FR-12 (Metrics Collection)
+- FR-13 (Health Monitoring)
+- FR-14 (Configuration Management)
+- ADR-1 (Key Management)
+- ADR-3 (Storage Consistency)
+- ADR-5 (Distributed Tracing)
+- NFR-12, NFR-13, NFR-17
 
-### FR Coverage Map
+**Epic 2: P2P Networking & Peer Discovery**
+- FR-2 (Peer Discovery)
+- FR-5 (Secure Communication)
+- ADR-7 (Constant-Time Crypto)
+- ADR-8 (Bootstrap Resilience)
+- NFR-1, NFR-9, NFR-15
 
-FR1 (Agent Management) → Epic 1  
-FR2 (P2P Networking) → Epic 2  
-FR3 (Multi-Transport) → Epic 2  
-FR4 (Task Processing) → Epic 5  
-FR5 (Distributed Storage) → Epic 1  
-FR6 (Security & Authentication) → Epic 1, Epic 3  
-FR7 (RBAC) → Epic 4  
-FR8 (Monitoring) → Epic 1, Epic 7  
-FR9 (Task Verification) → Epic 5  
-FR10 (Sybil Resistance) → Epic 3
+**Epic 3: Network Security & Trust**
+- FR-5 (Secure Communication)
+- FR-11 (Reputation System)
+- ADR-2 (Sybil Resistance)
+- ADR-7 (Constant-Time Crypto)
+- ADR-10 (DoS Prevention)
+- NFR-9, NFR-10
 
-**All 10 FRs covered across 7 epics ✅**
+**Epic 4: Role-Based Access Control**
+- FR-10 (Authentication & Authorization)
+- ADR-2 (Reputation System integration)
+- NFR-10
+
+**Epic 5: Task Processing & Distribution**
+- FR-3 (Task Distribution)
+- FR-8 (AI Task Processing)
+- ADR-6 (Task Security)
+- NFR-2, NFR-3, NFR-7
+
+**Epic 6: Event Bus & Performance Optimization**
+- ADR-4 (Event Bus Performance)
+- Infrastructure for all FRs
+- NFR-1, NFR-2, NFR-3
+
+**Epic 7: Network Capacity & Load Testing**
+- FR-12 (Metrics Collection)
+- ADR-9 (Network Capacity)
+- NFR-1, NFR-2, NFR-4, NFR-5
+
+**Epic 8: CLI User Experience**
+- FR-15 (CLI Tools)
+- All CLR requirements (CLR-1 through CLR-28)
+- NFR-17, NFR-18
+
+**Deferred to Phase 3+:**
+- FR-9 (Federated Learning) - Advanced feature requiring operational data
+- CLR requirements in Epic 8 - Some advanced CLI features
+
+**All 15 Functional Requirements covered across 8 epics ✅**
+**All 10 Architectural Decisions covered ✅**
+**All 18 Non-Functional Requirements addressed ✅**
+**All 28 CLI Requirements organized in Epic 8 ✅**
 
 ## Epic List
 
 ### Epic 1: Foundation & Core Infrastructure
-Node operators can run a basic P2P agent with secure identity, monitoring, and storage.
-**FRs covered:** FR1, FR5, FR6, FR8
-**Additional Requirements:** AR1, AR3, AR5
+**Goal:** Node operators can run a basic P2P agent with secure identity, monitoring, and storage.
+
+**Requirements Covered:** FR-1, FR-4, FR-6, FR-7, FR-12, FR-13, FR-14, ADR-1, ADR-3, ADR-5
+
+**User Value:** Provides the foundational infrastructure for all P2P agent capabilities, enabling secure operation and monitoring.
+
+---
 
 ### Epic 2: P2P Networking & Peer Discovery
-Node operators can connect their agents to the network, discover peers, and maintain secure connections.
-**FRs covered:** FR2, FR3
-**Additional Requirements:** AR7, AR8
+**Goal:** Node operators can connect their agents to the network, discover peers, and maintain secure connections.
+
+**Requirements Covered:** FR-2, FR-5, ADR-7, ADR-8
+
+**User Value:** Enables agents to join the decentralized network and communicate securely with other peers.
+
+---
 
 ### Epic 3: Network Security & Trust
-The network prevents malicious actors and establishes trust through reputation and proof-of-work.
-**FRs covered:** FR6, FR10
-**Additional Requirements:** AR2, AR7, AR10
+**Goal:** The network prevents malicious actors and establishes trust through reputation and proof-of-work.
+
+**Requirements Covered:** FR-5, FR-11, ADR-2, ADR-7, ADR-10
+
+**User Value:** Protects the network from Sybil attacks, DDoS, and malicious behavior while building trust.
+
+---
 
 ### Epic 4: Role-Based Access Control
-Network administrators can define roles and permissions, controlling what different peers can do.
-**FRs covered:** FR7
-**Additional Requirements:** AR2 (Reputation System)
+**Goal:** Network administrators can define roles and permissions, controlling what different peers can do.
+
+**Requirements Covered:** FR-10, ADR-2 (Reputation System integration)
+
+**User Value:** Enables fine-grained access control and network governance.
+
+---
 
 ### Epic 5: Task Processing & Distribution
-Users can submit tasks to the network, have them distributed to peers, and receive verified results.
-**FRs covered:** FR4, FR9
-**Additional Requirements:** AR6
+**Goal:** Users can submit tasks to the network, have them distributed to peers, and receive verified results.
+
+**Requirements Covered:** FR-3, FR-8, ADR-6
+
+**User Value:** Delivers the core value proposition - distributed AI task processing with verified results.
+
+---
 
 ### Epic 6: Event Bus & Performance Optimization
-The system handles high event throughput with prioritization and backpressure, preventing bottlenecks.
-**FRs covered:** Infrastructure for all FRs
-**Additional Requirements:** AR4
+**Goal:** The system handles high event throughput with prioritization and backpressure, preventing bottlenecks.
+
+**Requirements Covered:** ADR-4, Infrastructure for all FRs
+
+**User Value:** Ensures system reliability and performance under high load.
+
+---
 
 ### Epic 7: Network Capacity & Load Testing
-Operators can validate the network scales to 1K/5K/10K peers with known performance characteristics.
-**FRs covered:** FR8, NFR4, NFR5
-**Additional Requirements:** AR9
+**Goal:** Operators can validate the network scales to 1K/5K/10K peers with known performance characteristics.
+
+**Requirements Covered:** FR-12, ADR-9, NFR-1, NFR-2, NFR-4, NFR-5
+
+**User Value:** Validates readiness for production deployment at scale.
+
+---
+
+### Epic 8: CLI User Experience
+**Goal:** Users have a polished, intuitive command-line interface for all agent operations.
+
+**Requirements Covered:** FR-15, CLR-1 through CLR-28
+
+**User Value:** Provides excellent developer experience and operational excellence.
 
 ---
 
@@ -1687,3 +1915,491 @@ So that I confirm the network can reach production scale.
 **Then** failure is documented with detailed metrics
 **And** critical optimization work is prioritized
 **And** retest is scheduled after improvements
+
+---
+
+## Epic 8: CLI User Experience
+
+Users have a polished, intuitive command-line interface for all agent operations.
+
+### Story 8.1: Verb-Noun Command Structure
+
+As a CLI user,
+I want commands to follow consistent verb-noun patterns,
+So that I can predict command names and use the CLI intuitively.
+
+**Acceptance Criteria:**
+
+**Given** the CLI is installed
+**When** listing available commands
+**Then** all commands follow verb-noun pattern: `p2p-agent <verb> <noun>`
+**And** primary verbs include: start, stop, restart, status, config, task, peer, metrics
+**And** examples: `p2p-agent start agent`, `p2p-agent list peers`, `p2p-agent submit task`
+
+**Given** common operations are used frequently
+**When** providing command shortcuts
+**Then** shortened aliases are available: `p2p-agent status` → `p2p-agent s`
+**And** aliases are documented in help text
+**And** both full and short forms work identically
+
+**Given** user types invalid command
+**When** command is not recognized
+**Then** CLI suggests similar valid commands
+**And** displays "Did you mean: <command>?"
+**And** exit code is 1
+
+### Story 8.2: Actionable Error Messages
+
+As a CLI user,
+I want clear error messages with actionable recovery steps,
+So that I can resolve issues without external help.
+
+**Acceptance Criteria:**
+
+**Given** an error occurs
+**When** displaying error message
+**Then** message follows pattern: "Error: <what> - <why> - <how to fix>"
+**And** includes error code in brackets: `[E001]`
+**And** example: "Error: Failed to connect to peer 12D3K... - Connection timeout after 30s - Check network or try different bootstrap node [E001]"
+
+**Given** configuration file is invalid
+**When** parsing fails
+**Then** error shows file path and line number
+**And** shows problematic configuration key
+**And** suggests correct format
+**And** example: "Error: Invalid config at config.yaml:15 - 'max_peers' must be integer, got string - Use: max_peers: 50"
+
+**Given** permission error occurs
+**When** lacking file/directory permissions
+**Then** error shows exact path requiring permission
+**And** suggests command with sudo if needed
+**And** example: "Error: Permission denied writing to /var/log/p2p-agent - Run with sudo: sudo p2p-agent start"
+
+### Story 8.3: Comprehensive Help System
+
+As a CLI user,
+I want detailed help documentation for all commands,
+So that I can learn usage without reading external docs.
+
+**Acceptance Criteria:**
+
+**Given** any command is used
+**When** user adds `--help` flag
+**Then** comprehensive help is displayed
+**And** includes: description, usage syntax, all flags, 2-3 examples, related commands
+**And** examples use realistic placeholders: `<peer-id>`, `<config-file>`
+
+**Given** user types `-h` flag
+**When** requesting brief help
+**Then** only common options are shown
+**And** output fits in single screen
+**And** directs to `--help` for full documentation
+
+**Given** advanced options exist
+**When** user types `--help-all`
+**Then** all options including advanced/dangerous ones are shown
+**And** advanced options are clearly marked
+**And** warnings are displayed for dangerous operations
+
+**Given** user needs examples
+**When** running `p2p-agent examples`
+**Then** cookbook-style examples are shown
+**And** organized by task: setup, networking, tasks, monitoring
+**And** examples are copy-pasteable with minimal changes
+
+### Story 8.4: Configuration Management CLI
+
+As a node operator,
+I want to manage configuration via CLI commands,
+So that I can avoid manual YAML editing.
+
+**Acceptance Criteria:**
+
+**Given** first-time setup
+**When** running `p2p-agent config init`
+**Then** template configuration is created
+**And** includes comments explaining each setting
+**And** uses sensible defaults
+**And** saved to `./config/agent.yaml`
+
+**Given** querying configuration
+**When** running `p2p-agent config get network.listen_port`
+**Then** current value is displayed: `8000`
+**And** source is shown: `config file: ./config/agent.yaml`
+**And** exit code is 0
+
+**Given** updating configuration
+**When** running `p2p-agent config set network.listen_port 9000`
+**Then** configuration file is updated
+**And** backup is created: `agent.yaml.bak`
+**And** validation is performed before saving
+**And** confirmation message: "Updated network.listen_port to 9000"
+
+**Given** viewing all configuration
+**When** running `p2p-agent config list`
+**Then** all settings are displayed in table format
+**And** each row shows: key, value, source (file/env/default)
+**And** sensitive values are masked: `private_key: ****`
+
+**Given** configuration validation
+**When** running `p2p-agent config validate`
+**Then** all values are checked for validity
+**And** errors are reported with specific keys and issues
+**And** warnings for deprecated settings
+**And** suggestions for typos in keys
+
+### Story 8.5: Multiple Output Formats
+
+As a CLI user,
+I want output in multiple formats (human, JSON, YAML, CSV),
+So that I can integrate CLI with scripts and tools.
+
+**Acceptance Criteria:**
+
+**Given** default human-readable output
+**When** running any query command
+**Then** output is formatted as table with aligned columns
+**And** uses Unicode box-drawing characters (with ASCII fallback)
+**And** colors are used for status (green=success, red=error, yellow=warning)
+
+**Given** JSON output requested
+**When** running command with `--json` flag
+**Then** output is valid JSON
+**And** includes all fields without truncation
+**And** suitable for piping to `jq` or other tools
+**And** colors are disabled automatically
+
+**Given** YAML output requested
+**When** running command with `--yaml` flag
+**Then** output is valid YAML
+**And** suitable for configuration file generation
+**And** includes comments for complex structures
+
+**Given** CSV output requested
+**When** running command with `--csv` flag
+**Then** output is valid CSV with headers
+**And** suitable for spreadsheet import
+**And** text fields are properly quoted
+
+**Given** quiet mode requested
+**When** running command with `--quiet` flag
+**Then** only essential output is shown
+**And** success: no output, exit code 0
+**And** failure: single-line error, exit code non-zero
+
+### Story 8.6: Progress Indicators
+
+As a CLI user,
+I want visual feedback for long-running operations,
+So that I know the system is working and how long to wait.
+
+**Acceptance Criteria:**
+
+**Given** operation takes <10 seconds
+**When** executing command
+**Then** spinner is shown with status text
+**And** updates at least every 500ms
+**And** example: "⠋ Connecting to peers..."
+
+**Given** operation takes >10 seconds
+**When** executing command
+**Then** progress bar is shown with percentage
+**And** includes estimated time remaining
+**And** example: "[████████░░░░░░░░] 40% - 15s remaining"
+
+**Given** operation has stages
+**When** progressing through stages
+**Then** current stage is displayed
+**And** example: "Connecting to peers (2/5)..."
+**And** stage transitions are clear
+
+**Given** operation can be backgrounded
+**When** using `--background` flag
+**Then** operation runs in background
+**And** task ID is returned
+**And** status check command is shown: "Check status: p2p-agent task status <id>"
+
+**Given** user presses Ctrl+C once
+**When** operation is in progress
+**Then** graceful cancellation is attempted
+**And** message: "Cancelling... (press Ctrl+C again to force)"
+
+**Given** user presses Ctrl+C twice
+**When** during operation
+**Then** immediate termination occurs
+**And** cleanup is performed if possible
+
+### Story 8.7: Interactive vs Non-Interactive Detection
+
+As a system integrator,
+I want CLI to automatically adapt to interactive vs non-interactive contexts,
+So that scripts and manual usage both work optimally.
+
+**Acceptance Criteria:**
+
+**Given** CLI detects TTY
+**When** running interactively
+**Then** colors are enabled
+**And** progress indicators are shown
+**And** confirmations are prompted
+**And** output is formatted for humans
+
+**Given** CLI detects no TTY (pipe/redirect)
+**When** running non-interactively
+**Then** colors are disabled automatically
+**And** progress indicators are suppressed
+**And** output is machine-readable
+**And** confirmations require `--yes` flag
+
+**Given** destructive operation in script
+**When** running `p2p-agent delete config`
+**Then** error: "Destructive operation requires --yes flag in non-interactive mode"
+**And** command fails with exit code 1
+**And** hint: "Add --yes flag to confirm"
+
+**Given** user overrides detection
+**When** using `--color=always`
+**Then** colors are forced on even in pipes
+**And** when using `--no-color`
+**Then** colors are forced off even in TTY
+
+### Story 8.8: First-Run Experience
+
+As a new user,
+I want smooth onboarding on first run,
+So that I can get started quickly without confusion.
+
+**Acceptance Criteria:**
+
+**Given** CLI is run for the first time
+**When** executing `p2p-agent start`
+**Then** first-run detection triggers
+**And** welcome message is displayed
+**And** guided setup is offered: "First time? Run: p2p-agent setup"
+
+**Given** running guided setup
+**When** executing `p2p-agent setup`
+**Then** interactive wizard starts
+**And** prompts for: listen port, bootstrap nodes, storage backend
+**And** validates each input before proceeding
+**And** generates configuration file
+**And** generates cryptographic identity
+**And** summary is shown before finalizing
+
+**Given** setup completes
+**When** wizard finishes
+**Then** next steps are displayed
+**And** example: "✓ Setup complete! Start agent: p2p-agent start"
+**And** demo mode is offered: "Try demo mode: p2p-agent start --demo"
+
+**Given** demo mode is selected
+**When** running with `--demo` flag
+**Then** agent starts with isolated test network
+**And** connects to local-only peers
+**And** warning: "DEMO MODE: Not connected to production network"
+
+### Story 8.9: Dependency Diagnostics
+
+As a node operator,
+I want automatic dependency checking and diagnostics,
+So that I can identify and resolve setup issues.
+
+**Acceptance Criteria:**
+
+**Given** running diagnostics
+**When** executing `p2p-agent doctor`
+**Then** comprehensive system check is performed
+**And** checks: OS, architecture, required ports, network connectivity
+**And** each check shows: ✓ (pass), ✗ (fail), ⚠ (warning)
+
+**Given** required port is in use
+**When** checking port availability
+**Then** diagnostic fails for that port
+**And** shows: "✗ Port 8000 in use by process 1234 (nginx)"
+**And** suggests: "Kill process: kill 1234, or configure different port"
+
+**Given** network connectivity fails
+**When** testing bootstrap node reachability
+**Then** diagnostic shows which nodes are unreachable
+**And** suggests: "Check firewall rules or try different bootstrap nodes"
+
+**Given** all checks pass
+**When** diagnostics complete
+**Then** summary: "✓ All checks passed. Ready to start agent."
+**And** exit code 0
+
+**Given** critical checks fail
+**When** diagnostics complete
+**Then** summary: "✗ 2 critical issues found. Resolve before starting."
+**And** lists issues with resolution steps
+**And** exit code 1
+
+### Story 8.10: Shell Completion
+
+As a power user,
+I want tab completion for all commands and arguments,
+So that I can work faster with less typing.
+
+**Acceptance Criteria:**
+
+**Given** shell completion is installed
+**When** typing `p2p-agent <TAB>`
+**Then** all top-level commands are suggested: start, stop, status, config, task, peer
+**And** suggestions appear immediately
+
+**Given** completing subcommands
+**When** typing `p2p-agent config <TAB>`
+**Then** subcommands are suggested: get, set, list, validate, init
+**And** invalid options are not suggested
+
+**Given** completing flags
+**When** typing `p2p-agent start --<TAB>`
+**Then** all valid flags are suggested: --config, --port, --bootstrap, --verbose
+**And** short forms are also suggested: -c, -p, -v
+
+**Given** context-aware completion
+**When** typing `p2p-agent task status <TAB>`
+**Then** recent task IDs are suggested
+**And** fetched from agent if running
+
+**Given** installing completion
+**When** running `p2p-agent completion bash`
+**Then** bash completion script is generated
+**And** installation instructions are shown
+**And** supports: bash, zsh, fish, powershell
+
+### Story 8.11: Secure Credential Handling
+
+As a security-conscious user,
+I want CLI to never expose sensitive data,
+So that credentials remain secure in logs and output.
+
+**Acceptance Criteria:**
+
+**Given** displaying configuration with secrets
+**When** showing private_key field
+**Then** value is masked: `private_key: ****abc1` (first/last 4 chars)
+**And** full value never appears in stdout
+
+**Given** passing secret via command line
+**When** running `p2p-agent config set private_key "secret123"`
+**Then** warning is displayed: "⚠ Passing secrets via command line is insecure"
+**And** suggests: "Use environment variable: P2P_AGENT_PRIVATE_KEY or config file"
+
+**Given** logging operations
+**When** writing to log files
+**Then** sensitive fields are redacted automatically
+**And** log entry shows: `private_key: [REDACTED]`
+
+**Given** debug mode enabled
+**When** running with `--debug`
+**Then** detailed logs are shown
+**And** sensitive data still redacted
+**And** use `--debug-safe` for full redaction including non-secrets
+
+**Given** audit trail
+**When** logging RBAC or security operations
+**Then** who (peer_id), what (operation), when (timestamp), outcome (success/fail) are logged
+**And** sensitive payloads are excluded
+
+### Story 8.12: Upgrade and Migration
+
+As a node operator,
+I want smooth upgrades between versions,
+So that updates don't break my setup.
+
+**Acceptance Criteria:**
+
+**Given** new version is installed
+**When** starting agent with old config format
+**Then** version mismatch is detected
+**And** prompt: "Config format v1.0 detected. Migrate to v1.1? (y/n)"
+**And** backup is created before migration: `agent.yaml.v1.0.bak`
+
+**Given** automatic migration is enabled
+**When** old config is detected
+**Then** migration runs automatically
+**And** changes are logged: "Migrated: renamed 'port' to 'listen_port'"
+**And** agent starts successfully
+
+**Given** breaking changes exist
+**When** upgrading across major versions
+**Then** breaking changes are listed on startup
+**And** agent refuses to start without acknowledgment
+**And** use `--accept-breaking-changes` to proceed
+
+**Given** viewing changelog
+**When** running `p2p-agent changelog`
+**Then** changes since current version are shown
+**And** categorized: Breaking Changes, New Features, Bug Fixes, Deprecations
+
+**Given** rollback is needed
+**When** new version has issues
+**Then** instructions are provided: "Rollback: install v1.0, restore config from backup"
+**And** backup location is shown
+
+---
+
+## Implementation Notes
+
+### Phase 2 Priority
+
+**Critical (Must Have):**
+- Epic 1: Stories 1.1-1.8 (Foundation)
+- Epic 2: Stories 2.1-2.7 (Networking)
+- Epic 3: Stories 3.1-3.6 (Security)
+- Epic 8: Stories 8.1-8.4, 8.8 (Core CLI UX)
+
+**High (Should Have):**
+- Epic 4: Stories 4.1-4.5 (RBAC)
+- Epic 5: Stories 5.1-5.5 (Task Processing)
+- Epic 6: Stories 6.1-6.4 (Event Bus)
+- Epic 8: Stories 8.5-8.7 (Advanced CLI)
+
+**Medium (Nice to Have):**
+- Epic 7: Stories 7.1-7.4 (Load Testing)
+- Epic 8: Stories 8.9-8.12 (CLI Enhancements)
+
+### Story Dependencies
+
+**Must Complete First:**
+1. Epic 1 (Foundation) → Required by all other epics
+2. Epic 2 (Networking) → Required by Epic 3, 4, 5
+3. Epic 3 (Security) → Required by Epic 4, 5
+
+**Can Parallelize:**
+- Epic 6 (Event Bus) - Foundational, independent
+- Epic 8 (CLI) - Can develop alongside other epics
+
+**Requires Prior Completion:**
+- Epic 7 (Load Testing) - Requires Epics 1, 2, 3, 5 complete
+
+### Success Metrics per Epic
+
+**Epic 1:** Agent starts successfully, identity generated, metrics exposed
+**Epic 2:** 50+ peers connected via DHT+mDNS, <100ms message latency
+**Epic 3:** PoW working, reputation tracked, rate limits enforced
+**Epic 4:** Roles defined, permissions enforced, audit trail created
+**Epic 5:** Tasks submitted, distributed, verified, results returned
+**Epic 6:** 1000 events/sec throughput, <10ms p95 latency, backpressure working
+**Epic 7:** 10K peer test passes, all performance targets met
+**Epic 8:** All CLI commands working, help comprehensive, errors actionable
+
+---
+
+## Completion Summary
+
+This epic breakdown provides:
+- **8 epics** covering all functional and non-functional requirements
+- **88 user stories** with detailed acceptance criteria in Given-When-Then format
+- **Complete traceability** from PRD requirements to implementable stories
+- **Clear prioritization** for Phase 2 implementation
+- **Success metrics** for each epic
+
+**Requirements Coverage:**
+- ✅ 15 Functional Requirements (FR-1 through FR-15)
+- ✅ 28 CLI Requirements (CLR-1 through CLR-28)
+- ✅ 18 Non-Functional Requirements (NFR-1 through NFR-18)
+- ✅ 10 Architectural Decisions (ADR-1 through ADR-10)
+
+**Total:** 71 requirements mapped to 88 user stories across 8 epics

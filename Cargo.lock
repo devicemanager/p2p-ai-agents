@@ -2675,6 +2675,7 @@ dependencies = [
  "ed25519-dalek",
  "futures",
  "libp2p",
+ "libp2p-identity",
  "metrics",
  "metrics-util",
  "mockall",

@@ -19,7 +19,7 @@ projectDocsCount: 5
 **Product:** Distributed Peer-to-Peer AI Agents Network  
 **Author:** Rene  
 **Date:** 2026-01-03  
-**Version:** 1.0  
+**Version:** 1.1  
 **Status:** Active Development
 
 ---
@@ -322,9 +322,326 @@ A decentralized network of AI agents where participants contribute compute resou
 
 ---
 
-## 5. Non-Functional Requirements
+## 5. CLI User Experience Requirements
 
-### 5.1 Performance Requirements
+### 5.1 Command Taxonomy & Structure
+
+**CLR-1: Verb-Noun Command Pattern**
+- Priority: P0 (Critical)
+- Description: All CLI commands must follow a consistent verb-noun structure
+- Requirements:
+  - Primary commands: `start`, `stop`, `restart`, `status`, `config`, `task`, `peer`, `metrics`
+  - Subcommands follow pattern: `p2p-agent <verb> <noun> [options]`
+  - Examples: `p2p-agent start agent`, `p2p-agent submit task`, `p2p-agent list peers`
+  - Support shortened aliases for common operations (e.g., `p2p-agent status` → `p2p-agent s`)
+  - Group related operations under common verbs (list, show, create, delete, update)
+
+**CLR-2: Consistent Flag Naming**
+- Priority: P0 (Critical)
+- Description: Standardized flag naming conventions across all commands
+- Requirements:
+  - Use long-form flags for clarity: `--config`, `--verbose`, `--output`
+  - Provide short-form aliases for common flags: `-c`, `-v`, `-o`
+  - Boolean flags use positive naming: `--json` not `--no-text`
+  - Required flags clearly indicated in help text
+  - Mutually exclusive flags properly documented
+
+**CLR-3: Command Hierarchy**
+- Priority: P1 (High)
+- Description: Logical grouping of commands by functional area
+- Requirements:
+  - Top-level commands: agent lifecycle, network operations, task management
+  - Nested subcommands for specialized operations
+  - Maximum 3 levels of command nesting
+  - `help` command available at every level
+  - Autocomplete support for all command levels
+
+### 5.2 Error Handling Philosophy
+
+**CLR-4: Actionable Error Messages**
+- Priority: P0 (Critical)
+- Description: All errors must provide clear context and next steps
+- Requirements:
+  - Error messages follow pattern: "Error: <what happened> - <why it happened> - <what to do>"
+  - Example: "Error: Failed to connect to peer 12D3K... - Connection timeout after 30s - Check network connectivity or try a different bootstrap node"
+  - Include error codes for programmatic handling: `[E001]`, `[E002]`, etc.
+  - Link to documentation for complex errors
+  - Distinguish between user errors and system errors
+  - Never show raw stack traces to users (log to file instead)
+
+**CLR-5: Error Context & Recovery**
+- Priority: P0 (Critical)
+- Description: Provide context for errors and suggest recovery actions
+- Requirements:
+  - Include relevant context (file paths, network addresses, resource limits)
+  - Suggest specific actions: "Run `p2p-agent config validate` to check configuration"
+  - For permission errors, show exact command with sudo if needed
+  - For configuration errors, show location of config file and problematic line
+  - For network errors, suggest diagnostic commands
+
+**CLR-6: Graceful Degradation**
+- Priority: P1 (High)
+- Description: Handle partial failures gracefully
+- Requirements:
+  - Continue operation when non-critical features fail
+  - Warn users about degraded functionality
+  - Provide option to force full execution: `--strict` flag
+  - Log degraded operations for later review
+  - Show summary of warnings at command completion
+
+### 5.3 Help Text Quality Standards
+
+**CLR-7: Comprehensive Help Documentation**
+- Priority: P0 (Critical)
+- Description: Every command must have clear, helpful documentation
+- Requirements:
+  - `--help` flag available for all commands and subcommands
+  - Help text includes: description, usage examples, all flags/options, common scenarios
+  - Examples use realistic data and scenarios
+  - Help text is concise but complete (<50 lines for most commands)
+  - Cross-reference related commands
+  - Include "See also" section linking to docs
+
+**CLR-8: Progressive Help Disclosure**
+- Priority: P1 (High)
+- Description: Help text adapts to user expertise level
+- Requirements:
+  - Brief help with `-h` showing common options only
+  - Detailed help with `--help` showing all options and examples
+  - Expert mode with `--help-all` including advanced/dangerous options
+  - Interactive help mode: `p2p-agent help interactive`
+  - Context-sensitive suggestions when commands fail
+
+**CLR-9: Command Examples Library**
+- Priority: P1 (High)
+- Description: Rich library of real-world usage examples
+- Requirements:
+  - Every command includes 2-3 common examples
+  - Examples show progression: simple → intermediate → advanced
+  - Examples use placeholders that make sense: `<agent-id>`, `<config-file>`, etc.
+  - Include cookbook-style examples: `p2p-agent examples cookbook`
+  - Examples copy-pasteable with minimal modification
+
+### 5.4 Configuration Ergonomics
+
+**CLR-10: Configuration Validation**
+- Priority: P0 (Critical)
+- Description: Validate configuration before using it
+- Requirements:
+  - `config validate` command checks syntax and semantics
+  - Validate on startup and show clear errors
+  - Check file permissions and accessibility
+  - Validate environment variable overrides
+  - Provide warnings for deprecated configuration options
+  - Suggest corrections for common typos
+
+**CLR-11: Configuration Discovery**
+- Priority: P1 (High)
+- Description: Intuitive configuration file discovery and precedence
+- Requirements:
+  - Search order: `--config` flag → `./config/agent.yaml` → `~/.config/p2p-agent/agent.yaml` → `/etc/p2p-agent/agent.yaml`
+  - Show which config file is being used: `p2p-agent config show-active`
+  - List all config locations: `p2p-agent config show-search-path`
+  - Support config merging from multiple sources
+  - Environment variables override file config with clear naming: `P2P_AGENT_<SECTION>_<KEY>`
+
+**CLR-12: Configuration Management Commands**
+- Priority: P1 (High)
+- Description: Easy configuration management via CLI
+- Requirements:
+  - `config init` creates template configuration with comments
+  - `config get <key>` retrieves specific values
+  - `config set <key> <value>` updates values safely
+  - `config list` shows all current settings with sources
+  - `config reset` restores defaults with confirmation
+  - `config migrate` updates old config formats
+
+### 5.5 Output Formatting Standards
+
+**CLR-13: Multiple Output Formats**
+- Priority: P0 (Critical)
+- Description: Support both human-readable and machine-readable output
+- Requirements:
+  - Default: Human-readable formatted tables and lists
+  - `--json` flag: JSON output for programmatic parsing
+  - `--yaml` flag: YAML output for configuration integration
+  - `--csv` flag: CSV output for data analysis
+  - `--quiet` flag: Minimal output (success/failure only)
+  - `--verbose` flag: Detailed output with debug information
+
+**CLR-14: Table Formatting**
+- Priority: P1 (High)
+- Description: Consistent, readable table formatting
+- Requirements:
+  - Use Unicode box-drawing characters for tables (fallback to ASCII)
+  - Auto-detect terminal width and adapt column widths
+  - Truncate long values with ellipsis, show full with `--no-truncate`
+  - Align numeric columns right, text columns left
+  - Color-code status indicators (green=success, red=error, yellow=warning)
+  - Support `--no-color` for CI/CD environments
+
+**CLR-15: Streaming Output**
+- Priority: P1 (High)
+- Description: Progressive output for long-running operations
+- Requirements:
+  - Stream results as they become available
+  - Use paging for long output (respect $PAGER environment)
+  - Support `--no-pager` to disable automatic paging
+  - Flush output buffers regularly
+  - Handle SIGPIPE gracefully when output is piped
+
+### 5.6 Progress Indicators
+
+**CLR-16: Progress Feedback**
+- Priority: P0 (Critical)
+- Description: Clear feedback for long-running operations
+- Requirements:
+  - Show spinner for operations <10 seconds
+  - Show progress bar with percentage for operations >10 seconds
+  - Display estimated time remaining for long operations
+  - Show current operation status: "Connecting to peers (2/5)..."
+  - Update progress at least every 500ms
+  - Support `--no-progress` for non-interactive environments
+
+**CLR-17: Background Operations**
+- Priority: P1 (High)
+- Description: Handle long operations gracefully
+- Requirements:
+  - Option to background operations: `--background` or `--detach`
+  - Show how to check status: "Run `p2p-agent task status <id>` to monitor progress"
+  - Support operation cancellation with Ctrl+C
+  - Clean shutdown with double Ctrl+C (force quit)
+  - Resume interrupted operations when possible
+
+**CLR-18: Real-time Updates**
+- Priority: P2 (Medium)
+- Description: Live updates for monitoring commands
+- Requirements:
+  - `watch` mode for status commands: `p2p-agent status --watch`
+  - Auto-refresh every N seconds (default: 5s)
+  - Highlight changes since last update
+  - Show timestamp of last update
+  - Exit watch mode cleanly with Ctrl+C
+
+### 5.7 Interactive vs Non-Interactive Modes
+
+**CLR-19: Interactive Confirmations**
+- Priority: P0 (Critical)
+- Description: Confirm destructive operations in interactive mode
+- Requirements:
+  - Prompt for confirmation on destructive operations (delete, reset, etc.)
+  - Show clear warning about consequences
+  - Require explicit "yes" (not just "y") for dangerous operations
+  - Support `--yes` or `-y` flag to skip prompts in automation
+  - Detect non-interactive mode (no TTY) and require explicit flags
+
+**CLR-20: Smart Interactive Detection**
+- Priority: P1 (High)
+- Description: Automatically adapt to interactive vs non-interactive contexts
+- Requirements:
+  - Detect TTY to determine interactive mode
+  - Disable colors in non-interactive mode unless `--color=always`
+  - Disable progress indicators in pipes/redirects
+  - Adjust output verbosity based on context
+  - Support `--interactive` / `--non-interactive` flags for override
+
+**CLR-21: Interactive Wizards**
+- Priority: P2 (Medium)
+- Description: Guided setup for complex operations
+- Requirements:
+  - `config init --interactive` launches configuration wizard
+  - Step-by-step prompts with sensible defaults
+  - Validation at each step with immediate feedback
+  - Option to go back and change previous answers
+  - Summary before finalizing changes
+  - Generate equivalent non-interactive command
+
+### 5.8 Installation & Setup Experience
+
+**CLR-22: First-Run Experience**
+- Priority: P0 (Critical)
+- Description: Smooth onboarding for new users
+- Requirements:
+  - Detect first run and offer guided setup
+  - Create configuration directory and files automatically
+  - Generate cryptographic keys on first launch
+  - Test network connectivity to bootstrap nodes
+  - Provide clear "getting started" message with next steps
+  - Offer to run in demo mode for testing
+
+**CLR-23: Dependency Detection**
+- Priority: P1 (High)
+- Description: Check and validate dependencies
+- Requirements:
+  - Verify system requirements (OS, architecture, available ports)
+  - Check for required external tools (if any)
+  - Suggest installation commands for missing dependencies
+  - Validate network accessibility
+  - Test write permissions for data directories
+  - Show comprehensive diagnostics: `p2p-agent doctor`
+
+**CLR-24: Upgrade & Migration**
+- Priority: P1 (High)
+- Description: Smooth upgrades between versions
+- Requirements:
+  - Detect version mismatches in configuration
+  - Auto-migrate configuration formats when safe
+  - Backup old configuration before migration
+  - Show changelog between versions: `p2p-agent changelog`
+  - Warn about breaking changes
+  - Provide rollback instructions
+
+### 5.9 Shell Integration
+
+**CLR-25: Shell Completion**
+- Priority: P1 (High)
+- Description: Tab completion for all shells
+- Requirements:
+  - Generate completion scripts: `p2p-agent completion bash|zsh|fish|powershell`
+  - Complete commands, subcommands, and flags
+  - Context-aware completion (e.g., suggest agent IDs after `task status`)
+  - Installation instructions for each shell
+  - Test completions in CI pipeline
+
+**CLR-26: Shell Aliases & Scripts**
+- Priority: P2 (Medium)
+- Description: Convenient shell integration
+- Requirements:
+  - Suggest useful aliases in documentation
+  - Provide shell script examples
+  - Exit codes follow Unix conventions (0=success, non-zero=failure)
+  - Support shell pipelines naturally
+  - Work well with standard Unix tools (grep, awk, jq)
+
+### 5.10 Security & Privacy in CLI
+
+**CLR-27: Secure Credential Handling**
+- Priority: P0 (Critical)
+- Description: Never expose sensitive data in CLI
+- Requirements:
+  - Never log sensitive values (keys, tokens, passwords)
+  - Mask sensitive data in output (show first/last 4 chars only)
+  - Read secrets from environment variables or secure files
+  - Support credential management systems (keychain, vault)
+  - Warn when sensitive data passed via command line arguments
+  - Provide `--debug-safe` mode that redacts all sensitive data
+
+**CLR-28: Audit & Compliance**
+- Priority: P1 (High)
+- Description: Maintain audit trail for compliance
+- Requirements:
+  - Log all CLI operations to audit log
+  - Include timestamp, user, command, and result
+  - Support structured logging for SIEM integration
+  - Provide audit log query commands
+  - Support log rotation and retention policies
+  - Comply with relevant security standards (SOC2, etc.)
+
+---
+
+## 6. Non-Functional Requirements
+
+### 6.1 Performance Requirements
 
 **NFR-1: Latency**
 - Requirement: <100ms p95 latency for network operations
@@ -341,7 +658,7 @@ A decentralized network of AI agents where participants contribute compute resou
 - Measurement: Resource monitoring and reporting
 - Priority: P1
 
-### 5.2 Scalability Requirements
+### 6.2 Scalability Requirements
 
 **NFR-4: Network Scale**
 - Requirement: Support 10,000+ concurrent agents
@@ -353,7 +670,7 @@ A decentralized network of AI agents where participants contribute compute resou
 - Measurement: Performance testing at different scales
 - Priority: P1
 
-### 5.3 Reliability Requirements
+### 6.3 Reliability Requirements
 
 **NFR-6: Availability**
 - Requirement: 99.9% uptime for critical services
@@ -370,7 +687,7 @@ A decentralized network of AI agents where participants contribute compute resou
 - Measurement: Data integrity checks and auditing
 - Priority: P1
 
-### 5.4 Security Requirements
+### 6.4 Security Requirements
 
 **NFR-9: Encryption**
 - Requirement: All network traffic encrypted with TLS 1.3+
@@ -387,7 +704,7 @@ A decentralized network of AI agents where participants contribute compute resou
 - Measurement: Privacy impact assessments
 - Priority: P1
 
-### 5.5 Maintainability Requirements
+### 6.5 Maintainability Requirements
 
 **NFR-12: Code Quality**
 - Requirement: 90%+ test coverage overall, 95%+ for critical paths
@@ -404,7 +721,7 @@ A decentralized network of AI agents where participants contribute compute resou
 - Measurement: Automated file size validation
 - Priority: P1
 
-### 5.6 Portability Requirements
+### 6.6 Portability Requirements
 
 **NFR-15: Platform Support**
 - Requirement: Support Linux, macOS, Windows
@@ -416,7 +733,7 @@ A decentralized network of AI agents where participants contribute compute resou
 - Measurement: Testing on diverse hardware
 - Priority: P1
 
-### 5.7 Usability Requirements
+### 6.7 Usability Requirements
 
 **NFR-17: Setup Time**
 - Requirement: <15 minutes from download to running agent
@@ -430,9 +747,9 @@ A decentralized network of AI agents where participants contribute compute resou
 
 ---
 
-## 6. Technical Architecture
+## 7. Technical Architecture
 
-### 6.1 Technology Stack
+### 7.1 Technology Stack
 
 **Core Language**: Rust 1.75.0+
 - Memory safety and performance
@@ -469,7 +786,7 @@ A decentralized network of AI agents where participants contribute compute resou
 - Rich visualization
 - Alerting capabilities
 
-### 6.2 Architecture Patterns
+### 7.2 Architecture Patterns
 
 **Dependency Injection**
 - Container-based service management
@@ -496,7 +813,7 @@ A decentralized network of AI agents where participants contribute compute resou
 - Pluggable authentication providers
 - Fine-grained authorization
 
-### 6.3 Component Architecture
+### 7.3 Component Architecture
 
 ```
 ┌─────────────────────────────────────────────────────────┐
@@ -534,9 +851,9 @@ A decentralized network of AI agents where participants contribute compute resou
 
 ---
 
-## 7. Data Model
+## 8. Data Model
 
-### 7.1 Core Entities
+### 8.1 Core Entities
 
 **Agent**
 ```rust
@@ -589,7 +906,7 @@ struct Peer {
 }
 ```
 
-### 7.2 State Management
+### 8.2 State Management
 
 **Local State**
 - Agent configuration
@@ -606,9 +923,9 @@ struct Peer {
 
 ---
 
-## 8. API Specifications
+## 9. API Specifications
 
-### 8.1 Internal APIs
+### 9.1 Internal APIs
 
 **Task Submission API**
 ```rust
@@ -638,7 +955,7 @@ trait Storage: Send + Sync {
 }
 ```
 
-### 8.2 External APIs (Future)
+### 9.2 External APIs (Future)
 
 **REST API** (Planned for Phase 4)
 - POST /api/v1/tasks - Submit task
@@ -653,9 +970,9 @@ trait Storage: Send + Sync {
 
 ---
 
-## 9. Security Considerations
+## 10. Security Considerations
 
-### 9.1 Threat Model
+### 10.1 Threat Model
 
 **Threats**
 1. Malicious agents submitting harmful tasks
@@ -673,7 +990,7 @@ trait Storage: Send + Sync {
 5. Zero-knowledge processing where possible
 6. Resource limits and monitoring
 
-### 9.2 Security Controls
+### 10.2 Security Controls
 
 **Authentication**
 - Cryptographic identity verification
@@ -697,15 +1014,15 @@ trait Storage: Send + Sync {
 
 ---
 
-## 10. Testing Strategy
+## 11. Testing Strategy
 
-### 10.1 Test Coverage Requirements
+### 11.1 Test Coverage Requirements
 
 - **Overall**: 90% minimum coverage
 - **Critical Paths**: 95% minimum coverage
 - **Security-Critical**: 100% coverage
 
-### 10.2 Test Types
+### 11.2 Test Types
 
 **Unit Tests**
 - Per-component testing
@@ -732,7 +1049,7 @@ trait Storage: Send + Sync {
 - Network partition handling
 - Byzantine fault tolerance
 
-### 10.3 CI/CD Pipeline
+### 11.3 CI/CD Pipeline
 
 **Continuous Integration**
 - Build on all target platforms
@@ -749,9 +1066,9 @@ trait Storage: Send + Sync {
 
 ---
 
-## 11. Deployment & Operations
+## 12. Deployment & Operations
 
-### 11.1 Deployment Methods
+### 12.1 Deployment Methods
 
 **Container Deployment**
 - Docker images with multi-stage builds
@@ -768,7 +1085,7 @@ trait Storage: Send + Sync {
 - Development builds
 - Custom compilation flags
 
-### 11.2 Configuration Management
+### 12.2 Configuration Management
 
 **Configuration Files**
 - YAML-based primary configuration
@@ -786,7 +1103,7 @@ trait Storage: Send + Sync {
 3. Environment variables
 4. Command-line arguments
 
-### 11.3 Monitoring & Alerting
+### 12.3 Monitoring & Alerting
 
 **Metrics**
 - Prometheus endpoint exposure
@@ -805,9 +1122,9 @@ trait Storage: Send + Sync {
 
 ---
 
-## 12. Risks & Mitigation
+## 13. Risks & Mitigation
 
-### 12.1 Technical Risks
+### 13.1 Technical Risks
 
 **Risk: Network Partitions**
 - Impact: High
@@ -824,7 +1141,7 @@ trait Storage: Send + Sync {
 - Probability: Low
 - Mitigation: Security audits, penetration testing, responsible disclosure
 
-### 12.2 Operational Risks
+### 13.2 Operational Risks
 
 **Risk: Insufficient Adoption**
 - Impact: High
@@ -841,7 +1158,7 @@ trait Storage: Send + Sync {
 - Probability: Medium
 - Mitigation: Rate limiting, reputation systems, resource quotas
 
-### 12.3 Legal & Compliance Risks
+### 13.3 Legal & Compliance Risks
 
 **Risk: Data Privacy Violations**
 - Impact: Critical
@@ -855,9 +1172,9 @@ trait Storage: Send + Sync {
 
 ---
 
-## 13. Success Criteria & KPIs
+## 14. Success Criteria & KPIs
 
-### 13.1 Technical KPIs
+### 14.1 Technical KPIs
 
 - **Network Size**: 10,000+ concurrent agents
 - **Task Throughput**: 1,000,000+ tasks/hour network-wide
@@ -866,7 +1183,7 @@ trait Storage: Send + Sync {
 - **Test Coverage**: >90% overall
 - **Task Success Rate**: >99%
 
-### 13.2 Community KPIs
+### 14.2 Community KPIs
 
 - **Active Contributors**: 100+
 - **Deployed Agents**: 50,000+
@@ -874,7 +1191,7 @@ trait Storage: Send + Sync {
 - **Community Members**: 10,000+
 - **External Integrations**: 20+
 
-### 13.3 Business KPIs (Future)
+### 14.3 Business KPIs (Future)
 
 - **API Usage**: 1M+ API calls/day
 - **Energy Efficiency**: 50% reduction vs centralized
@@ -883,16 +1200,16 @@ trait Storage: Send + Sync {
 
 ---
 
-## 14. Timeline & Milestones
+## 15. Timeline & Milestones
 
-### 14.1 Completed Milestones
+### 15.1 Completed Milestones
 
 - ✅ **Q1 2025**: Core architecture implemented
 - ✅ **Q1 2025**: Security framework operational
 - ✅ **Q1 2025**: Load testing framework
 - ✅ **Q1 2025**: Documentation foundation
 
-### 14.2 Upcoming Milestones
+### 15.2 Upcoming Milestones
 
 **Q2 2025/2026 - Phase 2: Networking**
 - libp2p integration complete
@@ -920,13 +1237,13 @@ trait Storage: Send + Sync {
 
 ---
 
-## 15. Appendices
+## 16. Appendices
 
-### 15.1 Glossary
+### 16.1 Glossary
 
 See [docs/glossary.md](../docs/glossary.md) for complete terminology.
 
-### 15.2 References
+### 16.2 References
 
 - [High-Level Design](../docs/high-level-design.md)
 - [Roadmap](../docs/roadmap.md)
@@ -934,10 +1251,11 @@ See [docs/glossary.md](../docs/glossary.md) for complete terminology.
 - [Architecture Documentation](../docs/architecture/)
 - [Development Guide](../docs/development/readme.md)
 
-### 15.3 Revision History
+### 16.3 Revision History
 
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
+| 1.1 | 2026-01-03 | Rene | Added comprehensive CLI UX Requirements (Section 5) |
 | 1.0 | 2026-01-03 | Rene | Initial comprehensive PRD created |
 
 ---
