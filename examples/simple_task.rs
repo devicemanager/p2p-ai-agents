@@ -8,9 +8,11 @@ use p2p_ai_agents::agent::{
     Agent, AgentConfig, AgentId, DefaultAgent, ResourceLimits, Task, TaskPayload, TaskPriority,
     TaskType,
 };
+use p2p_ai_agents::core::services::ServiceRegistry;
 use serde_json::json;
 use std::collections::HashMap;
 use std::error::Error;
+use std::sync::Arc;
 use std::time::Duration;
 use tokio::time::sleep;
 
@@ -26,10 +28,11 @@ async fn main() -> Result<(), Box<dyn Error>> {
             max_memory: 1024 * 1024 * 1024,
             max_storage: 10 * 1024 * 1024 * 1024,
             max_bandwidth: 1024 * 1024,
+            max_connections: 50,
         },
     };
 
-    let agent = DefaultAgent::new(config).await?;
+    let agent = DefaultAgent::new(config, Arc::new(ServiceRegistry::new())).await?;
     agent.start().await?;
     println!("✅ Agent ready for task processing\n");
 
@@ -207,10 +210,11 @@ mod tests {
                 max_memory: 512 * 1024 * 1024,
                 max_storage: 1024 * 1024 * 1024,
                 max_bandwidth: 256 * 1024,
+                max_connections: 50,
             },
         };
 
-        let agent = DefaultAgent::new(config).await?;
+        let agent = DefaultAgent::new(config, Arc::new(ServiceRegistry::new())).await?;
         agent.start().await?;
 
         // Test basic task submission
@@ -242,10 +246,11 @@ mod tests {
                 max_memory: 1024 * 1024 * 1024,
                 max_storage: 10 * 1024 * 1024 * 1024,
                 max_bandwidth: 1024 * 1024,
+                max_connections: 50,
             },
         };
 
-        let agent = DefaultAgent::new(config).await?;
+        let agent = DefaultAgent::new(config, Arc::new(ServiceRegistry::new())).await?;
         agent.start().await?;
 
         // Test all priority levels

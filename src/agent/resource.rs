@@ -149,6 +149,7 @@ mod tests {
             max_memory: 1024 * 1024 * 1024,       // 1GB
             max_storage: 10 * 1024 * 1024 * 1024, // 10GB
             max_bandwidth: 1024 * 1024,           // 1MB/s
+            max_connections: 100,
         };
 
         let monitor = ResourceMonitor::new(&limits).unwrap();
@@ -169,6 +170,7 @@ mod tests {
             max_memory: 1024,    // Very low memory limit
             max_storage: 1024,   // Very low storage limit
             max_bandwidth: 1024, // Very low bandwidth limit
+            max_connections: 10,
         };
 
         let monitor = ResourceMonitor::new(&limits).unwrap();

@@ -6,6 +6,7 @@
 use p2p_ai_agents::agent::{DefaultAgent, ResourceLimits};
 use p2p_ai_agents::core::config::ConfigValue;
 use p2p_ai_agents::core::events::{AgentStarted, TaskCompleted};
+use p2p_ai_agents::core::services::ServiceRegistry;
 use p2p_ai_agents::prelude::*;
 use p2p_ai_agents::service_factory;
 use std::any::Any;
@@ -113,10 +114,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             max_memory: 512 * 1024 * 1024,       // 512MB
             max_storage: 5 * 1024 * 1024 * 1024, // 5GB
             max_bandwidth: 512 * 1024,           // 512KB/s
+            max_connections: 50,
         },
     };
 
-    let agent = Arc::new(DefaultAgent::new(agent_config).await?);
+    let agent = Arc::new(DefaultAgent::new(agent_config, Arc::new(ServiceRegistry::new())).await?);
     app.add_agent(agent.clone()).await?;
 
     println!("Added agent: {}", agent.id());
