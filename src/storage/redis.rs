@@ -2,7 +2,6 @@
 ///
 /// This module provides a Redis-based storage backend that implements the Storage trait.
 /// It uses connection pooling and automatic retry logic for resilience.
-
 use crate::storage::local::{ConsistencyLevel, Storage, StorageError};
 use async_trait::async_trait;
 use redis::aio::ConnectionManager;
@@ -11,6 +10,9 @@ use serde::{Deserialize, Serialize};
 use std::time::Duration;
 use tokio::time::sleep;
 use tracing::{debug, error, warn};
+
+#[cfg(feature = "metrics-prometheus")]
+use crate::metrics::prometheus_exporter::MetricsCollector;
 
 /// Configuration for Redis storage backend
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -47,6 +49,8 @@ impl Default for RedisConfig {
 pub struct RedisStorage {
     connection: ConnectionManager,
     config: RedisConfig,
+    #[cfg(feature = "metrics-prometheus")]
+    metrics: Option<MetricsCollector>,
 }
 
 impl RedisStorage {
@@ -62,12 +66,44 @@ impl RedisStorage {
             StorageError::ConnectionFailed(format!("Could not connect to Redis: {}", e))
         })?;
 
-        let storage = Self { connection, config };
+        let storage = Self {
+            connection,
+            config,
+            #[cfg(feature = "metrics-prometheus")]
+            metrics: None,
+        };
 
         // Verify connectivity with ping
         storage.ping().await?;
 
         debug!("Redis storage backend initialized successfully");
+        Ok(storage)
+    }
+
+    /// Create Redis storage with metrics collector
+    #[cfg(feature = "metrics-prometheus")]
+    pub async fn with_metrics(
+        config: RedisConfig,
+        metrics: MetricsCollector,
+    ) -> Result<Self, StorageError> {
+        let client = Client::open(config.url.as_str()).map_err(|e| {
+            error!("Failed to create Redis client: {}", e);
+            StorageError::InitializationFailed(format!("Invalid Redis URL: {}", e))
+        })?;
+
+        let connection = ConnectionManager::new(client).await.map_err(|e| {
+            error!("Failed to establish Redis connection: {}", e);
+            StorageError::ConnectionFailed(format!("Could not connect to Redis: {}", e))
+        })?;
+
+        let storage = Self {
+            connection,
+            config,
+            metrics: Some(metrics),
+        };
+
+        storage.ping().await?;
+        debug!("Redis storage backend with metrics initialized successfully");
         Ok(storage)
     }
 
@@ -127,6 +163,9 @@ impl Storage for RedisStorage {
         key: &str,
         _consistency: ConsistencyLevel,
     ) -> Result<Option<Vec<u8>>, StorageError> {
+        #[cfg(feature = "metrics-prometheus")]
+        let start = std::time::Instant::now();
+
         // Redis always provides Strong consistency
         debug!("Getting key from Redis: {}", key);
 
@@ -137,9 +176,9 @@ impl Storage for RedisStorage {
         let mut attempts = 0;
         let mut delay = config.retry_delay_ms;
 
-        loop {
+        let result = loop {
             match conn.get::<_, Option<Vec<u8>>>(&key).await {
-                Ok(result) => return Ok(result),
+                Ok(result) => break Ok(result),
                 Err(e) => {
                     attempts += 1;
                     if attempts >= config.max_retries {
@@ -147,7 +186,7 @@ impl Storage for RedisStorage {
                             "Redis GET failed after {} retries: {}",
                             config.max_retries, e
                         );
-                        return Err(StorageError::ConnectionFailed(format!(
+                        break Err(StorageError::ConnectionFailed(format!(
                             "Redis connection failed after {} retries",
                             config.max_retries
                         )));
@@ -160,7 +199,15 @@ impl Storage for RedisStorage {
                     delay *= 2;
                 }
             }
+        };
+
+        #[cfg(feature = "metrics-prometheus")]
+        if let Some(ref metrics) = self.metrics {
+            let duration_ms = start.elapsed().as_millis() as u64;
+            metrics.record_storage_operation("get", "redis", duration_ms);
         }
+
+        result
     }
 
     async fn put(
@@ -169,6 +216,9 @@ impl Storage for RedisStorage {
         value: Vec<u8>,
         _consistency: ConsistencyLevel,
     ) -> Result<(), StorageError> {
+        #[cfg(feature = "metrics-prometheus")]
+        let start = std::time::Instant::now();
+
         // Redis always provides Strong consistency
         debug!("Putting key to Redis: {}", key);
 
@@ -179,9 +229,9 @@ impl Storage for RedisStorage {
         let mut attempts = 0;
         let mut delay = config.retry_delay_ms;
 
-        loop {
+        let result = loop {
             match conn.set::<_, _, ()>(&key, &value).await {
-                Ok(_) => return Ok(()),
+                Ok(_) => break Ok(()),
                 Err(e) => {
                     attempts += 1;
                     if attempts >= config.max_retries {
@@ -189,7 +239,7 @@ impl Storage for RedisStorage {
                             "Redis SET failed after {} retries: {}",
                             config.max_retries, e
                         );
-                        return Err(StorageError::ConnectionFailed(format!(
+                        break Err(StorageError::ConnectionFailed(format!(
                             "Redis connection failed after {} retries",
                             config.max_retries
                         )));
@@ -202,14 +252,21 @@ impl Storage for RedisStorage {
                     delay *= 2;
                 }
             }
+        };
+
+        #[cfg(feature = "metrics-prometheus")]
+        if let Some(ref metrics) = self.metrics {
+            let duration_ms = start.elapsed().as_millis() as u64;
+            metrics.record_storage_operation("put", "redis", duration_ms);
         }
+
+        result
     }
 
-    async fn delete(
-        &self,
-        key: &str,
-        _consistency: ConsistencyLevel,
-    ) -> Result<(), StorageError> {
+    async fn delete(&self, key: &str, _consistency: ConsistencyLevel) -> Result<(), StorageError> {
+        #[cfg(feature = "metrics-prometheus")]
+        let start = std::time::Instant::now();
+
         // Redis always provides Strong consistency
         debug!("Deleting key from Redis: {}", key);
 
@@ -220,9 +277,9 @@ impl Storage for RedisStorage {
         let mut attempts = 0;
         let mut delay = config.retry_delay_ms;
 
-        loop {
+        let result = loop {
             match conn.del::<_, ()>(&key).await {
-                Ok(_) => return Ok(()),
+                Ok(_) => break Ok(()),
                 Err(e) => {
                     attempts += 1;
                     if attempts >= config.max_retries {
@@ -230,7 +287,7 @@ impl Storage for RedisStorage {
                             "Redis DEL failed after {} retries: {}",
                             config.max_retries, e
                         );
-                        return Err(StorageError::ConnectionFailed(format!(
+                        break Err(StorageError::ConnectionFailed(format!(
                             "Redis connection failed after {} retries",
                             config.max_retries
                         )));
@@ -243,7 +300,15 @@ impl Storage for RedisStorage {
                     delay *= 2;
                 }
             }
+        };
+
+        #[cfg(feature = "metrics-prometheus")]
+        if let Some(ref metrics) = self.metrics {
+            let duration_ms = start.elapsed().as_millis() as u64;
+            metrics.record_storage_operation("delete", "redis", duration_ms);
         }
+
+        result
     }
 }
 

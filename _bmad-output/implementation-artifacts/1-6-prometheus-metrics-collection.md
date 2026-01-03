@@ -1,6 +1,6 @@
 # Story 1.6: Prometheus Metrics Collection
 
-Status: done
+Status: needs-rework
 
 ## Story
 
@@ -130,3 +130,215 @@ metrics:
 - Metrics should have minimal performance impact (<1% overhead)
 - Follow Prometheus naming conventions
 - Document metrics in docs/metrics.md
+
+---
+
+## 🔥 Code Review Issues - Remediation Required
+
+**Review Date:** 2026-01-03  
+**Reviewer:** Amelia (Adversarial Code Review Agent)  
+**Status:** NEEDS REWORK - 2 Critical, 5 Medium, 1 Low issues found
+
+### 🔴 Critical Issues
+
+**ISSUE-CR-1.6-001: AC3 Storage Metrics Integration Missing** ⚠️ CRITICAL
+```yaml
+Severity: HIGH
+Acceptance Criteria: AC3 - Storage Operation Metrics
+Problem: |
+  - Metrics functions exist in prometheus_exporter.rs
+  - record_storage_operation() never called by storage layer
+  - src/storage/local.rs NOT modified (per git diff)
+  - src/storage/redis.rs NOT modified (per git diff)
+  - AC3 marked complete but functionally NOT implemented
+Required Action: |
+  1. Add MetricsCollector field to LocalStorageBackend struct
+  2. Add MetricsCollector field to RedisStorageBackend struct  
+  3. Instrument get/put/delete operations with timing:
+     - Start timer before operation
+     - Record duration after operation completes
+     - Call collector.record_storage_operation(op, backend, duration_ms)
+  4. Write integration tests verifying metrics incremented during storage ops
+Test Validation:
+  - Create storage backend → perform get/put/delete → verify metrics counters increased
+  - Check histogram buckets contain duration observations
+Blocking: YES - AC3 cannot be considered complete
+```
+
+**ISSUE-CR-1.6-002: AC2 Message Metrics Integration Missing** ⚠️ CRITICAL
+```yaml
+Severity: HIGH
+Acceptance Criteria: AC2 - Message Processing Metrics
+Problem: |
+  - record_message_received() function exists but never called
+  - record_message_duration() function exists but never called
+  - No integration with message processing layer
+  - AC2 marked complete but functionally NOT implemented
+Required Action: |
+  1. Identify message processing entry point (likely in network/ or application/)
+  2. Add MetricsCollector to message handler
+  3. Call record_message_received() when message arrives
+  4. Wrap message processing with timing, call record_message_duration()
+  5. Write integration tests verifying metrics during message processing
+Test Validation:
+  - Process test message → verify messages_received_total incremented
+  - Verify message_processing_duration_seconds histogram updated
+Blocking: YES - AC2 cannot be considered complete
+```
+
+### 🟡 Medium Issues
+
+**ISSUE-CR-1.6-003: Test Assertions Missing** ⚠️ MEDIUM
+```yaml
+Severity: MEDIUM
+Problem: |
+  Test functions exist but have no assertions:
+  - test_record_storage_operation: comment says "Just verify it doesn't panic"
+  - test_record_message_metrics: no assertions
+  - test_update_gauges: no assertions
+  Tests call functions but don't validate behavior
+Required Action: |
+  1. Add assertions to verify counter increments:
+     before = get_counter_value()
+     call_function()
+     after = get_counter_value()
+     assert!(after > before)
+  2. Use prometheus::gather() to read actual metric values
+  3. Verify histogram buckets populated
+  4. Check gauge values actually set correctly
+File: src/metrics/prometheus_exporter.rs lines 234-261
+```
+
+**ISSUE-CR-1.6-004: Story Structure Missing Task List** ⚠️ MEDIUM
+```yaml
+Severity: MEDIUM
+Problem: |
+  Story has "Implementation Plan" but no executable Tasks/Subtasks checklist
+  Cannot track what was done vs planned
+  No [ ] / [x] checkbox tracking
+Required Action: |
+  Add proper task structure after Implementation Plan:
+  
+  ## Tasks
+  
+  ### Task 1: Create Metrics Module [x]
+  - [x] Subtask 1.1: Define MetricsCollector struct
+  - [x] Subtask 1.2: Define MetricsConfig struct
+  - [x] Subtask 1.3: Register Prometheus metrics (gauges, counters, histograms)
+  
+  ### Task 2: Integrate Storage Metrics [ ]
+  - [ ] Subtask 2.1: Add MetricsCollector to LocalStorageBackend
+  - [ ] Subtask 2.2: Instrument local storage operations
+  - [ ] Subtask 2.3: Add MetricsCollector to RedisStorageBackend
+  - [ ] Subtask 2.4: Instrument Redis operations
+  
+  ### Task 3: Integrate Message Metrics [ ]
+  - [ ] Subtask 3.1: Add MetricsCollector to message handler
+  - [ ] Subtask 3.2: Record message receipt and processing duration
+  
+  ### Task 4: HTTP Endpoint [ ]
+  - [ ] Subtask 4.1: Create MetricsServer with HTTP handler
+  - [ ] Subtask 4.2: Test endpoint responds with Prometheus format
+  
+  ### Task 5: Tests [ ]
+  - [ ] Subtask 5.1: Write unit tests with assertions
+  - [ ] Subtask 5.2: Write integration tests for storage metrics
+  - [ ] Subtask 5.3: Write integration tests for message metrics
+```
+
+**ISSUE-CR-1.6-005: Unused Field Warning** ⚠️ MEDIUM
+```yaml
+Severity: MEDIUM
+Problem: |
+  Compiler warning in production code:
+  warning: field `config` is never read
+    --> src/metrics/prometheus_exporter.rs:142:5
+  MetricsServer.config field declared but never used
+Required Action: |
+  Option A: Use config field (e.g., log config on server start)
+  Option B: Remove field if truly not needed
+  Option C: Add #[allow(dead_code)] with comment explaining future use
+File: src/metrics/prometheus_exporter.rs line 142
+```
+
+**ISSUE-CR-1.6-006: Story Claims Files Modified That Weren't** ⚠️ MEDIUM
+```yaml
+Severity: MEDIUM
+Problem: |
+  Implementation Plan says:
+  - "Modify: src/storage/local.rs - Add metrics recording"
+  - "Modify: src/storage/redis.rs - Add metrics recording"
+  Git commit 6f92a60 does NOT include these files
+Required Action: |
+  Either:
+  A. Actually modify these files (ties to ISSUE-CR-1.6-001)
+  B. Update Implementation Plan to reflect what was actually done
+```
+
+**ISSUE-CR-1.6-007: Integration Tests Missing** ⚠️ MEDIUM
+```yaml
+Severity: MEDIUM
+Problem: |
+  Testing Strategy says "Integration Tests" but none exist
+  - No HTTP endpoint integration test
+  - No end-to-end metrics collection test
+  - No validation that metrics endpoint serves correct format
+Required Action: |
+  Create tests/integration_metrics.rs:
+  1. Start MetricsServer
+  2. Perform operations that should increment metrics
+  3. GET http://localhost:8080/metrics
+  4. Parse response, verify counters increased
+  5. Verify Content-Type: text/plain; version=0.0.4
+```
+
+### 🟢 Low Issues
+
+**ISSUE-CR-1.6-008: Missing Dev Agent Record Section** ⚠️ LOW
+```yaml
+Severity: LOW
+Problem: |
+  Story missing "## Dev Agent Record" section
+  Cannot track implementation decisions, changes made, or files modified
+Required Action: |
+  Add section after Notes:
+  
+  ## Dev Agent Record
+  
+  ### File List
+  - CREATED: src/metrics/mod.rs
+  - CREATED: src/metrics/prometheus_exporter.rs
+  - MODIFIED: src/lib.rs (added metrics module)
+  - MODIFIED: Cargo.toml (added prometheus, hyper, lazy_static dependencies)
+  
+  ### Change Log
+  - [timestamp] Created metrics module with Prometheus exporter
+  - [timestamp] Defined standard metrics (CPU, memory, peers, messages, storage)
+  - [timestamp] Implemented HTTP server for /metrics endpoint
+  - [timestamp] Added unit tests for metric recording
+  
+  ### Implementation Decisions
+  - Used lazy_static for global metrics registry (per Notes)
+  - Feature-gated prometheus dependencies (metrics-prometheus feature)
+  - Provided no-op implementations when feature disabled
+```
+
+---
+
+## Remediation Plan
+
+**Priority 1 (Blocking):**
+1. Integrate storage metrics (ISSUE-CR-1.6-001) - AC3 incomplete
+2. Integrate message metrics (ISSUE-CR-1.6-002) - AC2 incomplete
+3. Add test assertions (ISSUE-CR-1.6-003) - Tests not validating
+
+**Priority 2 (Should Fix):**
+4. Add task list structure (ISSUE-CR-1.6-004)
+5. Fix unused field warning (ISSUE-CR-1.6-005)
+6. Update story accuracy (ISSUE-CR-1.6-006)
+7. Add integration tests (ISSUE-CR-1.6-007)
+
+**Priority 3 (Nice to Have):**
+8. Add Dev Agent Record (ISSUE-CR-1.6-008)
+
+**Recommendation:** Create follow-up story "1.6.1: Complete Metrics Integration" to address Critical issues, or reopen this story as "needs-rework".
