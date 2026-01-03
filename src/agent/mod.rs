@@ -81,6 +81,39 @@ pub struct ResourceLimits {
     pub max_connections: usize,
 }
 
+impl ResourceLimits {
+    /// Validate resource limit values
+    pub fn validate(&self) -> Result<()> {
+        if self.max_cpu <= 0.0 || self.max_cpu > 1.0 {
+            return Err(Error::InvalidConfig(format!(
+                "max_cpu must be between 0.0 and 1.0, got {}",
+                self.max_cpu
+            )));
+        }
+        if self.max_memory == 0 {
+            return Err(Error::InvalidConfig(
+                "max_memory must be greater than 0".into(),
+            ));
+        }
+        if self.max_storage == 0 {
+            return Err(Error::InvalidConfig(
+                "max_storage must be greater than 0".into(),
+            ));
+        }
+        if self.max_bandwidth == 0 {
+            return Err(Error::InvalidConfig(
+                "max_bandwidth must be greater than 0".into(),
+            ));
+        }
+        if self.max_connections == 0 {
+            return Err(Error::InvalidConfig(
+                "max_connections must be greater than 0".into(),
+            ));
+        }
+        Ok(())
+    }
+}
+
 /// Agent trait defining the core functionality
 #[async_trait]
 pub trait Agent: Send + Sync {
@@ -524,6 +557,29 @@ mod tests {
         assert_eq!(format!("{}", agent_id), test_str);
     }
 
+    #[test]
+    fn test_agent_id_serialization() {
+        let id = AgentId::from_string("test-123".to_string());
+
+        // Test JSON serialization
+        let json = serde_json::to_string(&id).unwrap();
+        assert_eq!(json, r#""test-123""#);
+
+        // Test deserialization
+        let deserialized: AgentId = serde_json::from_str(&json).unwrap();
+        assert_eq!(id, deserialized);
+    }
+
+    #[test]
+    fn test_agent_id_serialization_roundtrip() {
+        let original = AgentId::new();
+
+        let json = serde_json::to_string(&original).unwrap();
+        let deserialized: AgentId = serde_json::from_str(&json).unwrap();
+
+        assert_eq!(original, deserialized);
+    }
+
     // AgentConfig tests
     #[test]
     fn test_agent_config_creation() {
@@ -544,6 +600,118 @@ mod tests {
         assert_eq!(config.id, agent_id);
         assert_eq!(config.resource_limits.max_cpu, limits.max_cpu);
         assert_eq!(config.resource_limits.max_memory, limits.max_memory);
+    }
+
+    #[test]
+    fn test_agent_config_serialization() {
+        let config = AgentConfig {
+            id: AgentId::from_string("agent-1".to_string()),
+            resource_limits: ResourceLimits {
+                max_cpu: 0.8,
+                max_memory: 1024 * 1024 * 1024,
+                max_storage: 10 * 1024 * 1024 * 1024,
+                max_bandwidth: 1024 * 1024,
+                max_connections: 100,
+            },
+        };
+
+        // Serialize to JSON
+        let json = serde_json::to_string_pretty(&config).unwrap();
+        assert!(json.contains("\"agent-1\""));
+        assert!(json.contains("max_cpu"));
+
+        // Deserialize back
+        let deserialized: AgentConfig = serde_json::from_str(&json).unwrap();
+        assert_eq!(config.id, deserialized.id);
+        assert_eq!(
+            config.resource_limits.max_cpu,
+            deserialized.resource_limits.max_cpu
+        );
+    }
+
+    #[test]
+    fn test_resource_limits_serialization() {
+        let limits = ResourceLimits {
+            max_cpu: 0.75,
+            max_memory: 2048 * 1024 * 1024,
+            max_storage: 50 * 1024 * 1024 * 1024,
+            max_bandwidth: 5 * 1024 * 1024,
+            max_connections: 200,
+        };
+
+        let json = serde_json::to_string(&limits).unwrap();
+        let deserialized: ResourceLimits = serde_json::from_str(&json).unwrap();
+
+        assert_eq!(limits.max_cpu, deserialized.max_cpu);
+        assert_eq!(limits.max_memory, deserialized.max_memory);
+        assert_eq!(limits.max_storage, deserialized.max_storage);
+        assert_eq!(limits.max_bandwidth, deserialized.max_bandwidth);
+        assert_eq!(limits.max_connections, deserialized.max_connections);
+    }
+
+    #[test]
+    fn test_resource_limits_validation_valid() {
+        let limits = ResourceLimits {
+            max_cpu: 0.8,
+            max_memory: 1024 * 1024 * 1024,
+            max_storage: 10 * 1024 * 1024 * 1024,
+            max_bandwidth: 1024 * 1024,
+            max_connections: 100,
+        };
+
+        assert!(limits.validate().is_ok());
+    }
+
+    #[test]
+    fn test_resource_limits_validation_invalid_cpu_too_high() {
+        let limits = ResourceLimits {
+            max_cpu: 1.5,
+            max_memory: 1024,
+            max_storage: 1024,
+            max_bandwidth: 1024,
+            max_connections: 10,
+        };
+
+        assert!(limits.validate().is_err());
+    }
+
+    #[test]
+    fn test_resource_limits_validation_invalid_cpu_zero() {
+        let limits = ResourceLimits {
+            max_cpu: 0.0,
+            max_memory: 1024,
+            max_storage: 1024,
+            max_bandwidth: 1024,
+            max_connections: 10,
+        };
+
+        assert!(limits.validate().is_err());
+    }
+
+    #[test]
+    fn test_resource_limits_validation_invalid_memory_zero() {
+        let limits = ResourceLimits {
+            max_cpu: 0.5,
+            max_memory: 0,
+            max_storage: 1024,
+            max_bandwidth: 1024,
+            max_connections: 10,
+        };
+
+        assert!(limits.validate().is_err());
+    }
+
+    #[test]
+    fn test_resource_limits_validation_invalid_connections_zero() {
+        let limits = ResourceLimits {
+            max_cpu: 0.5,
+            max_memory: 1024,
+            max_storage: 1024,
+            max_bandwidth: 1024,
+            max_connections: 0,
+        };
+
+        assert!(limits.validate().is_err());
     }
 
     // Existing test

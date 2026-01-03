@@ -18,6 +18,20 @@ use thiserror::Error;
 use zeroize::Zeroize;
 
 /// Cryptographic identity for an agent
+///
+/// This type manages the cryptographic keypair (Ed25519) used for signing and verification.
+///
+/// **Note on Serialization:**
+/// This type intentionally does NOT implement `Serialize`/`Deserialize` for security reasons.
+/// Private keys should never be directly serialized to prevent accidental exposure.
+///
+/// Instead, use:
+/// - [`save_to_dir()`](Self::save_to_dir) to securely persist the identity with encrypted private key
+/// - [`load_from_dir()`](Self::load_from_dir) to load a previously saved identity
+/// - [`load_or_generate()`](Self::load_or_generate) to load existing or create new identity
+///
+/// The private key is encrypted with AES-256-GCM before storage, with the encryption key
+/// stored in the system keychain.
 #[derive(Debug)]
 pub struct Identity {
     /// Signing key for the agent
