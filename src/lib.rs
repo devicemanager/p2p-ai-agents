@@ -12,6 +12,8 @@ pub mod agent;
 pub mod application;
 /// Core architectural components
 pub mod core;
+/// Metrics collection and monitoring
+pub mod metrics;
 pub mod network;
 /// The storage module provides the pluggable storage layer for the system.
 pub mod storage;

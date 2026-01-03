@@ -53,6 +53,9 @@ chrono = { version = "0.4", features = ["serde"] }
 # Metrics
 metrics = "0.21"
 metrics-util = "0.15"
+prometheus = { version = "0.13", optional = true }
+hyper = { version = "0.14", features = ["server", "http1", "tcp"], optional = true }
+lazy_static = { version = "1.4", optional = true }
 
 # Supabase/PostgreSQL (optional)
 postgrest = { version = "1.5", optional = true }
@@ -93,11 +96,12 @@ debug = true
 
 [features]
 default = []
-full = ["network", "storage", "cli"]
+full = ["network", "storage", "cli", "metrics-prometheus"]
 network = ["libp2p", "futures", "bytes"]
 storage = []
 storage-supabase = ["postgrest", "reqwest", "url"]
 storage-redis = ["redis"]
+metrics-prometheus = ["prometheus", "hyper", "lazy_static"]
 cli = []
 reqwest = ["dep:reqwest"]
 
