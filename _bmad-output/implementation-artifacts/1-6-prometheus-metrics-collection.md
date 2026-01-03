@@ -1,6 +1,6 @@
 # Story 1.6: Prometheus Metrics Collection
 
-Status: ready-for-dev
+Status: done
 
 ## Story
 
