@@ -1,6 +1,6 @@
 # Task Management Index
 
-*Last updated: 2025-12-16 15:32:50*
+*Last updated: 2026-01-03 05:05:45*
 
 ## Overview
 
@@ -8,20 +8,20 @@ This directory contains all implementation tasks for the P2P AI Agents project, 
 
 ## Task Statistics
 
-- **Total Tasks**: 375
-- **Completed**: 12 (3.2%)
+- **Total Tasks**: 384
+- **Completed**: 22 (5.7%)
 - **In Progress**: 4
-- **TODO**: 359
+- **TODO**: 358
 
 ## Task Directories
 
-### 📋 [TODO Tasks](./todo/) (359 tasks)
+### 📋 [TODO Tasks](./todo/) (358 tasks)
 Tasks that are planned but not yet started.
 
 ### 🚧 [In Progress Tasks](./in-progress/) (4 tasks)
 Tasks that are currently being worked on.
 
-### ✅ [Completed Tasks](./completed/) (12 tasks)
+### ✅ [Completed Tasks](./completed/) (22 tasks)
 Tasks that have been finished and verified.
 
 ## Task Management
@@ -68,7 +68,6 @@ Each task follows a standardized Markdown format with:
 - [add-code-format-docs](./todo/add-code-format-docs.md)
 - [Task: Add Supabase Storage Documentation](./todo/add-supabase-storage-docs.md)
 - [add-taskid-unit-tests](./todo/add-taskid-unit-tests.md)
-- [Access control](./todo/core-implementation-core-implementation-access-con.md)
 - [Add load tests](./todo/core-implementation-core-implementation-add-load-t.md)
 - [Add missing information](./todo/core-implementation-core-implementation-add-missin.md)
 - [Add policy verification](./todo/core-implementation-core-implementation-add-policy.md)
@@ -437,6 +436,16 @@ Each task follows a standardized Markdown format with:
 - [Task: Add Code Format Documentation](./completed/add-code-format-docs.md)
 - [Task: Add Supabase Storage Documentation](./completed/add-supabase-storage-docs.md)
 - [Task: Add Unit Test for TaskId](./completed/add-taskid-unit-tests.md)
+- [Key Management Lifecycle Design](./completed/arch-001-key-management-lifecycle.md)
+- [Sybil Resistance Mechanism Design](./completed/arch-002-sybil-resistance.md)
+- [Storage Consistency Model Design](./completed/arch-003-storage-consistency.md)
+- [Event Bus Performance Architecture](./completed/arch-004-event-bus-performance.md)
+- [Distributed Tracing Foundation](./completed/arch-005-distributed-tracing.md)
+- [Task Security and Authorization Model](./completed/arch-006-task-security.md)
+- [Constant-Time Cryptographic Operations](./completed/arch-007-constant-time-crypto.md)
+- [Bootstrap Node Resilience Architecture](./completed/arch-008-bootstrap-resilience.md)
+- [Network Capacity Planning and Load Testing](./completed/arch-009-network-capacity.md)
+- [DoS Prevention and Resource Limits](./completed/arch-010-dos-prevention.md)
 - [Access control](./completed/core-implementation-core-implementation-access-con.md)
 - [All public APIs have unit tests](./completed/core-implementation-core-implementation-all-public.md)
 - [Base agent trait and types](./completed/core-implementation-core-implementation-base-agent.md)
