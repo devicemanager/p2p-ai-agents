@@ -21,6 +21,13 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 ed25519-dalek = { version = "2.1", features = ["rand_core"] }
 rand = "0.8"
 libp2p-identity = { version = "0.2", features = ["peerid", "ed25519"] }
+aes-gcm = "0.10"
+zeroize = { version = "1.7", features = ["derive"] }
+sha2 = "0.10"
+
+# System integration  
+keyring = "2.3"
+base64 = { version = "0.21", optional = false }
 
 # Serialization
 serde = { version = "1.0", features = ["derive"] }
@@ -51,7 +58,6 @@ metrics-util = "0.15"
 postgrest = { version = "1.5", optional = true }
 reqwest = { version = "0.11", features = ["json"], optional = true }
 url = { version = "2.5", optional = true }
-base64 = { version = "0.21", optional = true }
 
 # Testing
 criterion = "0.5"
@@ -87,7 +93,7 @@ default = []
 full = ["network", "storage", "cli"]
 network = ["libp2p", "futures", "bytes"]
 storage = []
-storage-supabase = ["postgrest", "reqwest", "url", "base64"]
+storage-supabase = ["postgrest", "reqwest", "url"]
 cli = []
 reqwest = ["dep:reqwest"]
 
