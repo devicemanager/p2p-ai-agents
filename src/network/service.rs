@@ -376,6 +376,7 @@ impl Service for NetworkServiceImpl {
                         // For now, just send to all connected peers
                         let network_manager = self.network_manager.read().await;
                         let peers = network_manager.get_connected_peers().await;
+                        let peer_count = peers.len();
                         
                         for addr in peers {
                             network_manager.send_message(NetworkMessage {
@@ -386,7 +387,7 @@ impl Service for NetworkServiceImpl {
                         }
                         
                         // Update stats
-                        self.update_stats(|stats| stats.total_messages_sent += peers.len() as u64).await;
+                        self.update_stats(|stats| stats.total_messages_sent += peer_count as u64).await;
                         
                         Ok(NetworkServiceResponse::MessageBroadcast(Ok(())))
                     }

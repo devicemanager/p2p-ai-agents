@@ -1,0 +1,371 @@
+# P2P AI Agents - Project Context
+
+> **Last Updated:** 2026-01-02  
+> **Version:** 0.1.0  
+> **Status:** Active Development - Phase 2 (Networking)
+
+---
+
+## 🎯 PROJECT VISION
+
+**Mission:** Democratize AI by building a distributed, peer-to-peer (P2P) network of lightweight AI agents.
+
+**Goal:** Enable anyone to contribute their idle compute resources (PC, server, Raspberry Pi, etc.) to help process, chunk, and retrieve data—reducing the need for centralized, energy-intensive datacenters and making AI accessible to all.
+
+**Impact:** Build a sustainable, decentralized AI future that's greener, more open, and accessible to everyone.
+
+---
+
+## 📊 PROJECT STATUS
+
+### Current Phase
+- **Phase 1: Foundation** ✅ Complete (Q1 2025)
+- **Phase 2: Networking** 🔄 In Progress (Q2 2025/2026)
+- **Phase 3: Core Processing** 📋 Planned (Q3 2025/2026)
+- **Phase 4: Advanced Features** 🚀 Planned (Q4 2025/2026)
+- **Phase 5: Production Ready** 🌟 Planned (Q1 2026/2027)
+
+### Maturity Level
+**Early Development / Infrastructure Boilerplate**
+- Not yet production-ready
+- Core architecture complete
+- Active development on networking layer
+- Open to contributions and feedback
+
+### Task Tracking
+- **Total Tasks:** 375
+- **Completed:** 12 (3.2%)
+- **In Progress:** 4
+- **TODO:** 359
+
+---
+
+## 🏗 ARCHITECTURAL DECISIONS
+
+### Technology Stack
+
+#### Core Language
+**Rust (1.75.0+)**
+- Chosen for: Memory safety, performance, concurrency, zero-cost abstractions
+- Async runtime: Tokio
+- Benefits: Type safety, no garbage collection, excellent for systems programming
+
+#### P2P Networking
+**libp2p**
+- Chosen for: Mature P2P framework, modular design, battle-tested
+- Protocols: Gossipsub, Kad-DHT, mDNS, identify
+- Benefits: NAT traversal, peer discovery, multiple transports
+
+#### Cryptography
+**ed25519-dalek**
+- Chosen for: Fast signature verification, small keys, widely adopted
+- Use cases: Agent identity, message signing, authentication
+- Benefits: Security, performance, compatibility
+
+#### Serialization
+**Serde + JSON/CBOR**
+- Chosen for: Flexibility, ecosystem support, human-readable options
+- Benefits: Type-safe serialization, multiple formats
+
+#### Storage
+**Pluggable Storage System**
+- Implementations: Redis, Local filesystem, Supabase (cloud)
+- Design: Abstract trait-based interface
+- Benefits: Flexibility, testability, cloud/local hybrid
+
+#### Monitoring
+**Prometheus + Grafana**
+- Chosen for: Industry standard, rich ecosystem, powerful visualization
+- Metrics: Performance, resource usage, network health
+- Benefits: Real-time monitoring, alerting, historical analysis
+
+### Core Architecture Patterns
+
+#### 1. Dependency Injection (DI)
+- **Pattern:** Container-based service management
+- **Why:** Decoupling, testability, lifecycle management
+- **Implementation:** Custom DI container with Arc/RwLock for thread safety
+
+#### 2. Event-Driven Architecture
+- **Pattern:** Async event bus with pub/sub
+- **Why:** Loose coupling, scalability, reactivity
+- **Implementation:** Tokio channels with typed events
+
+#### 3. Service Registry
+- **Pattern:** Centralized service discovery and health monitoring
+- **Why:** Dynamic service management, health checks, graceful degradation
+- **Implementation:** Registry with health status tracking
+
+#### 4. Pluggable Storage
+- **Pattern:** Trait-based abstract storage interface
+- **Why:** Multiple backend support, testability, flexibility
+- **Implementation:** Storage trait with Redis/Local/Cloud implementations
+
+#### 5. RBAC Security
+- **Pattern:** Role-Based Access Control with pluggable providers
+- **Why:** Security, compliance, flexibility
+- **Implementation:** Access control layer with authentication/authorization
+
+---
+
+## 🎯 KEY DESIGN PRINCIPLES
+
+### 1. Decentralization
+- No single point of failure or control
+- Distributed decision-making
+- Autonomous agent operation
+- Peer-to-peer communication
+
+### 2. Privacy-First
+- Data sovereignty
+- End-to-end encryption
+- Zero-knowledge processing where possible
+- Privacy-preserving computations
+
+### 3. Energy Efficiency
+- Utilize idle compute resources
+- Smart scheduling based on renewable energy availability
+- Resource optimization
+- Efficient task distribution
+
+### 4. Scalability
+- Horizontal scaling via peer addition
+- Dynamic peer discovery
+- Resource-aware load balancing
+- Network grows stronger with more participants
+
+### 5. Interoperability
+- Standard protocols (libp2p)
+- API compatibility
+- Multi-platform support (Linux, macOS, Windows, embedded)
+- Extensible architecture via plugins
+
+### 6. Security
+- Cryptographic identity (Ed25519)
+- Secure communication channels (TLS 1.3)
+- Trust mechanisms and reputation systems
+- Role-based access control
+
+### 7. Developer Experience
+- Clear documentation
+- Type-safe APIs
+- Comprehensive test coverage (90%+ target)
+- Examples and tutorials
+
+---
+
+## 🚧 TECHNICAL CONSTRAINTS
+
+### File Size Policy
+**Maximum 500 lines per file**
+- Reason: AI model compatibility, maintainability
+- Enforcement: Documentation validation tools
+- Solution: File sharding for larger documents
+
+### Test Coverage Requirements
+- **Minimum:** 90% overall coverage
+- **Critical Paths:** 95% coverage
+- **Security-Critical:** 100% coverage
+
+### Rust Version
+- **Minimum:** 1.75.0
+- **Recommendation:** Latest stable
+- **MSRV Policy:** Update conservatively
+
+### Platform Support
+- **Primary:** Linux (amd64, arm64)
+- **Secondary:** macOS (Intel, Apple Silicon)
+- **Tertiary:** Windows 10+
+- **Future:** Embedded systems (Raspberry Pi)
+
+---
+
+## 🎭 USER PERSONAS
+
+### 1. Node Operator
+**Who:** Individual/organization running P2P agents
+**Needs:** Easy setup, reliable operation, resource monitoring
+**Goals:** Contribute to network, minimal maintenance
+
+### 2. Developer/Integrator
+**Who:** Building applications on top of P2P AI Agents
+**Needs:** Clear APIs, good documentation, examples
+**Goals:** Integrate AI capabilities, leverage distributed compute
+
+### 3. Contributor
+**Who:** Open source developer contributing code
+**Needs:** Development guides, architecture docs, test frameworks
+**Goals:** Fix bugs, add features, improve system
+
+### 4. Researcher
+**Who:** Academic/industry researcher
+**Needs:** Protocol specs, performance data, design rationale
+**Goals:** Understand system, publish papers, experiment
+
+---
+
+## 📈 SUCCESS CRITERIA
+
+### Technical Milestones
+- ✅ Core architecture implemented
+- ✅ Security framework operational (RBAC, auth/authz)
+- ✅ Load testing framework in place
+- 🔄 P2P networking functional
+- ⏳ Task distribution working
+- ⏳ Distributed storage operational
+- ⏳ 100+ active nodes in test network
+- ⏳ Production-ready v1.0 release
+
+### Community Milestones
+- ⏳ 100+ GitHub stars
+- ⏳ 10+ active contributors
+- ⏳ Active Discord community
+- ⏳ First production deployment
+
+### Performance Targets
+- Network latency: <100ms p95
+- Task throughput: 1000+ tasks/second (network-wide)
+- Node efficiency: >80% idle resource utilization
+- Fault tolerance: <1% task failure rate
+
+---
+
+## 🔄 DEVELOPMENT WORKFLOW
+
+### Task Management
+- **System:** Custom task tracking (`./scripts/tasks.sh`)
+- **Lifecycle:** todo → in-progress → completed
+- **CI Integration:** Automated GitHub issue creation
+- **Tracking:** 375 tasks identified, 12 completed
+
+### Testing Strategy
+- **Unit Tests:** Per-module with high coverage
+- **Integration Tests:** Cross-component validation
+- **Performance Tests:** Load testing framework
+- **Security Tests:** Automated security scanning
+
+### CI/CD Pipeline
+- **Rust CI:** Build, test, lint (clippy)
+- **Documentation CI:** Validation and consistency checks
+- **Coverage:** Codecov integration
+- **Release:** Automated crate publishing (future)
+
+### Code Review Process
+- All changes via pull requests
+- Automated CI checks must pass
+- Test coverage requirements enforced
+- Security review for auth/crypto changes
+
+---
+
+## 🤝 CONTRIBUTION GUIDELINES
+
+### Getting Started
+1. Read [CONTRIBUTING.md](docs/contributing.md)
+2. Check [Good First Issues](https://github.com/p2p-ai-agents/p2p-ai-agents/labels/good-first-issue)
+3. Join community discussions
+4. Review architecture documentation
+
+### Development Setup
+```bash
+# Install Rust
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+
+# Install dev tools
+make install-tools
+
+# Run tests
+make test
+
+# Check code
+make ci-check
+```
+
+---
+
+## 📚 CRITICAL DOCUMENTATION
+
+### For Understanding
+- [System Overview](docs/architecture/system-overview.md) - Architecture overview
+- [High-Level Design](docs/high-level-design.md) - Comprehensive design
+- [Roadmap](docs/roadmap.md) - Development phases
+
+### For Development
+- [Development Guide](docs/development/readme.md) - Developer setup
+- [Testing Guide](docs/development/testing-guide.md) - Testing practices
+- [AGENTS.md](AGENTS.md) - AI agent guide
+
+### For Operations
+- [Getting Started](docs/user-guides/getting-started.md) - Setup guide
+- [Agent Configuration](docs/user-guides/agent-configuration.md) - Configuration
+- [Security Best Practices](docs/user-guides/security-best-practices.md) - Security
+
+---
+
+## 🔮 FUTURE VISION
+
+### Short-Term (2026 Q1-Q2)
+- Complete P2P networking implementation
+- Task distribution system operational
+- First test network deployment
+- Security audit completion
+
+### Medium-Term (2026 Q3-Q4)
+- Distributed storage implementation
+- Federated learning capabilities
+- Performance optimization
+- Production-ready release
+
+### Long-Term (2027+)
+- Large-scale network deployment
+- Mobile agent support
+- Advanced privacy features
+- Incentive mechanisms
+- Academic partnerships
+
+---
+
+## ⚠️ KNOWN LIMITATIONS
+
+### Current State
+- **Not production-ready** - Early development phase
+- **Limited testing** - Expanding test coverage
+- **API instability** - Breaking changes possible
+- **Documentation gaps** - Work in progress
+
+### Technical Debt
+- Some components need refactoring
+- Test coverage below target (working toward 90%)
+- Performance optimization needed
+- API documentation incomplete
+
+---
+
+## 📞 CONTACT & SUPPORT
+
+### Community
+- **GitHub:** https://github.com/p2p-ai-agents/p2p-ai-agents
+- **Issues:** https://github.com/p2p-ai-agents/p2p-ai-agents/issues
+- **Discord:** (Coming soon)
+
+### Maintainers
+- Project discussions via GitHub Discussions
+- Security issues: Responsible disclosure via GitHub Security Advisories
+
+---
+
+## 📄 LICENSE
+
+Dual-licensed under MIT OR Apache-2.0
+- Flexibility for both open source and commercial use
+- Contributor-friendly licensing
+- Clear legal framework
+
+---
+
+**🚀 Let's build a greener, open, and decentralized AI future—together!**
+
+---
+
+*This context document is the single source of truth for AI agents working on this project.*  
+*Last validated: 2026-01-02*
