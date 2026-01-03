@@ -2,7 +2,6 @@
 ///
 /// This module provides Prometheus metrics collection for monitoring agent health,
 /// performance, and resource usage.
-
 #[cfg(feature = "metrics-prometheus")]
 pub mod prometheus_exporter;
 

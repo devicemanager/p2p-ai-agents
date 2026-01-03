@@ -7,11 +7,12 @@ use tokio::fs;
 use crate::metrics::prometheus_exporter::MetricsCollector;
 
 /// Consistency level for storage operations
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
 pub enum ConsistencyLevel {
     /// Strong consistency - read returns most recent write
     /// Linearizable operations, highest latency
     /// Use case: Critical data (identity, configuration)
+    #[default]
     Strong,
 
     /// Eventual consistency - read may return stale data
@@ -28,12 +29,6 @@ pub enum ConsistencyLevel {
     /// If A causes B, all nodes see A before B
     /// Use case: Message ordering, event logs
     Causal,
-}
-
-impl Default for ConsistencyLevel {
-    fn default() -> Self {
-        ConsistencyLevel::Strong
-    }
 }
 
 /// Storage errors for storage backends
