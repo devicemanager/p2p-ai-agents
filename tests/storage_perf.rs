@@ -1,5 +1,5 @@
 use p2p_ai_agents::storage::local::{
-    CacheStorage, CustomStorage, DistributedStorage, LocalStorage, Storage,
+    CacheStorage, ConsistencyLevel, CustomStorage, DistributedStorage, LocalStorage, Storage,
 };
 #[cfg(feature = "storage-supabase")]
 use p2p_ai_agents::storage::supabase::{SupabaseConfig, SupabaseStorage};
@@ -133,7 +133,10 @@ impl StoragePerfTest {
 
         for i in 0..self.operations {
             let key = format!("perf_write_{}", i);
-            storage.put(&key, test_data.clone()).await.unwrap();
+            storage
+                .put(&key, test_data.clone(), ConsistencyLevel::Strong)
+                .await
+                .unwrap();
         }
 
         let duration = start.elapsed();
@@ -146,14 +149,17 @@ impl StoragePerfTest {
         let test_data = vec![42u8; self.data_size];
         for i in 0..self.operations {
             let key = format!("perf_read_{}", i);
-            storage.put(&key, test_data.clone()).await.unwrap();
+            storage
+                .put(&key, test_data.clone(), ConsistencyLevel::Strong)
+                .await
+                .unwrap();
         }
 
         // Now measure read performance
         let start = Instant::now();
         for i in 0..self.operations {
             let key = format!("perf_read_{}", i);
-            let _data = storage.get(&key).await.unwrap();
+            let _data = storage.get(&key, ConsistencyLevel::Strong).await.unwrap();
         }
 
         let duration = start.elapsed();
@@ -179,10 +185,16 @@ impl StoragePerfTest {
                     let key = format!("perf_concurrent_{}_{}", task_id, i);
                     // Mix of writes and reads
                     if i % 2 == 0 {
-                        storage.put(&key, test_data.clone()).await.unwrap();
+                        storage
+                            .put(&key, test_data.clone(), ConsistencyLevel::Strong)
+                            .await
+                            .unwrap();
                     } else {
                         let read_key = format!("perf_concurrent_{}_{}", task_id, i - 1);
-                        let _data = storage.get(&read_key).await.unwrap();
+                        let _data = storage
+                            .get(&read_key, ConsistencyLevel::Strong)
+                            .await
+                            .unwrap();
                     }
                 }
             });
@@ -204,14 +216,20 @@ impl StoragePerfTest {
         let test_data = vec![42u8; self.data_size];
         for i in 0..self.operations {
             let key = format!("perf_delete_{}", i);
-            storage.put(&key, test_data.clone()).await.unwrap();
+            storage
+                .put(&key, test_data.clone(), ConsistencyLevel::Strong)
+                .await
+                .unwrap();
         }
 
         // Now measure delete performance
         let start = Instant::now();
         for i in 0..self.operations {
             let key = format!("perf_delete_{}", i);
-            storage.delete(&key).await.unwrap();
+            storage
+                .delete(&key, ConsistencyLevel::Strong)
+                .await
+                .unwrap();
         }
 
         let duration = start.elapsed();
@@ -438,10 +456,13 @@ async fn test_local_storage_stress() {
                 let value = vec![task_id as u8; 128];
 
                 // Put
-                storage.put(&key, value.clone()).await.unwrap();
+                storage
+                    .put(&key, value.clone(), ConsistencyLevel::Strong)
+                    .await
+                    .unwrap();
 
                 // Get and verify
-                let retrieved = storage.get(&key).await.unwrap();
+                let retrieved = storage.get(&key, ConsistencyLevel::Strong).await.unwrap();
                 assert_eq!(retrieved, Some(value));
 
                 // Small delay to allow other tasks
@@ -462,7 +483,7 @@ async fn test_local_storage_stress() {
     for task_id in 0..num_tasks {
         for i in 0..operations_per_task {
             let key = format!("stress_{}_{}", task_id, i);
-            let value = storage.get(&key).await.unwrap();
+            let value = storage.get(&key, ConsistencyLevel::Strong).await.unwrap();
             assert_eq!(value, Some(vec![task_id as u8; 128]));
         }
     }
@@ -517,12 +538,15 @@ async fn test_supabase_storage_performance() {
     let test_data = vec![1, 2, 3, 4];
 
     // This should work if Supabase is available
-    if let Err(e) = storage.put(test_key, test_data.clone()).await {
+    if let Err(e) = storage
+        .put(test_key, test_data.clone(), ConsistencyLevel::Strong)
+        .await
+    {
         panic!("❌ Supabase put operation failed: {}. Make sure a local Supabase instance is running on {}", e, url);
     }
 
     // Verify we can read it back
-    match storage.get(test_key).await {
+    match storage.get(test_key, ConsistencyLevel::Strong).await {
         Ok(Some(data)) if data == test_data => {
             println!("✅ Supabase connectivity verified");
         }
@@ -555,5 +579,5 @@ async fn test_supabase_storage_performance() {
     assert!(delete_result.ops_per_second > 0.0);
 
     // Clean up test data
-    let _ = storage.delete(test_key).await;
+    let _ = storage.delete(test_key, ConsistencyLevel::Strong).await;
 }

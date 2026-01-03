@@ -1,7 +1,6 @@
 /// Prometheus metrics exporter
 ///
 /// Provides Prometheus-compatible metrics endpoint via HTTP server.
-
 use hyper::service::{make_service_fn, service_fn};
 use hyper::{Body, Method, Request, Response, Server, StatusCode};
 use lazy_static::lazy_static;
@@ -18,17 +17,17 @@ lazy_static! {
     // Gauges
     static ref PROCESS_CPU_USAGE: Gauge =
         register_gauge!("process_cpu_usage", "CPU usage percentage").unwrap();
-    
+
     static ref PROCESS_MEMORY_BYTES: Gauge =
         register_gauge!("process_memory_bytes", "Memory usage in bytes").unwrap();
-    
+
     static ref AGENT_PEERS_CONNECTED: Gauge =
         register_gauge!("agent_peers_connected", "Number of connected peers").unwrap();
 
     // Counters
     static ref MESSAGES_RECEIVED_TOTAL: CounterVec =
         register_counter_vec!("messages_received_total", "Total messages received", &[]).unwrap();
-    
+
     static ref STORAGE_OPERATIONS_TOTAL: CounterVec = register_counter_vec!(
         "storage_operations_total",
         "Total storage operations",
@@ -44,7 +43,7 @@ lazy_static! {
         vec![0.001, 0.005, 0.01, 0.05, 0.1, 0.5, 1.0, 5.0]
     )
     .unwrap();
-    
+
     static ref STORAGE_OPERATION_DURATION: HistogramVec = register_histogram_vec!(
         "storage_operation_duration_seconds",
         "Storage operation duration in seconds",
@@ -93,12 +92,12 @@ impl MetricsCollector {
         STORAGE_OPERATIONS_TOTAL
             .with_label_values(&[operation, backend])
             .inc();
-        
+
         let duration_seconds = duration_ms as f64 / 1000.0;
         STORAGE_OPERATION_DURATION
             .with_label_values(&[operation, backend])
             .observe(duration_seconds);
-        
+
         debug!(
             "Recorded storage operation: {} on {} took {}ms",
             operation, backend, duration_ms
@@ -169,13 +168,10 @@ impl MetricsServer {
 
         info!("Starting metrics server on http://{}{}", addr, path_for_log);
 
-        Server::bind(&addr)
-            .serve(make_svc)
-            .await
-            .map_err(|e| {
-                error!("Metrics server error: {}", e);
-                Box::new(e) as Box<dyn std::error::Error>
-            })?;
+        Server::bind(&addr).serve(make_svc).await.map_err(|e| {
+            error!("Metrics server error: {}", e);
+            Box::new(e) as Box<dyn std::error::Error>
+        })?;
 
         Ok(())
     }
@@ -190,7 +186,7 @@ async fn handle_request(
             let encoder = TextEncoder::new();
             let metric_families = prometheus::gather();
             let mut buffer = vec![];
-            
+
             if let Err(e) = encoder.encode(&metric_families, &mut buffer) {
                 error!("Failed to encode metrics: {}", e);
                 return Ok(Response::builder()
@@ -234,10 +230,10 @@ mod tests {
     fn test_record_storage_operation() {
         let config = MetricsConfig::default();
         let collector = MetricsCollector::new(config);
-        
+
         collector.record_storage_operation("get", "local", 10);
         collector.record_storage_operation("put", "redis", 25);
-        
+
         // Just verify it doesn't panic
     }
 
@@ -245,7 +241,7 @@ mod tests {
     fn test_record_message_metrics() {
         let config = MetricsConfig::default();
         let collector = MetricsCollector::new(config);
-        
+
         collector.record_message_received();
         collector.record_message_duration(50);
     }
@@ -254,7 +250,7 @@ mod tests {
     fn test_update_gauges() {
         let config = MetricsConfig::default();
         let collector = MetricsCollector::new(config);
-        
+
         collector.update_peers_connected(5);
         collector.update_cpu_usage(25.5);
         collector.update_memory_usage(1024 * 1024 * 100);
@@ -267,7 +263,7 @@ mod tests {
             ..Default::default()
         };
         let collector = MetricsCollector::new(config.clone());
-        
+
         let result = MetricsServer::start(config, collector).await;
         assert!(result.is_ok());
     }

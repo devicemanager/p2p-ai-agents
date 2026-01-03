@@ -18,7 +18,7 @@ impl MetricsCollector {
     pub fn new(_config: MetricsConfig) -> Self {
         Self
     }
-    
+
     pub fn record_storage_operation(&self, _operation: &str, _backend: &str, _duration_ms: u64) {}
     pub fn record_message_received(&self) {}
     pub fn record_message_duration(&self, _duration_ms: u64) {}
@@ -49,7 +49,10 @@ pub struct MetricsServer;
 
 #[cfg(not(feature = "metrics-prometheus"))]
 impl MetricsServer {
-    pub async fn start(_config: MetricsConfig, _collector: MetricsCollector) -> Result<(), Box<dyn std::error::Error>> {
+    pub async fn start(
+        _config: MetricsConfig,
+        _collector: MetricsCollector,
+    ) -> Result<(), Box<dyn std::error::Error>> {
         Ok(())
     }
 }

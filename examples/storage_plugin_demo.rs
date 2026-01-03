@@ -1,4 +1,4 @@
-use p2p_ai_agents::storage::local::Storage;
+use p2p_ai_agents::storage::local::{ConsistencyLevel, Storage};
 use p2p_ai_agents::storage::{BackendConfig, StorageConfig, StorageManager, StoragePolicy};
 
 /// Check if Supabase Docker containers are running
@@ -119,31 +119,41 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("Testing storage operations...");
 
     // Store some data
-    manager.put("user:123", b"Alice".to_vec()).await?;
-    manager.put("user:456", b"Bob".to_vec()).await?;
-    manager.put("config:app", b"production".to_vec()).await?;
+    manager
+        .put("user:123", b"Alice".to_vec(), ConsistencyLevel::Strong)
+        .await?;
+    manager
+        .put("user:456", b"Bob".to_vec(), ConsistencyLevel::Strong)
+        .await?;
+    manager
+        .put(
+            "config:app",
+            b"production".to_vec(),
+            ConsistencyLevel::Strong,
+        )
+        .await?;
 
     // Retrieve data
-    if let Some(data) = manager.get("user:123").await? {
+    if let Some(data) = manager.get("user:123", ConsistencyLevel::Strong).await? {
         println!("Retrieved user:123 = {}", String::from_utf8_lossy(&data));
     }
 
-    if let Some(data) = manager.get("config:app").await? {
+    if let Some(data) = manager.get("config:app", ConsistencyLevel::Strong).await? {
         println!("Retrieved config:app = {}", String::from_utf8_lossy(&data));
     }
 
     // Check for non-existent key
-    match manager.get("user:999").await? {
+    match manager.get("user:999", ConsistencyLevel::Strong).await? {
         Some(_) => println!("Found user:999"),
         None => println!("user:999 not found (as expected)"),
     }
 
     // Delete data
-    manager.delete("user:456").await?;
+    manager.delete("user:456", ConsistencyLevel::Strong).await?;
     println!("Deleted user:456");
 
     // Verify deletion
-    match manager.get("user:456").await? {
+    match manager.get("user:456", ConsistencyLevel::Strong).await? {
         Some(_) => println!("user:456 still exists (unexpected)"),
         None => println!("user:456 confirmed deleted"),
     }
@@ -166,8 +176,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Always use local storage
     manager.set_policy(StoragePolicy::AlwaysUse("local".to_string()));
     println!("Policy: Always use 'local'");
-    manager.put("policy_test", b"local_only".to_vec()).await?;
-    if let Some(data) = manager.get("policy_test").await? {
+    manager
+        .put(
+            "policy_test",
+            b"local_only".to_vec(),
+            ConsistencyLevel::Strong,
+        )
+        .await?;
+    if let Some(data) = manager.get("policy_test", ConsistencyLevel::Strong).await? {
         println!("Stored and retrieved: {}", String::from_utf8_lossy(&data));
     }
 
@@ -179,7 +195,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         for i in 1..=3 {
             let key = format!("rr_test_{}", i);
             let value = format!("round_robin_value_{}", i);
-            manager.put(&key, value.as_bytes().to_vec()).await?;
+            manager
+                .put(&key, value.as_bytes().to_vec(), ConsistencyLevel::Strong)
+                .await?;
             println!("Stored {}", key);
         }
     }
