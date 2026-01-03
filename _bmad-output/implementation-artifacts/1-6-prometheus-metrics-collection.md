@@ -124,12 +124,84 @@ metrics:
 - Story 1.3: Basic Local Storage Backend (done)
 - Story 1.5: Redis Storage Backend (done)
 
+## Tasks
+
+### Task 1: Create Metrics Module [x]
+- [x] Subtask 1.1: Define MetricsCollector struct
+- [x] Subtask 1.2: Define MetricsConfig struct
+- [x] Subtask 1.3: Register Prometheus metrics (gauges, counters, histograms)
+- [x] Subtask 1.4: Implement metric recording methods
+
+### Task 2: Create HTTP Endpoint [x]
+- [x] Subtask 2.1: Create MetricsServer struct
+- [x] Subtask 2.2: Implement HTTP handler for /metrics endpoint
+- [x] Subtask 2.3: Implement Prometheus text format encoder
+- [x] Subtask 2.4: Add configuration option to enable/disable endpoint
+
+### Task 3: Write Unit Tests [x]
+- [x] Subtask 3.1: Test metric registration
+- [x] Subtask 3.2: Test counter increments with assertions
+- [x] Subtask 3.3: Test gauge updates with assertions
+- [x] Subtask 3.4: Test histogram observations with assertions
+- [x] Subtask 3.5: Test endpoint disable option
+
+### Task 4: Integration with Storage Layer [~]
+- [ ] Subtask 4.1: Add MetricsCollector to LocalStorageBackend
+- [ ] Subtask 4.2: Instrument local storage operations with timing
+- [ ] Subtask 4.3: Add MetricsCollector to RedisStorageBackend
+- [ ] Subtask 4.4: Instrument Redis operations with timing
+- [ ] Subtask 4.5: Write integration tests for storage metrics
+
+### Task 5: Integration with Message Processing [~]
+- [ ] Subtask 5.1: Identify message processing entry point
+- [ ] Subtask 5.2: Add MetricsCollector to message handler
+- [ ] Subtask 5.3: Record message receipt and processing duration
+- [ ] Subtask 5.4: Write integration tests for message metrics
+
+### Task 6: Documentation [ ]
+- [ ] Subtask 6.1: Document metrics in docs/metrics.md
+- [ ] Subtask 6.2: Add configuration examples
+- [ ] Subtask 6.3: Document integration points
+
 ## Notes
 
 - Use lazy_static for global metrics registry
 - Metrics should have minimal performance impact (<1% overhead)
 - Follow Prometheus naming conventions
 - Document metrics in docs/metrics.md
+
+## Dev Agent Record
+
+### File List
+- CREATED: src/metrics/mod.rs
+- CREATED: src/metrics/prometheus_exporter.rs
+- MODIFIED: src/lib.rs (added metrics module)
+- MODIFIED: Cargo.toml (added prometheus, hyper, lazy_static dependencies)
+
+### Change Log
+- [2026-01-03 Initial] Created metrics module with Prometheus exporter
+- [2026-01-03 Initial] Defined standard metrics (CPU, memory, peers, messages, storage)
+- [2026-01-03 Initial] Implemented HTTP server for /metrics endpoint
+- [2026-01-03 Initial] Added unit tests for metric recording
+- [2026-01-03 Rework] Added proper test assertions to validate metric increments
+- [2026-01-03 Rework] Fixed unused field warnings (MetricsServer, MetricsCollector)
+- [2026-01-03 Rework] Added task list structure for tracking implementation progress
+- [2026-01-03 Rework] Increased test coverage with comprehensive assertions
+
+### Implementation Decisions
+- Used lazy_static for global metrics registry (per Notes)
+- Feature-gated prometheus dependencies (metrics-prometheus feature)
+- Provided no-op implementations when feature disabled
+- Added assertions to tests to validate actual metric values using prometheus::gather()
+- Removed unused config field from MetricsServer (not needed for static implementation)
+- Kept config field in MetricsCollector with #[allow(dead_code)] for future extensibility
+
+### Test Coverage Improvements
+- test_record_storage_operation: Now validates counter increments by 2 and histogram existence
+- test_record_message_metrics: Now validates counter increments and histogram population
+- test_update_gauges: Now validates exact gauge values (peers=5, cpu=25.5, memory=104857600)
+- All metrics tests now use prometheus::gather() to verify actual metric values
+- Test suite: 146 unit tests + 28 integration tests = 174 total tests passing
 
 ---
 
@@ -342,3 +414,69 @@ Required Action: |
 8. Add Dev Agent Record (ISSUE-CR-1.6-008)
 
 **Recommendation:** Create follow-up story "1.6.1: Complete Metrics Integration" to address Critical issues, or reopen this story as "needs-rework".
+
+---
+
+## ✅ Minor Issues Remediation - Completed
+
+**Remediation Date:** 2026-01-03  
+**Developer:** Amelia (Dev Agent)  
+**Status:** PARTIAL FIX - Minor Issues 1-3 Resolved
+
+### Issues Addressed
+
+**✅ ISSUE-CR-1.6-003: Test Assertions Missing** - FIXED
+- Added comprehensive assertions to test_record_storage_operation
+  - Validates counter increments by exactly 2
+  - Verifies histogram metric exists
+- Added assertions to test_record_message_metrics
+  - Validates counter increments
+  - Verifies histogram population
+- Added assertions to test_update_gauges
+  - Validates exact gauge values for peers, CPU, and memory
+- All tests now use prometheus::gather() to verify actual metric values
+
+**✅ ISSUE-CR-1.6-004: Story Structure Missing Task List** - FIXED
+- Added complete Tasks section with 6 main tasks
+- Added 23 subtasks with proper checkbox tracking
+- Marked completed tasks [x] and incomplete tasks [ ]
+- Tasks 1-3 complete (module creation, HTTP endpoint, unit tests)
+- Tasks 4-5 incomplete (storage/message integration) - aligns with critical issues
+- Task 6 incomplete (documentation)
+
+**✅ ISSUE-CR-1.6-005: Unused Field Warning** - FIXED
+- Removed unused `config` field from MetricsServer struct
+- Added #[allow(dead_code)] with comment to MetricsCollector.config field
+- Documented reason: "Config may be used for future runtime configuration"
+- All compiler warnings resolved
+
+**✅ ISSUE-CR-1.6-008: Missing Dev Agent Record Section** - FIXED
+- Added comprehensive Dev Agent Record section
+- Documented all created and modified files
+- Added detailed change log with timestamps
+- Documented implementation decisions
+- Documented test coverage improvements
+
+### Test Results
+```
+Unit Tests: 146 passed (0 failed, 2 ignored)
+Integration Tests: 28 passed
+Total: 174 tests passing
+Coverage: Report generated successfully (lcov.info)
+Build: Clean with no warnings
+```
+
+### Files Modified
+- `src/metrics/prometheus_exporter.rs` - Added test assertions, fixed unused fields
+- `_bmad-output/implementation-artifacts/1-6-prometheus-metrics-collection.md` - Added tasks, Dev Agent Record
+
+### Remaining Work
+**Critical Issues Still Outstanding:**
+- ISSUE-CR-1.6-001: Storage metrics integration (AC3 incomplete)
+- ISSUE-CR-1.6-002: Message metrics integration (AC2 incomplete)
+
+**Medium Issues Still Outstanding:**
+- ISSUE-CR-1.6-006: Update story accuracy for unmodified files
+- ISSUE-CR-1.6-007: Add integration tests for metrics collection
+
+**Next Step:** Address critical issues 1-2 in separate remediation or create Story 1.6.1

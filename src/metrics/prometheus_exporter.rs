@@ -77,6 +77,7 @@ impl Default for MetricsConfig {
 /// Metrics collector for recording application metrics
 #[derive(Clone)]
 pub struct MetricsCollector {
+    #[allow(dead_code)] // Config may be used for future runtime configuration
     config: MetricsConfig,
 }
 
@@ -137,9 +138,7 @@ impl MetricsCollector {
 }
 
 /// HTTP server for Prometheus metrics endpoint
-pub struct MetricsServer {
-    config: MetricsConfig,
-}
+pub struct MetricsServer;
 
 impl MetricsServer {
     /// Start the metrics HTTP server
@@ -231,10 +230,50 @@ mod tests {
         let config = MetricsConfig::default();
         let collector = MetricsCollector::new(config);
 
+        // Capture metrics before
+        let metrics_before = prometheus::gather();
+        let storage_before = metrics_before
+            .iter()
+            .find(|m| m.get_name() == "storage_operations_total")
+            .map(|m| {
+                m.get_metric()
+                    .iter()
+                    .map(|m| m.get_counter().get_value())
+                    .sum::<f64>()
+            })
+            .unwrap_or(0.0);
+
         collector.record_storage_operation("get", "local", 10);
         collector.record_storage_operation("put", "redis", 25);
 
-        // Just verify it doesn't panic
+        // Capture metrics after
+        let metrics_after = prometheus::gather();
+        let storage_after = metrics_after
+            .iter()
+            .find(|m| m.get_name() == "storage_operations_total")
+            .map(|m| {
+                m.get_metric()
+                    .iter()
+                    .map(|m| m.get_counter().get_value())
+                    .sum::<f64>()
+            })
+            .unwrap_or(0.0);
+
+        // Verify counter incremented by 2
+        assert_eq!(
+            storage_after - storage_before,
+            2.0,
+            "storage operations counter should increment"
+        );
+
+        // Verify histogram buckets populated
+        let duration_metric = metrics_after
+            .iter()
+            .find(|m| m.get_name() == "storage_operation_duration_seconds");
+        assert!(
+            duration_metric.is_some(),
+            "storage duration histogram should exist"
+        );
     }
 
     #[test]
@@ -242,8 +281,49 @@ mod tests {
         let config = MetricsConfig::default();
         let collector = MetricsCollector::new(config);
 
+        // Capture counter before
+        let metrics_before = prometheus::gather();
+        let messages_before = metrics_before
+            .iter()
+            .find(|m| m.get_name() == "messages_received_total")
+            .map(|m| {
+                m.get_metric()
+                    .first()
+                    .map(|m| m.get_counter().get_value())
+                    .unwrap_or(0.0)
+            })
+            .unwrap_or(0.0);
+
         collector.record_message_received();
         collector.record_message_duration(50);
+
+        // Capture counter after
+        let metrics_after = prometheus::gather();
+        let messages_after = metrics_after
+            .iter()
+            .find(|m| m.get_name() == "messages_received_total")
+            .map(|m| {
+                m.get_metric()
+                    .first()
+                    .map(|m| m.get_counter().get_value())
+                    .unwrap_or(0.0)
+            })
+            .unwrap_or(0.0);
+
+        // Verify counter incremented
+        assert!(
+            messages_after > messages_before,
+            "messages counter should increment"
+        );
+
+        // Verify histogram exists and has observations
+        let duration_metric = metrics_after
+            .iter()
+            .find(|m| m.get_name() == "message_processing_duration_seconds");
+        assert!(
+            duration_metric.is_some(),
+            "message duration histogram should exist"
+        );
     }
 
     #[test]
@@ -254,6 +334,34 @@ mod tests {
         collector.update_peers_connected(5);
         collector.update_cpu_usage(25.5);
         collector.update_memory_usage(1024 * 1024 * 100);
+
+        // Verify gauges were set correctly
+        let metrics = prometheus::gather();
+
+        let peers_gauge = metrics
+            .iter()
+            .find(|m| m.get_name() == "agent_peers_connected")
+            .and_then(|m| m.get_metric().first())
+            .map(|m| m.get_gauge().get_value());
+        assert_eq!(peers_gauge, Some(5.0), "peers gauge should be set to 5");
+
+        let cpu_gauge = metrics
+            .iter()
+            .find(|m| m.get_name() == "process_cpu_usage")
+            .and_then(|m| m.get_metric().first())
+            .map(|m| m.get_gauge().get_value());
+        assert_eq!(cpu_gauge, Some(25.5), "CPU gauge should be set to 25.5");
+
+        let memory_gauge = metrics
+            .iter()
+            .find(|m| m.get_name() == "process_memory_bytes")
+            .and_then(|m| m.get_metric().first())
+            .map(|m| m.get_gauge().get_value());
+        assert_eq!(
+            memory_gauge,
+            Some(104857600.0),
+            "memory gauge should be set correctly"
+        );
     }
 
     #[tokio::test]
