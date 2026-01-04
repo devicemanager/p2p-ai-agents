@@ -47,7 +47,7 @@ development_status:
   1-4-storage-consistency-model-implementation: done
   1-5-redis-storage-backend: done
   1-6-prometheus-metrics-collection: done
-  1-7-structured-json-logging: backlog
+  1-7-structured-json-logging: done
   1-8-agent-lifecycle-management: backlog
   epic-1-retrospective: optional
 

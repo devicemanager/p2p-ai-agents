@@ -4,6 +4,7 @@
 //! cryptographic identities for agents, including key generation,
 //! signing, and verification.
 
+use crate::core::CorrelationId;
 use aes_gcm::{
     aead::{Aead, AeadCore, KeyInit, OsRng as AeadOsRng},
     Aes256Gcm, Nonce,
@@ -208,7 +209,8 @@ impl Identity {
     }
 
     /// Load existing identity or generate new one
-    pub fn load_or_generate(config_dir: impl AsRef<Path>) -> Result<Self> {
+    #[tracing::instrument(skip(config_dir), fields(correlation_id = %CorrelationId::new()))]
+    pub fn load_or_generate(config_dir: impl AsRef<Path> + std::fmt::Debug) -> Result<Self> {
         if Self::exists(&config_dir) {
             tracing::info!("Loading existing identity");
             Self::load_from_dir(config_dir)
@@ -217,7 +219,7 @@ impl Identity {
             let identity = Self::new()?;
             identity.save_to_dir(&config_dir)?;
             let peer_id = identity.peer_id()?;
-            tracing::info!("New identity created: {}", peer_id);
+            tracing::info!(peer_id = %peer_id, "New identity created");
             Ok(identity)
         }
     }
@@ -281,12 +283,20 @@ impl Identity {
     /// This method retrieves the encryption key from the system keychain and
     /// decrypts the private key. If keychain access fails, the agent will refuse
     /// to start and log "Failed to access system keychain".
-    pub fn load_from_dir(config_dir: impl AsRef<Path>) -> Result<Self> {
+    #[tracing::instrument(skip(config_dir), fields(correlation_id = %CorrelationId::new()))]
+    pub fn load_from_dir(config_dir: impl AsRef<Path> + std::fmt::Debug) -> Result<Self> {
         let key_path = config_dir.as_ref().join("identity.key");
         let pub_path = config_dir.as_ref().join("identity.pub");
 
         // Load public key to derive key ID
-        let pub_data = std::fs::read(&pub_path)?;
+        let pub_data = std::fs::read(&pub_path).inspect_err(|e| {
+            tracing::error!(
+                error_type = std::any::type_name_of_val(e),
+                error_message = %e,
+                path = ?pub_path,
+                "Failed to load public key"
+            );
+        })?;
         if pub_data.len() != 32 {
             return Err(IdentityError::InvalidKey(
                 "Invalid public key length".into(),
@@ -301,13 +311,30 @@ impl Identity {
         let key_id = Self::derive_key_id(&verifying_key);
 
         // Get encryption key from keychain
-        let mut encryption_key = Self::get_or_create_encryption_key(&key_id).inspect_err(|_| {
-            tracing::error!("Failed to access system keychain");
+        let mut encryption_key = Self::get_or_create_encryption_key(&key_id).inspect_err(|e| {
+            tracing::error!(
+                error_type = std::any::type_name_of_val(e),
+                error_message = %e,
+                "Failed to access system keychain"
+            );
         })?;
 
         // Load and decrypt private key
-        let encrypted_data = std::fs::read(&key_path)?;
-        let mut key_bytes = Self::decrypt_key(&encrypted_data, &encryption_key)?;
+        let encrypted_data = std::fs::read(&key_path).inspect_err(|e| {
+            tracing::error!(
+                error_type = std::any::type_name_of_val(e),
+                error_message = %e,
+                path = ?key_path,
+                "Failed to load private key file"
+            );
+        })?;
+        let mut key_bytes = Self::decrypt_key(&encrypted_data, &encryption_key).inspect_err(|e| {
+            tracing::error!(
+                error_type = std::any::type_name_of_val(e),
+                error_message = %e,
+                "Failed to decrypt private key"
+            );
+        })?;
 
         // Zero encryption key from memory
         encryption_key.zeroize();
@@ -330,7 +357,7 @@ impl Identity {
         };
 
         let peer_id = identity.peer_id()?;
-        tracing::info!("Identity loaded: {}", peer_id);
+        tracing::info!(peer_id = %peer_id, "Identity loaded successfully");
         Ok(identity)
     }
 }
