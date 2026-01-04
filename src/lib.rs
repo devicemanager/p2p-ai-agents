@@ -26,7 +26,9 @@ pub mod prelude {
     pub use crate::core::{
         config::{Config, ConfigError, ConfigManager},
         container::Container,
+        correlation::CorrelationId,
         events::{Event, EventBus, EventHandler, EventResult},
+        logging::{init_default_logging, init_logging, LogFormat, LoggingConfig, LoggingError},
         services::{Service, ServiceError, ServiceRegistry},
     };
     pub use crate::network::{

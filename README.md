@@ -17,6 +17,7 @@
 > - ✅ **Core Architecture**: Complete dependency injection, event system, service registry, and access control
 > - ✅ **Security Framework**: RBAC authentication and authorization with pluggable providers
 > - ✅ **Load Testing**: Comprehensive performance testing framework with metrics collection
+> - ✅ **Structured Logging**: JSON logging with correlation IDs for distributed tracing
 > - ✅ **Documentation**: Extensive guides for implementation and best practices
 > 
 > We welcome contributions and feedback as we work toward a fully functional system!
@@ -49,6 +50,7 @@ This project aims to democratize AI by building a distributed, peer-to-peer (P2P
 4. [Core Architecture](docs/core/)
    - [Access Control](docs/core/access-control.md)
    - [Load Testing](docs/core/load-testing.md)
+   - [Structured Logging](docs/core/logging.md)
 
 5. [Documentation](docs/)
    - [Documentation Index](docs/INDEX.md)
