@@ -28,7 +28,7 @@ async fn test_network_initialization_and_message() {
         addresses: vec![Multiaddr("/ip4/127.0.0.1/tcp/8080".to_string())],
         last_seen: Utc::now(),
         reputation: 100,
-        capabilities: PeerCapabilities,
+        capabilities: PeerCapabilities::default(),
         status: ConnectionStatus::Connected,
     };
     // Example stub: add peer address to connected_peers
