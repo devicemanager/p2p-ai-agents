@@ -34,7 +34,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         addresses: vec![Multiaddr(format!("/ip4/{}/tcp/8001", bootstrap_addr.ip()))],
         last_seen: Utc::now(),
         reputation: 100,
-        capabilities: PeerCapabilities,
+        capabilities: PeerCapabilities::default(),
         status: ConnectionStatus::Connected,
     };
 
@@ -201,7 +201,7 @@ mod tests {
             addresses: vec![Multiaddr(format!("/ip4/{}/tcp/9999", bootstrap_addr.ip()))],
             last_seen: Utc::now(),
             reputation: 100,
-            capabilities: PeerCapabilities,
+            capabilities: PeerCapabilities::default(),
             status: ConnectionStatus::Connected,
         };
 

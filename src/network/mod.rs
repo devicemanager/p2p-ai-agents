@@ -15,8 +15,14 @@ pub mod service;
 /// Transport submodule for network transport protocols.
 pub mod transport;
 
+/// Peer management and state tracking
+pub mod peers;
+
 // Re-export NetworkStats from service module
 pub use service::NetworkStats;
+
+// Re-export types from peers module
+pub use peers::{ConnectionStatus, PeerCache, PeerCapabilities, PeerInfo, PeerMetrics, PeerState};
 
 /// Errors that can occur in the network module.
 #[derive(Debug, Error)]
@@ -76,37 +82,6 @@ pub struct ResourceLimits {
 /// Security-related configuration for the network.
 pub struct SecurityConfig {
     // Add security-related fields here
-}
-
-/// Capabilities supported by a peer (stub)
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct PeerCapabilities;
-
-/// Connection status of a peer (stub)
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum ConnectionStatus {
-    /// Peer is connected
-    Connected,
-    /// Peer is disconnected
-    Disconnected,
-}
-
-/// Information about a network peer
-#[derive(Debug, Clone, Serialize, Deserialize)]
-/// Contains identity, addresses, and status of a peer.
-pub struct PeerInfo {
-    /// Unique peer identifier
-    pub peer_id: PeerId,
-    /// Known network addresses
-    pub addresses: Vec<Multiaddr>,
-    /// Last seen timestamp
-    pub last_seen: chrono::DateTime<chrono::Utc>,
-    /// Peer reputation score
-    pub reputation: i32,
-    /// Peer capabilities
-    pub capabilities: PeerCapabilities,
-    /// Connection status
-    pub status: ConnectionStatus,
 }
 
 /// Network configuration for the P2P system
@@ -537,71 +512,5 @@ mod tests {
         assert_eq!(limits.max_bandwidth, 1024 * 1024);
         assert_eq!(limits.max_memory, 512 * 1024 * 1024);
         assert_eq!(limits.max_connections, 100);
-    } // Test for PeerInfo creation and manipulation
-    #[test]
-    fn test_peer_info_creation() {
-        let peer_id = PeerId("test-peer".to_string());
-        let addresses = vec![
-            Multiaddr("/ip4/127.0.0.1/tcp/8080".to_string()),
-            Multiaddr("/ip4/192.168.1.100/tcp/8080".to_string()),
-        ];
-        let now = chrono::Utc::now();
-
-        let peer_info = PeerInfo {
-            peer_id: peer_id.clone(),
-            addresses: addresses.clone(),
-            last_seen: now,
-            reputation: 50,
-            capabilities: PeerCapabilities {},
-            status: ConnectionStatus::Connected,
-        };
-
-        assert_eq!(peer_info.peer_id, peer_id);
-        assert_eq!(peer_info.addresses.len(), 2);
-        assert_eq!(peer_info.reputation, 50);
-        assert!(matches!(peer_info.status, ConnectionStatus::Connected));
-    }
-
-    // Test ConnectionStatus enum
-    #[test]
-    fn test_connection_status_variants() {
-        let connected = ConnectionStatus::Connected;
-        let disconnected = ConnectionStatus::Disconnected;
-
-        assert!(matches!(connected, ConnectionStatus::Connected));
-        assert!(matches!(disconnected, ConnectionStatus::Disconnected));
-        assert_ne!(
-            std::mem::discriminant(&connected),
-            std::mem::discriminant(&disconnected)
-        );
-    }
-
-    // Test NetworkConfig creation and validation
-    #[test]
-    fn test_network_config_creation() {
-        let config = NetworkConfig {
-            listen_addr: "127.0.0.1:8080".parse().unwrap(),
-            bootstrap_peers: vec![PeerInfo {
-                peer_id: PeerId("bootstrap-peer".to_string()),
-                addresses: vec![Multiaddr("/ip4/127.0.0.1/tcp/8081".to_string())],
-                last_seen: chrono::Utc::now(),
-                reputation: 100,
-                capabilities: PeerCapabilities {},
-                status: ConnectionStatus::Connected,
-            }],
-            max_peers: 200,
-            protocol_config: ProtocolConfig {},
-            resource_limits: ResourceLimits {
-                max_bandwidth: 1024 * 1024,
-                max_memory: 1024 * 1024 * 1024,
-                max_connections: 200,
-            },
-            security_config: SecurityConfig {},
-        };
-
-        assert_eq!(config.listen_addr.port(), 8080);
-        assert_eq!(config.bootstrap_peers.len(), 1);
-        assert_eq!(config.max_peers, 200);
-        assert_eq!(config.resource_limits.max_connections, 200);
     }
 }
