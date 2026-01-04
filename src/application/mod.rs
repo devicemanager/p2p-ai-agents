@@ -3,6 +3,8 @@
 //! This module provides the main application architecture that orchestrates
 //! all system components using dependency injection and event-driven patterns.
 
+pub mod lifecycle;
+
 use crate::agent::Agent;
 use crate::core::{
     config::{ConfigError, ConfigManager},
@@ -100,8 +102,10 @@ impl Application {
 
     /// Initialize the application
     pub async fn initialize(&self) -> Result<(), ApplicationError> {
-        let mut state = self.state.write().await;
-        *state = ApplicationState::Initializing;
+        {
+            let mut state = self.state.write().await;
+            *state = ApplicationState::Initializing;
+        }
 
         // Load configuration
         self.load_configuration().await?;
@@ -118,7 +122,10 @@ impl Application {
         // Initialize network
         self.initialize_network().await?;
 
-        *state = ApplicationState::Running;
+        {
+            let mut state = self.state.write().await;
+            *state = ApplicationState::Running;
+        }
         Ok(())
     }
 
