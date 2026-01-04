@@ -74,7 +74,8 @@ impl LifecycleManager {
     /// Start the application with lifecycle management
     pub async fn startup(&self) -> Result<(), ApplicationError> {
         let correlation_id = CorrelationId::new();
-        let _span = tracing::info_span!("application_startup", correlation_id = %correlation_id).entered();
+        let _span =
+            tracing::info_span!("application_startup", correlation_id = %correlation_id).entered();
 
         info!("Starting application startup sequence");
 
@@ -115,7 +116,8 @@ impl LifecycleManager {
     /// Gracefully shutdown the application
     pub async fn shutdown(&self) -> Result<(), ApplicationError> {
         let correlation_id = CorrelationId::new();
-        let _span = tracing::info_span!("application_shutdown", correlation_id = %correlation_id).entered();
+        let _span =
+            tracing::info_span!("application_shutdown", correlation_id = %correlation_id).entered();
 
         info!("Starting graceful shutdown");
 
@@ -128,9 +130,12 @@ impl LifecycleManager {
 
         // Stop accepting new connections/tasks
         info!("Stopping acceptance of new connections");
-        
+
         // Wait for in-flight operations to complete with timeout
-        info!("Waiting for in-flight operations to complete (timeout: {}s)", self.shutdown_timeout.as_secs());
+        info!(
+            "Waiting for in-flight operations to complete (timeout: {}s)",
+            self.shutdown_timeout.as_secs()
+        );
         match timeout(self.shutdown_timeout, self.complete_inflight_operations()).await {
             Ok(Ok(())) => {
                 info!("All in-flight operations completed successfully");
@@ -172,10 +177,20 @@ impl LifecycleManager {
 
         #[cfg(unix)]
         {
-            let mut sigterm = signal::unix::signal(signal::unix::SignalKind::terminate())
-                .map_err(|e| ApplicationError::InitializationFailed(format!("Failed to register SIGTERM handler: {}", e)))?;
-            let mut sigint = signal::unix::signal(signal::unix::SignalKind::interrupt())
-                .map_err(|e| ApplicationError::InitializationFailed(format!("Failed to register SIGINT handler: {}", e)))?;
+            let mut sigterm =
+                signal::unix::signal(signal::unix::SignalKind::terminate()).map_err(|e| {
+                    ApplicationError::InitializationFailed(format!(
+                        "Failed to register SIGTERM handler: {}",
+                        e
+                    ))
+                })?;
+            let mut sigint =
+                signal::unix::signal(signal::unix::SignalKind::interrupt()).map_err(|e| {
+                    ApplicationError::InitializationFailed(format!(
+                        "Failed to register SIGINT handler: {}",
+                        e
+                    ))
+                })?;
 
             tokio::select! {
                 _ = sigterm.recv() => {
@@ -189,8 +204,9 @@ impl LifecycleManager {
 
         #[cfg(not(unix))]
         {
-            signal::ctrl_c().await
-                .map_err(|e| ApplicationError::InitializationFailed(format!("Failed to wait for Ctrl+C: {}", e)))?;
+            signal::ctrl_c().await.map_err(|e| {
+                ApplicationError::InitializationFailed(format!("Failed to wait for Ctrl+C: {}", e))
+            })?;
             info!("Received Ctrl+C, initiating graceful shutdown");
         }
 
@@ -206,11 +222,11 @@ impl LifecycleManager {
                 if prev_state.last_stopped.is_none() {
                     warn!("Detected unclean shutdown from previous run");
                     info!("Recovered state from {}", prev_state.last_started);
-                    
+
                     // Update unclean shutdown counter
                     let mut updated_state = prev_state;
                     updated_state.unclean_shutdowns += 1;
-                    
+
                     let mut state = self.state.write().await;
                     *state = Some(updated_state);
                 } else {
@@ -233,7 +249,7 @@ impl LifecycleManager {
         // 1. Wait for current tasks to complete
         // 2. Flush any pending messages
         // 3. Close connections gracefully
-        
+
         // For now, just a small delay to simulate completion
         tokio::time::sleep(Duration::from_millis(100)).await;
         Ok(())
@@ -243,12 +259,16 @@ impl LifecycleManager {
     async fn persist_state(&self, state: &LifecycleState) -> Result<(), ApplicationError> {
         // Try to get storage manager from application
         // For now, write to a file
-        let state_json = serde_json::to_string_pretty(state)
-            .map_err(|e| ApplicationError::InitializationFailed(format!("Failed to serialize state: {}", e)))?;
-        
-        tokio::fs::write("data/lifecycle_state.json", state_json).await
-            .map_err(|e| ApplicationError::InitializationFailed(format!("Failed to write state file: {}", e)))?;
-        
+        let state_json = serde_json::to_string_pretty(state).map_err(|e| {
+            ApplicationError::InitializationFailed(format!("Failed to serialize state: {}", e))
+        })?;
+
+        tokio::fs::write("data/lifecycle_state.json", state_json)
+            .await
+            .map_err(|e| {
+                ApplicationError::InitializationFailed(format!("Failed to write state file: {}", e))
+            })?;
+
         Ok(())
     }
 
@@ -256,12 +276,19 @@ impl LifecycleManager {
     async fn load_state(&self) -> Result<Option<LifecycleState>, ApplicationError> {
         match tokio::fs::read_to_string("data/lifecycle_state.json").await {
             Ok(contents) => {
-                let state: LifecycleState = serde_json::from_str(&contents)
-                    .map_err(|e| ApplicationError::InitializationFailed(format!("Failed to deserialize state: {}", e)))?;
+                let state: LifecycleState = serde_json::from_str(&contents).map_err(|e| {
+                    ApplicationError::InitializationFailed(format!(
+                        "Failed to deserialize state: {}",
+                        e
+                    ))
+                })?;
                 Ok(Some(state))
             }
             Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(None),
-            Err(e) => Err(ApplicationError::InitializationFailed(format!("Failed to read state file: {}", e))),
+            Err(e) => Err(ApplicationError::InitializationFailed(format!(
+                "Failed to read state file: {}",
+                e
+            ))),
         }
     }
 
@@ -295,8 +322,7 @@ mod tests {
     #[tokio::test]
     async fn test_lifecycle_manager_custom_timeout() {
         let app = Application::new();
-        let manager = LifecycleManager::new(app)
-            .with_shutdown_timeout(Duration::from_secs(60));
+        let manager = LifecycleManager::new(app).with_shutdown_timeout(Duration::from_secs(60));
         assert_eq!(manager.shutdown_timeout, Duration::from_secs(60));
     }
 
@@ -305,7 +331,7 @@ mod tests {
         // NOTE: This test is currently disabled due to a deadlock in Application::initialize()
         // The lifecycle manager implementation is correct, but Application has a lock ordering issue
         // TODO: Fix Application::initialize() to avoid holding write lock during async operations
-        
+
         // Ensure data directory exists
         let _ = tokio::fs::create_dir_all("data").await;
 
@@ -313,12 +339,12 @@ mod tests {
         let lifecycle_state = LifecycleState::new("test-peer".to_string());
         assert_eq!(lifecycle_state.peer_id, "test-peer");
         assert!(lifecycle_state.last_stopped.is_none());
-        
+
         // Simulate shutdown
         let mut updated_state = lifecycle_state;
         updated_state.last_stopped = Some(chrono::Utc::now());
         updated_state.successful_shutdowns += 1;
-        
+
         assert!(updated_state.last_stopped.is_some());
         assert_eq!(updated_state.successful_shutdowns, 1);
 
@@ -336,16 +362,23 @@ mod tests {
         let mut state = LifecycleState::new("crash-test-peer".to_string());
         state.last_stopped = None; // Simulates crash
         let state_json = serde_json::to_string_pretty(&state).unwrap();
-        tokio::fs::write("data/lifecycle_state.json", state_json).await.unwrap();
+        tokio::fs::write("data/lifecycle_state.json", state_json)
+            .await
+            .unwrap();
 
         // Simulate recovery: read state and detect unclean shutdown
-        let recovered_json = tokio::fs::read_to_string("data/lifecycle_state.json").await.unwrap();
+        let recovered_json = tokio::fs::read_to_string("data/lifecycle_state.json")
+            .await
+            .unwrap();
         let recovered_state: LifecycleState = serde_json::from_str(&recovered_json).unwrap();
-        
+
         // Verify crash detection
         assert_eq!(recovered_state.peer_id, "crash-test-peer");
-        assert!(recovered_state.last_stopped.is_none(), "Should detect unclean shutdown");
-        
+        assert!(
+            recovered_state.last_stopped.is_none(),
+            "Should detect unclean shutdown"
+        );
+
         // Simulate incrementing unclean shutdown counter
         let mut updated_state = recovered_state;
         updated_state.unclean_shutdowns += 1;

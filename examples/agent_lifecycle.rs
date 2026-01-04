@@ -23,11 +23,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Create application
     let app = Application::new();
-    
+
     // Create lifecycle manager with custom shutdown timeout
     let lifecycle = Arc::new(
         p2p_ai_agents::application::lifecycle::LifecycleManager::new(app)
-            .with_shutdown_timeout(Duration::from_secs(30))
+            .with_shutdown_timeout(Duration::from_secs(30)),
     );
 
     info!("Starting agent with lifecycle management");
@@ -36,7 +36,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     match lifecycle.startup().await {
         Ok(()) => {
             info!("Application started successfully");
-            
+
             // Print current state
             if let Some(state) = lifecycle.state().await {
                 info!("Agent State:");
@@ -56,12 +56,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Clone lifecycle for signal handler
     // Note: In production, you would spawn this in a separate task
     // For this example, we just demonstrate the API
-    
+
     // Simulate some work
     info!("Agent is now running. In production, signal handlers would be registered.");
     info!("For this example, we'll just run for a short time then shutdown.");
     info!("Simulating agent work...");
-    
+
     // In a real application, this would be the main event loop
     // For this example, we'll just wait a bit
     for i in 1..=5 {

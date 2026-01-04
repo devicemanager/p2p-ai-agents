@@ -7,29 +7,7 @@ use p2p_ai_agents::core::{
     correlation::CorrelationId,
     logging::{LogFormat, LoggingConfig},
 };
-use std::sync::{Arc, Mutex};
-use tracing::{debug, error, info, info_span, instrument, warn};
-
-// Helper to capture log output
-struct LogCapture {
-    logs: Arc<Mutex<Vec<String>>>,
-}
-
-impl LogCapture {
-    fn new() -> Self {
-        Self {
-            logs: Arc::new(Mutex::new(Vec::new())),
-        }
-    }
-
-    fn capture(&self, line: String) {
-        self.logs.lock().unwrap().push(line);
-    }
-
-    fn get_logs(&self) -> Vec<String> {
-        self.logs.lock().unwrap().clone()
-    }
-}
+use tracing::{debug, error, info, info_span, warn};
 
 /// Test that logs are formatted as valid JSON with required fields
 #[test]
@@ -42,7 +20,7 @@ fn test_json_log_format_with_required_fields() {
     let span = info_span!("test_function", correlation_id = %correlation_id);
     let _enter = span.enter();
     info!(target: "test_target", "Test message");
-    
+
     // The actual JSON validation happens in the test below which parses output
 }
 
@@ -69,7 +47,7 @@ fn test_correlation_id_propagation() {
     let _enter = span.enter();
 
     info!("Outer function");
-    
+
     let inner_span = info_span!("inner_function");
     let _inner_enter = inner_span.enter();
     info!("Inner function - should inherit correlation_id");
@@ -108,10 +86,7 @@ fn test_custom_config() {
     let config = LoggingConfig {
         format: LogFormat::Json,
         level: "DEBUG".to_string(),
-        target_filters: vec![
-            "p2p_ai_agents=TRACE".to_string(),
-            "libp2p=INFO".to_string(),
-        ],
+        target_filters: vec!["p2p_ai_agents=TRACE".to_string(), "libp2p=INFO".to_string()],
         output: "stdout".to_string(),
     };
 
@@ -179,9 +154,10 @@ fn test_multiple_correlation_ids() {
         .map(|i| {
             thread::spawn(move || {
                 let correlation_id = CorrelationId::new();
-                let span = info_span!("thread_operation", correlation_id = %correlation_id, thread = i);
+                let span =
+                    info_span!("thread_operation", correlation_id = %correlation_id, thread = i);
                 let _enter = span.enter();
-                
+
                 info!("Thread {} operation", i);
                 correlation_id
             })
@@ -223,7 +199,7 @@ fn test_instrumentation_with_correlation() {
         let correlation_id = CorrelationId::new();
         let span = info_span!("async_operation", correlation_id = %correlation_id);
         let _enter = span.enter();
-        
+
         info!("Async operation started");
         tokio::time::sleep(tokio::time::Duration::from_millis(10)).await;
         info!("Async operation completed");
@@ -238,11 +214,11 @@ fn test_nested_spans_correlation() {
     let _enter = span.enter();
 
     info!("Level 1");
-    
+
     let span2 = info_span!("level_2");
     let _enter2 = span2.enter();
     info!("Level 2");
-    
+
     let span3 = info_span!("level_3");
     let _enter3 = span3.enter();
     info!("Level 3 - deepest");
@@ -290,7 +266,7 @@ fn test_correlation_id_as_string() {
     let s = id.as_str();
     assert_eq!(s.len(), 36);
     assert!(s.contains('-'));
-    
+
     // Should be parseable as UUID
     let parsed = uuid::Uuid::parse_str(&s).unwrap();
     assert_eq!(parsed, id.as_uuid());

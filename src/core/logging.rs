@@ -99,16 +99,14 @@ pub enum LoggingError {
 /// ```
 pub fn init_logging(config: &LoggingConfig) -> Result<(), LoggingError> {
     // Build the env filter with the base level and target filters
-    let mut filter = EnvFilter::try_from_default_env()
-        .unwrap_or_else(|_| EnvFilter::new(&config.level));
+    let mut filter =
+        EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new(&config.level));
 
     // Add target-specific filters
     for target_filter in &config.target_filters {
-        filter = filter.add_directive(
-            target_filter
-                .parse()
-                .map_err(|e| LoggingError::Config(format!("Invalid filter '{}': {}", target_filter, e)))?,
-        );
+        filter = filter.add_directive(target_filter.parse().map_err(|e| {
+            LoggingError::Config(format!("Invalid filter '{}': {}", target_filter, e))
+        })?);
     }
 
     // Create the subscriber based on format

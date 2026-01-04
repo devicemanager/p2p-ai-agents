@@ -328,13 +328,14 @@ impl Identity {
                 "Failed to load private key file"
             );
         })?;
-        let mut key_bytes = Self::decrypt_key(&encrypted_data, &encryption_key).inspect_err(|e| {
-            tracing::error!(
-                error_type = std::any::type_name_of_val(e),
-                error_message = %e,
-                "Failed to decrypt private key"
-            );
-        })?;
+        let mut key_bytes =
+            Self::decrypt_key(&encrypted_data, &encryption_key).inspect_err(|e| {
+                tracing::error!(
+                    error_type = std::any::type_name_of_val(e),
+                    error_message = %e,
+                    "Failed to decrypt private key"
+                );
+            })?;
 
         // Zero encryption key from memory
         encryption_key.zeroize();

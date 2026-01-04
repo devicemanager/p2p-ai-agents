@@ -27,10 +27,10 @@ async fn process_user_request(user_id: u32) -> Result<(), String> {
 #[instrument]
 async fn load_user_data(user_id: u32) -> Result<(), String> {
     debug!(user_id = user_id, "Loading user data from database");
-    
+
     // Simulate database delay
     tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
-    
+
     info!(user_id = user_id, "User data loaded successfully");
     Ok(())
 }
@@ -38,7 +38,7 @@ async fn load_user_data(user_id: u32) -> Result<(), String> {
 #[instrument]
 async fn validate_user(user_id: u32) -> Result<(), String> {
     debug!(user_id = user_id, "Validating user permissions");
-    
+
     // Simulate validation
     if user_id == 999 {
         let err = "User not found";
@@ -50,7 +50,7 @@ async fn validate_user(user_id: u32) -> Result<(), String> {
         );
         return Err(err.to_string());
     }
-    
+
     info!(user_id = user_id, "User validated successfully");
     Ok(())
 }
@@ -58,14 +58,14 @@ async fn validate_user(user_id: u32) -> Result<(), String> {
 #[instrument]
 async fn perform_operation(user_id: u32) -> Result<(), String> {
     info!(user_id = user_id, "Performing operation");
-    
+
     // Simulate operation
     tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
-    
-    if user_id % 10 == 0 {
+
+    if user_id.is_multiple_of(10) {
         warn!(user_id = user_id, "Operation took longer than expected");
     }
-    
+
     info!(user_id = user_id, "Operation completed");
     Ok(())
 }
@@ -79,24 +79,20 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         target_filters: vec!["structured_logging=TRACE".to_string()],
         output: "stdout".to_string(),
     };
-    
+
     init_logging(&config)?;
-    
+
     info!("Starting structured logging example");
-    
+
     // Process several requests, each with its own correlation ID
     for user_id in [1, 2, 999, 10, 5] {
         match process_user_request(user_id).await {
             Ok(()) => info!(user_id = user_id, "Request succeeded"),
-            Err(e) => error!(
-                user_id = user_id,
-                error_message = e,
-                "Request failed"
-            ),
+            Err(e) => error!(user_id = user_id, error_message = e, "Request failed"),
         }
     }
-    
+
     info!("Example completed");
-    
+
     Ok(())
 }
