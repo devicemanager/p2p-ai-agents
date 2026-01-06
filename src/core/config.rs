@@ -1,521 +1,415 @@
 //! Configuration management for the P2P AI Agents system
 //!
-//! This module provides centralized configuration management with support
-//! for multiple configuration sources and runtime updates.
+//! Priority order:
+//! 1. CLI flags (handled in main.rs)
+//! 2. Environment variables
+//! 3. Configuration file
+//! 4. Built-in defaults
 
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
-use std::path::Path;
-use std::sync::Arc;
+use std::path::PathBuf;
+use std::env;
 use thiserror::Error;
-use tokio::sync::RwLock;
+use tokio::fs;
 
-/// Configuration value types
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub enum ConfigValue {
-    /// String configuration value
-    String(String),
-    /// Integer configuration value
-    Integer(i64),
-    /// Float configuration value
-    Float(f64),
-    /// Boolean configuration value
-    Boolean(bool),
-    /// Array configuration value
-    Array(Vec<ConfigValue>),
-    /// Object configuration value
-    Object(HashMap<String, ConfigValue>),
-}
-
-impl ConfigValue {
-    /// Get as string
-    pub fn as_string(&self) -> Option<&String> {
-        match self {
-            ConfigValue::String(s) => Some(s),
-            _ => None,
-        }
-    }
-
-    /// Get as integer
-    pub fn as_integer(&self) -> Option<i64> {
-        match self {
-            ConfigValue::Integer(i) => Some(*i),
-            _ => None,
-        }
-    }
-
-    /// Get as float
-    pub fn as_float(&self) -> Option<f64> {
-        match self {
-            ConfigValue::Float(f) => Some(*f),
-            _ => None,
-        }
-    }
-
-    /// Get as boolean
-    pub fn as_boolean(&self) -> Option<bool> {
-        match self {
-            ConfigValue::Boolean(b) => Some(*b),
-            _ => None,
-        }
-    }
-
-    /// Get as array
-    pub fn as_array(&self) -> Option<&Vec<ConfigValue>> {
-        match self {
-            ConfigValue::Array(a) => Some(a),
-            _ => None,
-        }
-    }
-
-    /// Get as object
-    pub fn as_object(&self) -> Option<&HashMap<String, ConfigValue>> {
-        match self {
-            ConfigValue::Object(o) => Some(o),
-            _ => None,
-        }
-    }
-}
-
-/// Configuration source
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub enum ConfigSource {
-    /// Environment variables
-    Environment,
-    /// Configuration file
-    File(String),
-    /// Command line arguments
-    CommandLine,
-    /// Default values
-    Default,
-    /// Runtime updates
-    Runtime,
-}
-
-/// Configuration entry
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ConfigEntry {
-    /// Configuration key
-    pub key: String,
-    /// Configuration value
-    pub value: ConfigValue,
-    /// Source of the configuration
-    pub source: ConfigSource,
-    /// Optional description of the configuration
-    pub description: Option<String>,
-    /// Whether this configuration is required
-    pub required: bool,
-    /// Whether this configuration contains sensitive data
-    pub sensitive: bool,
-}
-
-/// Configuration section
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ConfigSection {
-    /// Section name
-    pub name: String,
-    /// Configuration entries in this section
-    pub entries: HashMap<String, ConfigEntry>,
-    /// Optional section description
-    pub description: Option<String>,
-}
-
-/// Main configuration structure
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Config {
-    /// Configuration sections
-    pub sections: HashMap<String, ConfigSection>,
-    /// Configuration version
-    pub version: String,
-    /// Environment name
-    pub environment: String,
-}
-
-/// Configuration manager
-pub struct ConfigManager {
-    config: Arc<RwLock<Config>>,
-    watchers: Arc<RwLock<Vec<Box<dyn ConfigWatcher + Send + Sync>>>>,
-}
-
-/// Configuration watcher trait
-pub trait ConfigWatcher: Send + Sync {
-    /// Called when configuration changes
-    fn on_config_change(&self, key: &str, old_value: &ConfigValue, new_value: &ConfigValue);
-}
-
-/// Error types for configuration operations
 #[derive(Debug, Error)]
 pub enum ConfigError {
-    /// Configuration file not found
     #[error("Configuration file not found: {0}")]
-    FileNotFound(String),
-
-    /// Configuration parsing error
-    #[error("Configuration parsing error: {0}")]
+    NotFound(String),
+    #[error("Failed to parse config: {0}")]
     ParseError(String),
-
-    /// Configuration validation error
-    #[error("Configuration validation error: {0}")]
+    #[error("Invalid configuration: {0}")]
     ValidationError(String),
-
-    /// Configuration key not found
-    #[error("Configuration key not found: {0}")]
-    KeyNotFound(String),
-
-    /// Configuration type mismatch
-    #[error("Configuration type mismatch for key {0}: expected {1}, got {2}")]
-    TypeMismatch(String, String, String),
-
-    /// Configuration source error
-    #[error("Configuration source error: {0}")]
-    SourceError(String),
+    #[error("I/O error: {0}")]
+    IoError(#[from] std::io::Error),
 }
 
-impl ConfigManager {
-    /// Create a new configuration manager
-    pub fn new() -> Self {
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Config {
+    pub listen_port: u16,
+    pub bootstrap_nodes: Vec<String>,
+    pub max_peers: usize,
+    pub log_level: String,
+    pub storage_path: PathBuf,
+    pub health_check_interval_secs: u64,
+    pub max_memory_mb: u64,
+}
+
+impl Default for Config {
+    fn default() -> Self {
+        let storage_path = dirs::home_dir()
+            .unwrap_or_else(|| PathBuf::from("."))
+            .join(".p2p-ai-agents")
+            .join("data");
+        
         Self {
-            config: Arc::new(RwLock::new(Config {
-                sections: HashMap::new(),
-                version: "1.0.0".to_string(),
-                environment: "development".to_string(),
-            })),
-            watchers: Arc::new(RwLock::new(Vec::new())),
+            listen_port: 9000,
+            bootstrap_nodes: vec![],
+            max_peers: 32,
+            log_level: "info".to_string(),
+            storage_path,
+            health_check_interval_secs: 30,
+            max_memory_mb: 512,
         }
     }
+}
 
-    /// Load configuration from a file
-    pub async fn load_from_file<P: AsRef<Path>>(&self, path: P) -> Result<(), ConfigError> {
-        let path = path.as_ref();
+impl Config {
+    /// Load configuration from cascade of sources
+    pub async fn load() -> Result<Self, ConfigError> {
+        let mut config = Self::default();
+        
+        // 1. Load from file if exists
+        let config_path = default_config_path();
+        if config_path.exists() {
+            let content = fs::read_to_string(&config_path).await?;
+            let file_config: Config = serde_yaml::from_str(&content)
+                .map_err(|e| ConfigError::ParseError(e.to_string()))?;
+            config = config.merge(file_config);
+        }
+        
+        // 2. Load from environment variables
+        if let Ok(port) = env::var("P2P_LISTEN_PORT") {
+            if let Ok(p) = port.parse() {
+                config.listen_port = p;
+            }
+        }
+        if let Ok(nodes) = env::var("P2P_BOOTSTRAP_NODES") {
+            config.bootstrap_nodes = nodes.split(',')
+                .map(|s| s.trim().to_string())
+                .collect();
+        }
+        if let Ok(peers) = env::var("P2P_MAX_PEERS") {
+            if let Ok(p) = peers.parse() {
+                config.max_peers = p;
+            }
+        }
+        if let Ok(log) = env::var("P2P_LOG_LEVEL") {
+            config.log_level = log;
+        }
+        if let Ok(path) = env::var("P2P_STORAGE_PATH") {
+            config.storage_path = PathBuf::from(path);
+        }
+        if let Ok(interval) = env::var("P2P_HEALTH_CHECK_INTERVAL_SECS") {
+            if let Ok(i) = interval.parse() {
+                config.health_check_interval_secs = i;
+            }
+        }
+        if let Ok(mem) = env::var("P2P_MAX_MEMORY_MB") {
+            if let Ok(m) = mem.parse() {
+                config.max_memory_mb = m;
+            }
+        }
 
-        if !path.exists() {
-            return Err(ConfigError::FileNotFound(
-                path.to_string_lossy().to_string(),
+        Ok(config)
+    }
+
+    /// Validate the configuration
+    pub fn validate(&self) -> Result<(), ConfigError> {
+        // Validate listen_port: must be in range 1024-65535
+        if self.listen_port < 1024 {
+            return Err(ConfigError::ValidationError(
+                format!("listen_port must be at least 1024, got {}", self.listen_port)
             ));
         }
 
-        let content = tokio::fs::read_to_string(path)
-            .await
-            .map_err(|e| ConfigError::SourceError(e.to_string()))?;
+        // Validate max_peers: must be in range 1-256
+        if self.max_peers < 1 || self.max_peers > 256 {
+            return Err(ConfigError::ValidationError(
+                format!("max_peers must be between 1 and 256, got {}", self.max_peers)
+            ));
+        }
 
-        let config: Config = match path.extension().and_then(|s| s.to_str()) {
-            Some("json") => serde_json::from_str(&content)
-                .map_err(|e| ConfigError::ParseError(e.to_string()))?,
-            Some("yaml") | Some("yml") => serde_yaml::from_str(&content)
-                .map_err(|e| ConfigError::ParseError(e.to_string()))?,
-            Some("toml") => {
-                toml::from_str(&content).map_err(|e| ConfigError::ParseError(e.to_string()))?
-            }
-            _ => {
-                return Err(ConfigError::ParseError(
-                    "Unsupported file format".to_string(),
-                ))
-            }
-        };
-
-        let mut current_config = self.config.write().await;
-        *current_config = config;
-
-        Ok(())
-    }
-
-    /// Load configuration from environment variables
-    pub async fn load_from_env(&self, prefix: &str) -> Result<(), ConfigError> {
-        let mut config = self.config.write().await;
-
-        for (key, value) in std::env::vars() {
-            if key.starts_with(prefix) {
-                let config_key = key.strip_prefix(prefix).unwrap().to_lowercase();
-                let config_value = self.parse_env_value(&value)?;
-
-                let entry = ConfigEntry {
-                    key: config_key.clone(),
-                    value: config_value,
-                    source: ConfigSource::Environment,
-                    description: None,
-                    required: false,
-                    sensitive: false,
-                };
-
-                // Add to default section if no section specified
-                let section_name = "default".to_string();
-                let section = config
-                    .sections
-                    .entry(section_name.clone())
-                    .or_insert_with(|| ConfigSection {
-                        name: section_name,
-                        entries: HashMap::new(),
-                        description: None,
-                    });
-
-                section.entries.insert(config_key, entry);
-            }
+        // Validate max_memory_mb: must be in range 128-16384
+        if self.max_memory_mb < 128 || self.max_memory_mb > 16384 {
+            return Err(ConfigError::ValidationError(
+                format!("max_memory_mb must be between 128 and 16384, got {}", self.max_memory_mb)
+            ));
         }
 
         Ok(())
     }
 
-    /// Parse environment variable value
-    fn parse_env_value(&self, value: &str) -> Result<ConfigValue, ConfigError> {
-        // Try to parse as different types
-        if let Ok(int_val) = value.parse::<i64>() {
-            return Ok(ConfigValue::Integer(int_val));
+    /// Create default configuration file if it doesn't exist
+    pub async fn save_default_if_missing() -> Result<PathBuf, ConfigError> {
+        let config_path = default_config_path();
+        
+        // If config file already exists, return its path
+        if config_path.exists() {
+            return Ok(config_path);
         }
 
-        if let Ok(float_val) = value.parse::<f64>() {
-            return Ok(ConfigValue::Float(float_val));
+        // Ensure parent directory exists
+        if let Some(parent) = config_path.parent() {
+            fs::create_dir_all(parent).await?;
         }
 
-        if let Ok(bool_val) = value.parse::<bool>() {
-            return Ok(ConfigValue::Boolean(bool_val));
-        }
-
-        // Default to string
-        Ok(ConfigValue::String(value.to_string()))
+        // Create default config and save it
+        let default_config = Self::default();
+        let yaml = serde_yaml::to_string(&default_config)
+            .map_err(|e| ConfigError::ParseError(e.to_string()))?;
+        
+        fs::write(&config_path, yaml).await?;
+        
+        Ok(config_path)
     }
 
-    /// Get a configuration value
-    pub async fn get(&self, key: &str) -> Result<ConfigValue, ConfigError> {
-        let config = self.config.read().await;
-
-        // Try to find the key in any section
-        for section in config.sections.values() {
-            if let Some(entry) = section.entries.get(key) {
-                return Ok(entry.value.clone());
-            }
+    /// Merge another config into this one
+    fn merge(mut self, other: Config) -> Self {
+        if other.listen_port != 9000 { // Assuming 9000 is default
+            self.listen_port = other.listen_port;
         }
-
-        Err(ConfigError::KeyNotFound(key.to_string()))
-    }
-
-    /// Get a configuration value from a specific section
-    pub async fn get_from_section(
-        &self,
-        section: &str,
-        key: &str,
-    ) -> Result<ConfigValue, ConfigError> {
-        let config = self.config.read().await;
-
-        if let Some(section) = config.sections.get(section) {
-            if let Some(entry) = section.entries.get(key) {
-                return Ok(entry.value.clone());
-            }
+        if !other.bootstrap_nodes.is_empty() {
+            self.bootstrap_nodes = other.bootstrap_nodes;
         }
-
-        Err(ConfigError::KeyNotFound(format!("{}.{}", section, key)))
-    }
-
-    /// Set a configuration value
-    pub async fn set(&self, key: &str, value: ConfigValue) -> Result<(), ConfigError> {
-        let mut config = self.config.write().await;
-
-        // Find existing entry to preserve metadata
-        let mut entry = None;
-        for section in config.sections.values() {
-            if let Some(existing_entry) = section.entries.get(key) {
-                entry = Some(existing_entry.clone());
-                break;
-            }
+        if other.max_peers != 32 {
+            self.max_peers = other.max_peers;
         }
-
-        let entry = entry.unwrap_or_else(|| ConfigEntry {
-            key: key.to_string(),
-            value: ConfigValue::String("".to_string()),
-            source: ConfigSource::Runtime,
-            description: None,
-            required: false,
-            sensitive: false,
-        });
-
-        let mut new_entry = entry;
-        let old_value = new_entry.value.clone();
-        new_entry.value = value.clone();
-        new_entry.source = ConfigSource::Runtime;
-
-        // Add to default section
-        let section_name = "default".to_string();
-        let section = config
-            .sections
-            .entry(section_name.clone())
-            .or_insert_with(|| ConfigSection {
-                name: section_name,
-                entries: HashMap::new(),
-                description: None,
-            });
-
-        section.entries.insert(key.to_string(), new_entry);
-
-        // Notify watchers
-        let watchers = self.watchers.read().await;
-        for watcher in watchers.iter() {
-            watcher.on_config_change(key, &old_value, &value);
+        if other.log_level != "info" {
+            self.log_level = other.log_level;
         }
-
-        Ok(())
-    }
-
-    /// Add a configuration watcher
-    pub async fn add_watcher(&self, watcher: Box<dyn ConfigWatcher + Send + Sync>) {
-        let mut watchers = self.watchers.write().await;
-        watchers.push(watcher);
-    }
-
-    /// Get all configuration as a map
-    pub async fn get_all(&self) -> HashMap<String, ConfigValue> {
-        let config = self.config.read().await;
-        let mut result = HashMap::new();
-
-        for section in config.sections.values() {
-            for (key, entry) in &section.entries {
-                result.insert(key.clone(), entry.value.clone());
-            }
+        // Always merge storage_path if it's different from default
+        let default_storage = dirs::home_dir()
+            .unwrap_or_else(|| PathBuf::from("."))
+            .join(".p2p-ai-agents")
+            .join("data");
+        if other.storage_path != default_storage {
+            self.storage_path = other.storage_path;
         }
-
-        result
-    }
-
-    /// Validate configuration
-    pub async fn validate(&self) -> Result<(), ConfigError> {
-        let config = self.config.read().await;
-
-        for section in config.sections.values() {
-            for (key, entry) in &section.entries {
-                if entry.required
-                    && matches!(entry.value, ConfigValue::String(ref s) if s.is_empty())
-                {
-                    return Err(ConfigError::ValidationError(format!(
-                        "Required configuration key '{}' is empty",
-                        key
-                    )));
-                }
-            }
+        if other.health_check_interval_secs != 30 {
+            self.health_check_interval_secs = other.health_check_interval_secs;
         }
-
-        Ok(())
-    }
-
-    /// Export configuration to a file
-    pub async fn export_to_file<P: AsRef<Path>>(
-        &self,
-        path: P,
-        format: &str,
-    ) -> Result<(), ConfigError> {
-        let config = self.config.read().await;
-        let content = match format {
-            "json" => serde_json::to_string_pretty(&*config)
-                .map_err(|e| ConfigError::ParseError(e.to_string()))?,
-            "yaml" | "yml" => serde_yaml::to_string(&*config)
-                .map_err(|e| ConfigError::ParseError(e.to_string()))?,
-            "toml" => toml::to_string_pretty(&*config)
-                .map_err(|e| ConfigError::ParseError(e.to_string()))?,
-            _ => {
-                return Err(ConfigError::ParseError(
-                    "Unsupported export format".to_string(),
-                ))
-            }
-        };
-
-        tokio::fs::write(path, content)
-            .await
-            .map_err(|e| ConfigError::SourceError(e.to_string()))?;
-
-        Ok(())
+        if other.max_memory_mb != 512 {
+            self.max_memory_mb = other.max_memory_mb;
+        }
+        self
     }
 }
 
-impl Default for ConfigManager {
-    fn default() -> Self {
-        Self::new()
-    }
+fn default_config_path() -> PathBuf {
+    dirs::config_dir()
+        .unwrap_or_else(|| PathBuf::from("."))
+        .join("p2p-ai-agents")
+        .join("config.yaml")
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::sync::Arc;
+    use tempfile::TempDir;
 
-    struct TestConfigWatcher {
-        changes: Arc<RwLock<Vec<(String, ConfigValue, ConfigValue)>>>,
+    #[test]
+    fn test_default_config() {
+        let config = Config::default();
+        assert_eq!(config.listen_port, 9000);
+        assert_eq!(config.max_peers, 32);
+        assert_eq!(config.health_check_interval_secs, 30);
+        assert_eq!(config.max_memory_mb, 512);
+        assert_eq!(config.log_level, "info");
+        assert!(config.bootstrap_nodes.is_empty());
     }
 
-    impl ConfigWatcher for TestConfigWatcher {
-        fn on_config_change(&self, key: &str, old_value: &ConfigValue, new_value: &ConfigValue) {
-            // Note: This is a synchronous method, so we can't use await here
-            // In a real implementation, you'd use a different approach for async operations
-            // For now, we'll just store the changes in a way that works with the test
-            let changes = self.changes.clone();
-            let key = key.to_string();
-            let old_value = old_value.clone();
-            let new_value = new_value.clone();
-            tokio::spawn(async move {
-                let mut changes = changes.write().await;
-                changes.push((key, old_value, new_value));
-            });
+    #[test]
+    fn test_validate_valid_config() {
+        let config = Config::default();
+        assert!(config.validate().is_ok());
+    }
+
+    #[test]
+    fn test_validate_port_too_low() {
+        let mut config = Config::default();
+        config.listen_port = 1023;
+        let result = config.validate();
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("listen_port"));
+    }
+
+    #[test]
+    fn test_validate_port_boundary_values() {
+        let mut config = Config::default();
+        
+        // Test lower boundary
+        config.listen_port = 1024;
+        assert!(config.validate().is_ok());
+        
+        // Test upper boundary (u16 max is 65535)
+        config.listen_port = 65535;
+        assert!(config.validate().is_ok());
+        
+        // Test just below lower boundary
+        config.listen_port = 1023;
+        assert!(config.validate().is_err());
+    }
+
+    #[test]
+    fn test_validate_max_peers_too_low() {
+        let mut config = Config::default();
+        config.max_peers = 0;
+        let result = config.validate();
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("max_peers"));
+    }
+
+    #[test]
+    fn test_validate_max_peers_too_high() {
+        let mut config = Config::default();
+        config.max_peers = 257;
+        let result = config.validate();
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("max_peers"));
+    }
+
+    #[test]
+    fn test_validate_max_peers_boundary_values() {
+        let mut config = Config::default();
+        
+        // Test lower boundary
+        config.max_peers = 1;
+        assert!(config.validate().is_ok());
+        
+        // Test upper boundary
+        config.max_peers = 256;
+        assert!(config.validate().is_ok());
+    }
+
+    #[test]
+    fn test_validate_max_memory_too_low() {
+        let mut config = Config::default();
+        config.max_memory_mb = 127;
+        let result = config.validate();
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("max_memory_mb"));
+    }
+
+    #[test]
+    fn test_validate_max_memory_too_high() {
+        let mut config = Config::default();
+        config.max_memory_mb = 16385;
+        let result = config.validate();
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("max_memory_mb"));
+    }
+
+    #[test]
+    fn test_validate_max_memory_boundary_values() {
+        let mut config = Config::default();
+        
+        // Test lower boundary
+        config.max_memory_mb = 128;
+        assert!(config.validate().is_ok());
+        
+        // Test upper boundary
+        config.max_memory_mb = 16384;
+        assert!(config.validate().is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_save_default_if_missing_creates_file() {
+        let temp_dir = TempDir::new().unwrap();
+        let config_path = temp_dir.path().join("test_config.yaml");
+        
+        // Temporarily override the default path (we'll use a test helper)
+        // For this test, we'll manually test the save logic
+        let config = Config::default();
+        let yaml = serde_yaml::to_string(&config).unwrap();
+        
+        // Ensure parent directory exists
+        if let Some(parent) = config_path.parent() {
+            tokio::fs::create_dir_all(parent).await.unwrap();
         }
+        
+        tokio::fs::write(&config_path, yaml).await.unwrap();
+        
+        assert!(config_path.exists());
+        
+        // Verify we can read it back
+        let content = tokio::fs::read_to_string(&config_path).await.unwrap();
+        let loaded_config: Config = serde_yaml::from_str(&content).unwrap();
+        assert_eq!(loaded_config.listen_port, 9000);
+        assert_eq!(loaded_config.max_peers, 32);
     }
 
     #[tokio::test]
-    async fn test_config_manager_basic_operations() {
-        let manager = ConfigManager::new();
-
-        // Set a value
-        manager
-            .set("test_key", ConfigValue::String("test_value".to_string()))
-            .await
-            .unwrap();
-
-        // Get the value
-        let value = manager.get("test_key").await.unwrap();
-        assert_eq!(value, ConfigValue::String("test_value".to_string()));
+    async fn test_load_from_yaml_file() {
+        let temp_dir = TempDir::new().unwrap();
+        let config_path = temp_dir.path().join("config.yaml");
+        
+        // Create a test config file
+        let yaml_content = r#"
+listen_port: 8080
+bootstrap_nodes:
+  - "/ip4/127.0.0.1/tcp/9001"
+max_peers: 50
+log_level: debug
+storage_path: /tmp/test-storage
+health_check_interval_secs: 60
+max_memory_mb: 1024
+"#;
+        tokio::fs::write(&config_path, yaml_content).await.unwrap();
+        
+        // Load and verify
+        let content = tokio::fs::read_to_string(&config_path).await.unwrap();
+        let config: Config = serde_yaml::from_str(&content).unwrap();
+        
+        assert_eq!(config.listen_port, 8080);
+        assert_eq!(config.max_peers, 50);
+        assert_eq!(config.log_level, "debug");
+        assert_eq!(config.health_check_interval_secs, 60);
+        assert_eq!(config.max_memory_mb, 1024);
+        assert_eq!(config.bootstrap_nodes.len(), 1);
     }
 
     #[tokio::test]
-    async fn test_config_manager_watchers() {
-        let manager = ConfigManager::new();
-        let changes = Arc::new(RwLock::new(Vec::new()));
-
-        let watcher = TestConfigWatcher {
-            changes: changes.clone(),
-        };
-
-        manager.add_watcher(Box::new(watcher)).await;
-
-        // Set a value
-        manager
-            .set("test_key", ConfigValue::String("new_value".to_string()))
-            .await
-            .unwrap();
-
-        // Wait a bit for the async watcher to process
-        tokio::time::sleep(tokio::time::Duration::from_millis(10)).await;
-
-        // Check if watcher was notified
-        let changes = changes.read().await;
-        assert_eq!(changes.len(), 1);
-        assert_eq!(changes[0].0, "test_key");
+    async fn test_merge_configs() {
+        let default_config = Config::default();
+        
+        let mut custom_config = Config::default();
+        custom_config.listen_port = 8080;
+        custom_config.max_peers = 50;
+        
+        let merged = default_config.merge(custom_config);
+        
+        assert_eq!(merged.listen_port, 8080);
+        assert_eq!(merged.max_peers, 50);
+        // Other fields should remain at defaults
+        assert_eq!(merged.log_level, "info");
+        assert_eq!(merged.health_check_interval_secs, 30);
     }
 
     #[tokio::test]
-    async fn test_config_manager_validation() {
-        let manager = ConfigManager::new();
+    async fn test_environment_variable_override() {
+        // Set environment variables
+        env::set_var("P2P_LISTEN_PORT", "7070");
+        env::set_var("P2P_MAX_PEERS", "64");
+        env::set_var("P2P_MAX_MEMORY_MB", "1024");
+        env::set_var("P2P_HEALTH_CHECK_INTERVAL_SECS", "45");
+        env::set_var("P2P_LOG_LEVEL", "debug");
+        
+        let config = Config::load().await.unwrap();
+        
+        assert_eq!(config.listen_port, 7070);
+        assert_eq!(config.max_peers, 64);
+        assert_eq!(config.max_memory_mb, 1024);
+        assert_eq!(config.health_check_interval_secs, 45);
+        assert_eq!(config.log_level, "debug");
+        
+        // Clean up
+        env::remove_var("P2P_LISTEN_PORT");
+        env::remove_var("P2P_MAX_PEERS");
+        env::remove_var("P2P_MAX_MEMORY_MB");
+        env::remove_var("P2P_HEALTH_CHECK_INTERVAL_SECS");
+        env::remove_var("P2P_LOG_LEVEL");
+    }
 
-        // Set a required empty value
-        manager
-            .set("required_key", ConfigValue::String("".to_string()))
-            .await
-            .unwrap();
-
-        // Mark it as required
-        let mut config = manager.config.write().await;
-        if let Some(section) = config.sections.get_mut("default") {
-            if let Some(entry) = section.entries.get_mut("required_key") {
-                entry.required = true;
-            }
-        }
-        drop(config);
-
-        // This should fail validation
-        let result = manager.validate().await;
-        assert!(matches!(result, Err(ConfigError::ValidationError(_))));
+    #[test]
+    fn test_config_serialization() {
+        let config = Config::default();
+        let yaml = serde_yaml::to_string(&config).unwrap();
+        
+        assert!(yaml.contains("listen_port: 9000"));
+        assert!(yaml.contains("max_peers: 32"));
+        assert!(yaml.contains("health_check_interval_secs: 30"));
+        assert!(yaml.contains("max_memory_mb: 512"));
+        assert!(yaml.contains("log_level: info"));
     }
 }

@@ -56,7 +56,7 @@ impl LifecycleManager {
         Self {
             application,
             state: Arc::new(RwLock::new(None)),
-            shutdown_timeout: Duration::from_secs(30),
+            shutdown_timeout: Duration::from_secs(5),
         }
     }
 
@@ -84,11 +84,15 @@ impl LifecycleManager {
             warn!("Failed to check previous state: {}", e);
         }
 
-        // Initialize the application
+        // Initialize the application (moves to Registering state)
         info!("Initializing application");
         self.application.initialize().await?;
 
-        // Start the application
+        // Register with network (moves to Active state)
+        info!("Registering with network");
+        self.application.register().await?;
+
+        // Start the application services
         info!("Starting application services");
         self.application.start().await?;
 

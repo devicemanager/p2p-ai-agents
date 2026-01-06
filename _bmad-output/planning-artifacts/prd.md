@@ -1,5 +1,5 @@
 ---
-stepsCompleted: [1, 2, 3, 4, 5]
+stepsCompleted: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
 inputDocuments:
   - /Users/rene/Source/p2p-ai-agents/project-context.md
   - /Users/rene/Source/p2p-ai-agents/docs/high-level-design.md
@@ -7,7 +7,7 @@ inputDocuments:
   - /Users/rene/Source/p2p-ai-agents/docs/index.md
   - /Users/rene/Source/p2p-ai-agents/README.md
 workflowType: 'prd'
-lastStep: 5
+lastStep: 11
 briefCount: 0
 researchCount: 0
 brainstormingCount: 0
@@ -1263,3 +1263,188 @@ See [docs/glossary.md](../docs/glossary.md) for complete terminology.
 **Document Status**: ✅ Complete and Ready for Review
 
 This PRD provides a comprehensive specification for the P2P AI Agents project, covering all aspects from vision to implementation details. It should serve as the authoritative reference for product development, feature prioritization, and project management.
+
+## 6. Innovation & Novel Patterns
+
+### 6.1 Detected Innovation Areas
+
+**Universal AI Substrate (Protocol Layer)**
+More than just pooling idle compute, this creates a **Universal AI Substrate**—a standardized protocol layer that allows *any* device (from smart fridges to gaming rigs) to participate in a global intelligence network. This shifts the paradigm from "renting servers" to "plugging into the grid."
+
+**Privacy-Preserving Decentralized Inference**
+To address the "trust" problem, the system implements a multi-layered privacy approach:
+*   **Split Learning / Inference**: Models are segmented so no single peer possesses the complete model or data context.
+*   **Differential Privacy**: Statistical noise injection ensures individual data points cannot be reverse-engineered.
+*   **Trusted Execution Environments (TEE)**: Leveraging hardware enclaves (Intel SGX, ARM TrustZone) for encrypted processing.
+
+**Chaos-Resilient Inference**
+Instead of treating node failure as an exception, the system is **Chaos-Resilient by Design**. It thrives on instability using:
+*   **Redundant Computation**: Critical tasks are sent to multiple random peers; results are validated via consensus.
+*   **Micro-Tasking**: Breaking inference into millisecond-scale chunks that survive individual node dropouts.
+*   **Probabilistic Spot-Checking**: Randomly re-computing tasks to audit peer integrity (Reputation Slashing).
+
+**Sustainable "Green" Scheduling**
+The scheduler prioritizes nodes based on reported **renewable energy availability** and location-based carbon intensity APIs, effectively chasing the sun/wind for AI processing.
+
+**AI UBI (Economic Empowerment)**
+By democratizing participation, the platform effectively creates an **AI UBI (Universal Basic Income)** mechanism, allowing individuals to monetize their already-purchased hardware assets to offset costs or generate passive income, distributing the value of the AI boom to the edges.
+
+### 6.2 Market Context & Competitive Landscape
+
+**Competitive Landscape**
+*   **Centralized AI (AWS, Google, OpenAI)**: High reliability but massive cost, centralized control, and energy inefficiency.
+*   **Distributed Computing (BOINC)**: Great for scientific batch jobs, but lacks the real-time responsiveness for AI inference.
+*   **Web3 AI (Golem, Render)**: Often focused on batch rendering; p2p-ai-agents targets *low-latency inference* with a privacy-first architecture.
+
+**Market Gaps Addressed**
+*   **The "GPU Poor"**: democratizes access for researchers and startups priced out of H100 clusters.
+*   **Data Sovereignty**: Appeals to privacy-conscious entities who refuse to send data to centralized black boxes.
+*   **Accessibility**: "Zero-Config" deployment ensures non-technical users can join the network in seconds.
+
+### 6.3 Validation Approach
+
+**Technical Proof-of-Concept**
+*   **Chaos Test**: Randomly kill 40% of nodes during an inference task and measure recovery time/accuracy.
+*   **Privacy Audit**: Red-team challenge—can a malicious node reconstruct the original input from assigned chunks?
+
+**Pilot Validation**
+*   **"Screensaver" Beta**: Release a one-click installer for Windows/Mac and measure retention and average uptime of 100 beta users.
+
+### 6.4 Risk Mitigation
+
+**Sybil Attacks (Fake Nodes)**
+*   *Mitigation*: Proof-of-Work initialization + Gradual Reputation Ramp-up (new nodes earn trust slowly).
+
+**Quality of Service (Latency)**
+*   *Mitigation*: Latency-aware routing tables that group peers by network proximity (Edge Clusters).
+
+## 7. Project Type Specific Requirements (CLI + P2P Network)
+
+### 7.1 Project-Type Overview
+**Hybrid Architecture**: The system operates as a **hybrid CLI application and background daemon**. 
+- **User Interface**: A polished CLI (`p2p-agent`) for management.
+- **Core Runtime**: A headless daemon (`p2p-daemon`) handling networking/compute.
+- **Philosophy**: "Zero-Config" first run.
+
+### 7.2 Command Structure & UX
+**Design Pattern**: Git-style subcommands.
+- **Standard Flags**: `--json` (machine output), `--quiet`.
+
+**Core Commands**
+*   `p2p-agent init`: Generates keys, creates config.
+*   `p2p-agent up`: Starts daemon, enables start-on-boot (systemd/launchd).
+*   `p2p-agent status`: Dashboard with **Reachability Check** (NAT status).
+*   `p2p-agent wallet`: Manage earnings.
+*   `p2p-agent logs`: Stream daemon logs for debugging.
+
+### 7.3 Configuration & Security
+**Cascade Strategy**: Flags > Env > File > Defaults.
+
+**Security Architecture**
+*   **Local Control Plane**: Uses **Unix Domain Sockets** (Mac/Linux) or **Named Pipes** (Windows) to prevent unauthorized local network access. (Replaces TCP localhost).
+*   **Key Storage**: OS Keychain integration (default) or Encrypted Keystore file.
+
+### 7.4 Protocol Specification
+**Networking Stack**: **libp2p** standard.
+*   **Transport**: TCP + QUIC.
+*   **Traversal (Critical)**: **AutoNAT** + **DCUtR** (Hole Punching) enabled by default.
+*   **Discovery**: Kademlia DHT + mDNS.
+
+### 7.5 Implementation Considerations
+*   **Binaries**: Static linking (Rust).
+*   **Updates**: Self-update mechanism.
+*   **Resource Capping**: Strict cgroups/OS-level enforcement.
+
+## 8. Project Scoping & Phased Development
+
+### 8.1 MVP Strategy: Connectivity First (Substrate)
+**Refined Approach**: "Connectivity First, but AI Visible."
+**Rationale**: We must validate the mesh (libp2p/NAT) first, but we need to deliver on the "AI" brand promise immediately to retain early adopters.
+**MVP Goal**: Validate connectivity with 100+ nodes, where nodes perform *actual* (but tiny) AI tasks, not just hashing.
+
+### 8.2 Phase 1 (MVP) Feature Set
+**Timeline**: Weeks 1-8
+*   **Networking**: libp2p stack with AutoNAT, DHT Discovery.
+*   **Task Engine**: **Tiny AI Inference**. Instead of hashing, nodes run a small ONNX model (e.g., MobileBERT for sentiment analysis) on CPU.
+*   **Interface**: CLI with a `p2p-agent demo` command that runs a local inference to "prove" capability to the user.
+*   **OS Target**: Linux (Server/Desktop).
+
+### 8.3 Phase 2 (Growth) Feature Set
+**Timeline**: Weeks 9-20
+*   **Distributed Inference**: Moving from local tasks to network-assigned LLM tasks (Llama 2).
+*   **Hardware**: GPU Acceleration (CUDA/Metal).
+*   **Platform**: Windows & Mac Installers.
+*   **Economy**: Testnet Points.
+
+### 8.4 Phase 3 (Expansion) Feature Set
+**Timeline**: Weeks 21+
+*   **Privacy**: Split Learning & TEE.
+*   **Economy**: Mainnet Token.
+*   **Interface**: Web Dashboard.
+
+### 8.5 Risk Mitigation
+*   **"Boring" Factor**: Mitigated by replacing SHA-256 with visual/tangible Tiny AI tasks.
+*   **NAT Traversal**: Relay fallback.
+
+## 9. Functional Requirements
+
+### 9.1 Capability Area: Node Lifecycle Management
+- **FR1**: Users can initialize a new node identity and configuration profile.
+- **FR2**: Users can start the node in foreground or background (daemon) modes.
+- **FR3**: Users can gracefully stop the node, ensuring current tasks are either completed or released.
+- **FR4**: Users can view the current running status (uptime, version, PID).
+- **FR5**: The system can auto-restart after a crash or system reboot (if configured).
+
+### 9.2 Capability Area: Identity & Wallet Management
+- **FR6**: The system generates a cryptographic identity (Ed25519 keypair) on initialization.
+- **FR7**: Users can view their public Node ID and wallet address.
+- **FR8**: The system tracks and displays earned "Testnet Points" balance.
+- **FR9**: Users can backup/export their identity keys securely.
+
+### 9.3 Capability Area: Network Connectivity
+- **FR10**: Nodes can discover other peers via DHT (Distributed Hash Table) and mDNS (Local LAN).
+- **FR11**: Nodes can establish secure (encrypted) connections with discovered peers.
+- **FR12**: Nodes can detect their own NAT status and report reachability (Public/Restricted).
+- **FR13**: Nodes can route messages through relay peers if direct connection fails.
+
+### 9.4 Capability Area: Task Processing (Compute)
+- **FR14**: Nodes can receive "Tiny AI" inference tasks (e.g., Sentiment Analysis) from the network.
+- **FR15**: Nodes can download required model artifacts (ONNX files) dynamically.
+- **FR16**: Nodes can execute inference on CPU within a sandboxed timeout.
+- **FR17**: Nodes can generate cryptographic proof of computation (result hash + timing).
+
+### 9.5 Capability Area: Task Submission (CLI Demo)
+- **FR18**: Users can submit a "demo task" (e.g., text string for sentiment analysis) via CLI.
+- **FR19**: Users can see real-time progress of their submitted task (Searching -> Assigned -> Computing -> Done).
+- **FR20**: Users can view the raw result output from the remote peer.
+
+### 9.6 Capability Area: System Observability
+- **FR21**: Users can stream real-time logs from the daemon for debugging.
+- **FR22**: The system exposes Prometheus-compatible metrics (peer count, tasks/hr, memory usage).
+- **FR23**: Users can inspect specific peer details (latency, protocol version) in the routing table.
+
+## 10. Non-Functional Requirements
+
+### 10.1 Performance
+- **NFR1 (Latency)**: Network mesh latency (ping) between peers must be < 100ms (p95) for effective task routing.
+- **NFR2 (Task Overhead)**: Task distribution overhead (serialization/deserialization) must be < 50ms per task.
+- **NFR3 (Boot Time)**: The daemon must start and reach "Ready" state in < 2 seconds on standard hardware.
+
+### 10.2 Resource Usage (Critical for "Idle Compute")
+- **NFR4 (Idle Memory)**: Daemon memory usage must be < 100MB RAM when idle (not computing).
+- **NFR5 (Idle CPU)**: CPU usage must be < 1% when idle.
+- **NFR6 (Compute Cap)**: The agent must respect user-configured CPU limits (e.g., "Max 50%") with < 5% variance.
+- **NFR7 (Background Priority)**: The process must run at `nice` level 19 (lowest priority) to avoid impacting foreground apps.
+
+### 10.3 Security
+- **NFR8 (Encryption)**: All network traffic must be encrypted via TLS 1.3 or Noise Protocol (libp2p default).
+- **NFR9 (Key Storage)**: Private keys must be stored with 0600 permissions (read/write only by owner).
+- **NFR10 (Dependency Safety)**: All 3rd party crates must pass `cargo-audit` with 0 critical vulnerabilities.
+
+### 10.4 Reliability
+- **NFR11 (Partition Tolerance)**: The mesh must self-heal (re-route) within 30 seconds if 20% of nodes disconnect simultaneously.
+- **NFR12 (Crash Recovery)**: The daemon must auto-restart and re-join the mesh within 5 seconds of a crash (via systemd/supervisor).
+
+### 10.5 Compatibility
+- **NFR13 (OS Support)**: Must compile and pass tests on Linux (kernel 5.4+), Windows 10/11, and macOS 12+.
+- **NFR14 (Hardware)**: Must run on low-end hardware (Raspberry Pi 4, 2GB RAM) without crashing.

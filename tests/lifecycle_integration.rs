@@ -164,8 +164,8 @@ async fn test_application_state_enum() {
 
     let states = vec![
         ApplicationState::Initializing,
-        ApplicationState::Running,
-        ApplicationState::Stopping,
+        ApplicationState::Active,
+        ApplicationState::ShuttingDown,
         ApplicationState::Stopped,
     ];
 

@@ -427,6 +427,23 @@ impl Storage for StorageManager {
         .await
         .map_err(|e| StorageError::Other(e.to_string()))
     }
+
+    async fn shutdown(&self) -> Result<(), StorageError> {
+        let backends = self.backends.write().await;
+        let mut last_error = None;
+
+        for (name, backend) in backends.iter() {
+            if let Err(e) = backend.shutdown().await {
+                last_error = Some(format!("Backend {}: {}", name, e));
+            }
+        }
+
+        if let Some(err) = last_error {
+            Err(StorageError::Other(err))
+        } else {
+            Ok(())
+        }
+    }
 }
 
 impl Default for StorageManager {

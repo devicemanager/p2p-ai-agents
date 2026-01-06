@@ -28,12 +28,12 @@ workflow_status:
   product-brief: optional
   
   # Phase 2: Planning
-  prd: required
+  prd: _bmad-output/planning-artifacts/prd.md
   create-ux-design: conditional  # Determined after PRD
   
   # Phase 3: Solutioning
   create-architecture: _bmad-output/planning-artifacts/architecture.md
-  create-epics-and-stories: required
+  create-epics-and-stories: _bmad-output/planning-artifacts/epics.md
   test-design: optional
   implementation-readiness: _bmad-output/planning-artifacts/implementation-readiness-report-2026-01-02.md
   

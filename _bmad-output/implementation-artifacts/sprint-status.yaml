@@ -1,6 +1,6 @@
-# generated: 2026-01-03
+# generated: 2026-01-06
 # project: p2p-ai-agents
-# project_key: p2p-ai-agents
+# project_key: P2P
 # tracking_system: file-system
 # story_location: _bmad-output/implementation-artifacts
 
@@ -11,107 +11,67 @@
 #   - in-progress: Epic actively being worked on
 #   - done: All stories in epic completed
 #
-# Epic Status Transitions:
-#   - backlog → in-progress: Automatically when first story is created (via create-story)
-#   - in-progress → done: Manually when all stories reach 'done' status
-#
 # Story Status:
 #   - backlog: Story only exists in epic file
 #   - ready-for-dev: Story file created in stories folder
 #   - in-progress: Developer actively working on implementation
-#   - review: Ready for code review (via Dev's code-review workflow)
+#   - review: Ready for code review
 #   - done: Story completed
 #
 # Retrospective Status:
 #   - optional: Can be completed but not required
 #   - done: Retrospective has been completed
-#
-# WORKFLOW NOTES:
-# ===============
-# - Epic transitions to 'in-progress' automatically when first story is created
-# - Stories can be worked in parallel if team capacity allows
-# - SM typically creates next story after previous one is 'done' to incorporate learnings
-# - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
-generated: 2026-01-03
+generated: 2026-01-06
 project: p2p-ai-agents
-project_key: p2p-ai-agents
+project_key: P2P
 tracking_system: file-system
 story_location: _bmad-output/implementation-artifacts
 
 development_status:
-  epic-1: done
-  1-1-agent-identity-generation: done
-  1-2-private-key-encryption-at-rest: done
-  1-3-basic-local-storage-backend: done
-  1-4-storage-consistency-model-implementation: done
-  1-5-redis-storage-backend: done
-  1-6-prometheus-metrics-collection: done
-  1-7-structured-json-logging: done
-  1-8-agent-lifecycle-management: done
-  epic-1-retrospective: done
+  # Epic 1: Node Foundation & Identity Management
+  epic-1: in-progress
+  1-1-initialize-node: done
+  1-2-configure-node: done
+  1-3-daemon-process-management: done
+  1-4-graceful-shutdown: done
+  1-5-node-status-monitoring: in-progress
+  1-6-cryptographic-identity-generation: backlog
+  1-7-public-identity-display: backlog
+  1-8-points-balance-tracking: backlog
+  1-9-identity-key-backup-restore: backlog
+  epic-1-retrospective: optional
 
+  # Epic 2: P2P Mesh Connectivity
   epic-2: backlog
-  2-1-libp2p-network-initialization: backlog
-  2-2-mdns-local-peer-discovery: backlog
-  2-3-kademlia-dht-setup: backlog
-  2-4-bootstrap-node-connection: backlog
-  2-5-peer-connection-management: backlog
-  2-6-secure-message-encryption: backlog
-  2-7-message-signing-verification: backlog
-  2-8-multi-transport-support-quic: backlog
+  2-1-implement-p2p-transport-layer: backlog
+  2-2-peer-discovery-mechanism: backlog
+  2-3-secure-connection-handshake: backlog
+  2-4-nat-detection-and-traversal: backlog
   epic-2-retrospective: optional
 
+  # Epic 3: Tiny AI Task Engine
   epic-3: backlog
-  3-1-proof-of-work-for-peer-registration: backlog
-  3-2-reputation-system-implementation: backlog
-  3-3-connection-rate-limiting: backlog
-  3-4-message-replay-prevention: backlog
-  3-5-subnet-diversity-enforcement: backlog
-  3-6-resource-quota-enforcement: backlog
+  3-1-implement-task-queue-management: backlog
+  3-2-execute-inference-tasks: backlog
+  3-3-manage-ai-models: backlog
+  3-4-generate-proof-of-computation: backlog
   epic-3-retrospective: optional
 
+  # Epic 4: CLI Control Plane & Demo
   epic-4: backlog
-  4-1-rbac-role-definition: backlog
-  4-2-role-assignment-to-peers: backlog
-  4-3-permission-checking-for-operations: backlog
-  4-4-reputation-based-role-eligibility: backlog
-  4-5-audit-logging-for-rbac-actions: backlog
+  4-1-submit-inference-tasks: backlog
+  4-2-track-task-progress: backlog
+  4-3-view-task-results: backlog
+  4-4-interactive-demo-command: backlog
+  4-5-task-history-management: backlog
   epic-4-retrospective: optional
 
+  # Epic 5: System Observability & Monitoring
   epic-5: backlog
-  5-1-task-submission-api: backlog
-  5-2-task-queue-management: backlog
-  5-3-task-execution-by-workers: backlog
-  5-4-multi-peer-result-verification: backlog
-  5-5-task-result-delivery: backlog
+  5-1-structured-logging-system: backlog
+  5-2-metrics-collection-export: backlog
+  5-3-distributed-request-tracing: backlog
+  5-4-alerting-health-thresholds: backlog
+  5-5-debug-diagnostic-tools: backlog
   epic-5-retrospective: optional
-
-  epic-6: backlog
-  6-1-three-tier-priority-event-queues: backlog
-  6-2-backpressure-handling: backlog
-  6-3-circuit-breaker-for-event-processing: backlog
-  6-4-event-bus-performance-metrics: backlog
-  epic-6-retrospective: optional
-
-  epic-7: backlog
-  7-1-load-testing-framework-setup: backlog
-  7-2-1k-peer-performance-baseline: backlog
-  7-3-5k-peer-stress-testing: backlog
-  7-4-10k-peer-scalability-validation: backlog
-  epic-7-retrospective: optional
-
-  epic-8: backlog
-  8-1-verb-noun-command-structure: backlog
-  8-2-actionable-error-messages: backlog
-  8-3-comprehensive-help-system: backlog
-  8-4-configuration-management-cli: backlog
-  8-5-multiple-output-formats: backlog
-  8-6-progress-indicators: backlog
-  8-7-interactive-vs-non-interactive-detection: backlog
-  8-8-first-run-experience: backlog
-  8-9-dependency-diagnostics: backlog
-  8-10-shell-completion: backlog
-  8-11-secure-credential-handling: backlog
-  8-12-upgrade-and-migration: backlog
-  epic-8-retrospective: optional

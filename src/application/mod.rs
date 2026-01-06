@@ -4,10 +4,11 @@
 //! all system components using dependency injection and event-driven patterns.
 
 pub mod lifecycle;
+pub mod status;
 
 use crate::agent::Agent;
 use crate::core::{
-    config::{ConfigError, ConfigManager},
+    config::{Config, ConfigError},
     container::Container,
     events::{EventBus, EventHandler, EventResult},
     services::{Service, ServiceError, ServiceRegistry},
@@ -58,19 +59,48 @@ pub enum ApplicationError {
     ShutdownFailed(String),
 }
 
-/// Application state
+/// Application state representing the node lifecycle
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ApplicationState {
-    /// Application is initializing
-    Initializing,
-    /// Application is running
-    Running,
-    /// Application is stopping
-    Stopping,
-    /// Application has stopped
+    /// Application has stopped and is not running
     Stopped,
-    /// Application encountered an error
-    Error(String),
+    /// Application is initializing (loading config, setting up components)
+    Initializing,
+    /// Application is registering with the network (connecting to peers, announcing presence)
+    Registering,
+    /// Application is active and processing tasks
+    Active,
+    /// Application is shutting down gracefully
+    ShuttingDown,
+}
+
+impl ApplicationState {
+    /// Check if a state transition is valid
+    pub fn can_transition_to(&self, next: &ApplicationState) -> bool {
+        use ApplicationState::*;
+        matches!(
+            (self, next),
+            // Valid transitions
+            (Stopped, Initializing) |
+            (Initializing, Registering) |
+            (Initializing, ShuttingDown) | // Allow shutdown during init
+            (Registering, Active) |
+            (Registering, ShuttingDown) | // Allow shutdown during registration
+            (Active, ShuttingDown) |
+            (ShuttingDown, Stopped)
+        )
+    }
+
+    /// Get a human-readable description of the state
+    pub fn description(&self) -> &'static str {
+        match self {
+            ApplicationState::Stopped => "Node is stopped",
+            ApplicationState::Initializing => "Node is initializing",
+            ApplicationState::Registering => "Node is registering with network",
+            ApplicationState::Active => "Node is active and processing",
+            ApplicationState::ShuttingDown => "Node is shutting down",
+        }
+    }
 }
 
 /// Main application structure
@@ -78,10 +108,10 @@ pub struct Application {
     container: Arc<Container>,
     event_bus: Arc<EventBus>,
     service_registry: Arc<ServiceRegistry>,
-    config_manager: Arc<ConfigManager>,
+    config: Arc<RwLock<Config>>,
     state: Arc<RwLock<ApplicationState>>,
     agents: Arc<RwLock<Vec<Arc<dyn Agent>>>>,
-    network_manager: Arc<RwLock<Option<NetworkManager>>>,
+    pub(crate) network_manager: Arc<RwLock<Option<NetworkManager>>>,
     storage_manager: Arc<RwLock<Option<StorageManager>>>,
 }
 
@@ -92,7 +122,7 @@ impl Application {
             container: Arc::new(Container::new()),
             event_bus: Arc::new(EventBus::new()),
             service_registry: Arc::new(ServiceRegistry::new()),
-            config_manager: Arc::new(ConfigManager::new()),
+            config: Arc::new(RwLock::new(Config::default())),
             state: Arc::new(RwLock::new(ApplicationState::Stopped)),
             agents: Arc::new(RwLock::new(Vec::new())),
             network_manager: Arc::new(RwLock::new(None)),
@@ -102,10 +132,7 @@ impl Application {
 
     /// Initialize the application
     pub async fn initialize(&self) -> Result<(), ApplicationError> {
-        {
-            let mut state = self.state.write().await;
-            *state = ApplicationState::Initializing;
-        }
+        self.transition_state(ApplicationState::Initializing).await?;
 
         // Load configuration
         self.load_configuration().await?;
@@ -122,22 +149,44 @@ impl Application {
         // Initialize network
         self.initialize_network().await?;
 
-        {
-            let mut state = self.state.write().await;
-            *state = ApplicationState::Running;
+        self.transition_state(ApplicationState::Registering).await?;
+        Ok(())
+    }
+
+    /// Register with the network and become active
+    pub async fn register(&self) -> Result<(), ApplicationError> {
+        let state = self.state.read().await;
+        if *state != ApplicationState::Registering {
+            return Err(ApplicationError::StartupFailed(format!(
+                "Cannot register from state: {:?}",
+                *state
+            )));
         }
+        drop(state);
+
+        // Perform network registration tasks
+        tracing::info!("Registering with network...");
+        
+        // Start network manager if available
+        if let Some(_network_manager) = self.network_manager.read().await.as_ref() {
+            // Network registration would happen here
+            tracing::info!("Network manager ready");
+        }
+
+        self.transition_state(ApplicationState::Active).await?;
         Ok(())
     }
 
     /// Start the application
     pub async fn start(&self) -> Result<(), ApplicationError> {
         let state = self.state.read().await;
-        if *state != ApplicationState::Running {
+        if *state != ApplicationState::Active {
             return Err(ApplicationError::StartupFailed(format!(
-                "Application is not in running state: {:?}",
+                "Application is not in active state: {:?}",
                 *state
             )));
         }
+        drop(state);
 
         // Start all services
         self.service_registry.start_all().await?;
@@ -154,13 +203,13 @@ impl Application {
             agent.start().await?;
         }
 
+        tracing::info!("All services started successfully");
         Ok(())
     }
 
     /// Stop the application
     pub async fn stop(&self) -> Result<(), ApplicationError> {
-        let mut state = self.state.write().await;
-        *state = ApplicationState::Stopping;
+        self.transition_state(ApplicationState::ShuttingDown).await?;
 
         // Stop agents
         let agents = self.agents.read().await;
@@ -174,8 +223,61 @@ impl Application {
         if let Err(e) = self.service_registry.stop_all().await {
             tracing::warn!("Failed to stop some services: {}", e);
         }
+        
+        // Shutdown core components (Network, Storage)
+        if let Err(e) = self.shutdown_components().await {
+            tracing::warn!("Failed to shutdown components: {}", e);
+        }
 
-        *state = ApplicationState::Stopped;
+        self.transition_state(ApplicationState::Stopped).await?;
+        Ok(())
+    }
+
+    /// Shutdown all application components
+    pub async fn shutdown_components(&self) -> Result<(), ApplicationError> {
+        // Shutdown network manager
+        let mut network_manager = self.network_manager.write().await;
+        if let Some(manager) = network_manager.as_mut() {
+            tracing::info!("Shutting down network manager...");
+            if let Err(e) = manager.graceful_shutdown().await {
+                tracing::warn!("Failed to gracefully shutdown network manager: {}", e);
+            }
+        }
+        
+        // Shutdown storage manager
+        let storage_manager = self.storage_manager.read().await;
+        if let Some(manager) = storage_manager.as_ref() {
+            tracing::info!("Shutting down storage manager...");
+            use crate::storage::local::Storage; // Import Storage trait to see shutdown method
+            if let Err(e) = manager.shutdown().await {
+                tracing::warn!("Failed to shutdown storage manager: {}", e);
+            }
+        }
+
+        Ok(())
+    }
+
+    /// Transition to a new state with validation and logging
+    async fn transition_state(&self, next_state: ApplicationState) -> Result<(), ApplicationError> {
+        let mut state = self.state.write().await;
+        
+        // Validate transition
+        if !state.can_transition_to(&next_state) {
+            return Err(ApplicationError::InitializationFailed(format!(
+                "Invalid state transition from {:?} to {:?}",
+                *state, next_state
+            )));
+        }
+
+        tracing::info!(
+            from = ?*state,
+            to = ?next_state,
+            "State transition: {} -> {}",
+            state.description(),
+            next_state.description()
+        );
+
+        *state = next_state;
         Ok(())
     }
 
@@ -196,8 +298,8 @@ impl Application {
     }
 
     /// Get the configuration manager
-    pub fn config_manager(&self) -> Arc<ConfigManager> {
-        self.config_manager.clone()
+    pub fn config(&self) -> Arc<RwLock<Config>> {
+        self.config.clone()
     }
 
     /// Add an agent to the application
@@ -215,17 +317,9 @@ impl Application {
 
     /// Load configuration
     async fn load_configuration(&self) -> Result<(), ApplicationError> {
-        // Load from environment variables
-        self.config_manager.load_from_env("P2P_AI_").await?;
-
-        // Try to load from config file
-        if let Err(e) = self.config_manager.load_from_file("config.yaml").await {
-            tracing::info!("No config file found, using defaults: {}", e);
-        }
-
-        // Validate configuration
-        self.config_manager.validate().await?;
-
+        let loaded_config = Config::load().await?;
+        let mut config = self.config.write().await;
+        *config = loaded_config;
         Ok(())
     }
 
@@ -238,9 +332,21 @@ impl Application {
             .await?;
 
         // Register config manager as a service
-        let config_service = ConfigService::new(self.config_manager.clone());
+        let config_service = ConfigService::new(self.config.clone());
         self.service_registry
             .register(Arc::new(config_service))
+            .await?;
+
+        // Register status manager
+        let config = self.config.read().await;
+        let status_path = config.storage_path.join("node_status.json");
+        drop(config);
+
+        let status_manager = status::StatusManager::new(self.clone())
+            .with_status_file(status_path);
+
+        self.service_registry
+            .register(Arc::new(status_manager))
             .await?;
 
         Ok(())
@@ -299,7 +405,6 @@ impl Application {
     /// Get network configuration
     async fn get_network_config(&self) -> Result<NetworkConfig, ApplicationError> {
         // Create default network configuration
-        // In a real implementation, this would read from the config manager
         Ok(NetworkConfig {
             listen_addr: "127.0.0.1:0".parse().unwrap(),
             bootstrap_peers: vec![],
@@ -321,7 +426,7 @@ impl Clone for Application {
             container: self.container.clone(),
             event_bus: self.event_bus.clone(),
             service_registry: self.service_registry.clone(),
-            config_manager: self.config_manager.clone(),
+            config: self.config.clone(),
             state: self.state.clone(),
             agents: self.agents.clone(),
             network_manager: self.network_manager.clone(),
@@ -404,12 +509,12 @@ impl Service for EventBusService {
 /// Config service wrapper
 struct ConfigService {
     #[allow(dead_code)]
-    config_manager: Arc<ConfigManager>,
+    config: Arc<RwLock<Config>>,
 }
 
 impl ConfigService {
-    fn new(config_manager: Arc<ConfigManager>) -> Self {
-        Self { config_manager }
+    fn new(config: Arc<RwLock<Config>>) -> Self {
+        Self { config }
     }
 }
 
@@ -542,6 +647,69 @@ mod tests {
         let app = Application::new();
         let result = app.initialize().await;
         assert!(result.is_ok());
-        assert_eq!(app.state().await, ApplicationState::Running);
+        assert_eq!(app.state().await, ApplicationState::Registering);
+    }
+
+    #[tokio::test]
+    async fn test_state_transitions() {
+        use ApplicationState::*;
+
+        // Test valid transitions
+        assert!(Stopped.can_transition_to(&Initializing));
+        assert!(Initializing.can_transition_to(&Registering));
+        assert!(Registering.can_transition_to(&Active));
+        assert!(Active.can_transition_to(&ShuttingDown));
+        assert!(ShuttingDown.can_transition_to(&Stopped));
+
+        // Test invalid transitions
+        assert!(!Stopped.can_transition_to(&Active));
+        assert!(!Active.can_transition_to(&Initializing));
+        assert!(!Stopped.can_transition_to(&ShuttingDown));
+    }
+
+    #[tokio::test]
+    async fn test_state_descriptions() {
+        assert_eq!(ApplicationState::Stopped.description(), "Node is stopped");
+        assert_eq!(ApplicationState::Initializing.description(), "Node is initializing");
+        assert_eq!(ApplicationState::Registering.description(), "Node is registering with network");
+        assert_eq!(ApplicationState::Active.description(), "Node is active and processing");
+        assert_eq!(ApplicationState::ShuttingDown.description(), "Node is shutting down");
+    }
+
+    #[tokio::test]
+    async fn test_full_lifecycle() {
+        let app = Application::new();
+        
+        // Start from Stopped
+        assert_eq!(app.state().await, ApplicationState::Stopped);
+        
+        // Initialize
+        app.initialize().await.expect("Should initialize");
+        assert_eq!(app.state().await, ApplicationState::Registering);
+        
+        // Register and become active
+        app.register().await.expect("Should register");
+        assert_eq!(app.state().await, ApplicationState::Active);
+        
+        // Start services
+        app.start().await.expect("Should start");
+        assert_eq!(app.state().await, ApplicationState::Active);
+        
+        // Shutdown
+        app.stop().await.expect("Should stop");
+        assert_eq!(app.state().await, ApplicationState::Stopped);
+    }
+
+    #[tokio::test]
+    async fn test_shutdown_during_init() {
+        let app = Application::new();
+        
+        // Initialize
+        app.initialize().await.expect("Should initialize");
+        assert_eq!(app.state().await, ApplicationState::Registering);
+        
+        // Should be able to shutdown during registration
+        app.stop().await.expect("Should stop");
+        assert_eq!(app.state().await, ApplicationState::Stopped);
     }
 }

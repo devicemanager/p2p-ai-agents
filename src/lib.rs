@@ -12,6 +12,8 @@ pub mod agent;
 pub mod application;
 /// Core architectural components
 pub mod core;
+/// Daemon process management (Unix only)
+pub mod daemon;
 /// Metrics collection and monitoring
 pub mod metrics;
 pub mod network;
@@ -24,7 +26,7 @@ pub mod prelude {
     pub use crate::agent::{Agent, AgentConfig, AgentId};
     pub use crate::application::{Application, ApplicationError, ApplicationState};
     pub use crate::core::{
-        config::{Config, ConfigError, ConfigManager},
+        config::{Config, ConfigError},
         container::Container,
         correlation::CorrelationId,
         events::{Event, EventBus, EventHandler, EventResult},

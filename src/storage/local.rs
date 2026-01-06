@@ -71,7 +71,11 @@ pub trait Storage: Send + Sync {
 
     /// Delete a value by key with specified consistency level
     async fn delete(&self, key: &str, consistency: ConsistencyLevel) -> Result<(), StorageError>;
-    // ... batch, streaming, etc.
+
+    /// Shutdown the storage backend, flushing any pending writes
+    async fn shutdown(&self) -> Result<(), StorageError> {
+        Ok(())
+    }
 }
 
 /// Local storage backend with file-based persistence

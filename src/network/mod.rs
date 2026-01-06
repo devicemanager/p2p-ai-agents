@@ -234,6 +234,44 @@ impl NetworkManager {
         Ok(())
     }
 
+    /// Perform a graceful shutdown of the network manager.
+    /// 
+    /// This will:
+    /// 1. Mark the manager as shutting down to reject new connections
+    /// 2. Send goodbye messages to all connected peers
+    /// 3. Close all peer connections
+    pub async fn graceful_shutdown(&mut self) -> NetworkResult<()> {
+        if !self.is_running {
+            return Err(NetworkError::NotRunning);
+        }
+        
+        // 1. Mark as shutting down (we'll just use the is_running flag for now)
+        // In a real implementation we might want a separate state to allow
+        // outgoing goodbye messages while rejecting incoming ones
+        
+        // 2. Send goodbye messages to all peers
+        let peers = self.connected_peers.lock().await;
+        for peer_addr in peers.iter() {
+            // Queue a goodbye message
+            let msg = NetworkMessage {
+                from: "local".to_string(), // Should use actual node ID
+                to: peer_addr.to_string(),
+                content: b"GOODBYE".to_vec(),
+            };
+            self.messages.lock().await.push(msg);
+        }
+        
+        // 3. Close connections (simulate by clearing list)
+        // In a real implementation we would wait for the goodbye messages to flush
+        drop(peers); // Release lock before re-acquiring in simulate_transport_failure
+        
+        // Use existing method to clear peers
+        self.simulate_transport_failure().await?;
+        
+        self.is_running = false;
+        Ok(())
+    }
+
     /// Set the transport protocol.
     pub fn set_transport(&mut self, transport: &str) {
         self.transport_type = transport.to_string();

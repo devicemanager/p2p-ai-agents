@@ -24,10 +24,16 @@ libp2p-identity = { version = "0.2", features = ["peerid", "ed25519"] }
 aes-gcm = "0.10"
 zeroize = { version = "1.7", features = ["derive"] }
 sha2 = "0.10"
+hex = "0.4"
 
 # System integration  
 keyring = "2.3"
 base64 = { version = "0.21", optional = false }
+dirs = "5.0"
+
+# Daemon mode (Unix only)
+daemonize = "0.5"
+nix = { version = "0.27", features = ["signal", "process"] }
 
 # Serialization
 serde = { version = "1.0", features = ["derive"] }
