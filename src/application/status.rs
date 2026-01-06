@@ -3,8 +3,10 @@
 //! This module provides the `StatusManager` service which collects system metrics
 //! and persists them to a status file for external monitoring (e.g. by the CLI).
 
-use crate::application::{Application};
-use crate::core::services::{Service, ServiceError, ServiceHealth, ServiceId, ServiceRequest, ServiceResponse, ServiceStatus};
+use crate::application::Application;
+use crate::core::services::{
+    Service, ServiceError, ServiceHealth, ServiceId, ServiceRequest, ServiceResponse, ServiceStatus,
+};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -125,20 +127,20 @@ impl StatusManager {
             };
 
             let app_state = application.state().await;
-            
+
             // Get connected peers
             let network_manager = application.network_manager.read().await;
             let (connected_peers_count, peers_list) = if let Some(nm) = network_manager.as_ref() {
-                 let peers = nm.get_connected_peers().await;
-                 (peers.len(), peers.iter().map(|a| a.to_string()).collect())
+                let peers = nm.get_connected_peers().await;
+                (peers.len(), peers.iter().map(|a| a.to_string()).collect())
             } else {
-                 (0, Vec::new())
+                (0, Vec::new())
             };
-            
+
             let status = NodeStatus {
                 node_id,
                 state: format!("{:?}", app_state), // Use Debug impl for shorter string
-                uptime_seconds: 0, // Would need start time
+                uptime_seconds: 0,                 // Would need start time
                 connected_peers: connected_peers_count,
                 peers: peers_list,
                 memory_usage_bytes: sys.used_memory(),
@@ -156,7 +158,7 @@ impl StatusManager {
                 if let Some(parent) = status_file_path.parent() {
                     let _ = tokio::fs::create_dir_all(parent).await;
                 }
-                
+
                 if let Err(e) = tokio::fs::write(&status_file_path, json).await {
                     error!("Failed to write status file: {}", e);
                 }
@@ -164,7 +166,7 @@ impl StatusManager {
 
             tokio::time::sleep(update_interval).await;
         }
-        
+
         info!("Status monitoring loop stopped");
     }
 }
@@ -220,7 +222,7 @@ impl Service for StatusManager {
         if let Some(handle) = monitor_handle.take() {
             // Wait for loop to exit (it checks running flag)
             // We can abort it to be faster
-            handle.abort(); 
+            handle.abort();
         }
 
         info!("StatusManager stopped");
@@ -244,7 +246,10 @@ impl Service for StatusManager {
         }
     }
 
-    async fn handle_request(&self, _request: ServiceRequest) -> Result<ServiceResponse, ServiceError> {
+    async fn handle_request(
+        &self,
+        _request: ServiceRequest,
+    ) -> Result<ServiceResponse, ServiceError> {
         Err(ServiceError::RequestFailed("Not implemented".to_string()))
     }
 }

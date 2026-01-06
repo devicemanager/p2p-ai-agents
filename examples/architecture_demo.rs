@@ -40,7 +40,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         println!("Max Peers: {}", config.max_peers);
         println!("Log Level: {}", config.log_level);
         println!("Storage Path: {:?}", config.storage_path);
-        println!("Health Check Interval: {} seconds", config.health_check_interval_secs);
+        println!(
+            "Health Check Interval: {} seconds",
+            config.health_check_interval_secs
+        );
         println!("Max Memory: {} MB", config.max_memory_mb);
     }
 
