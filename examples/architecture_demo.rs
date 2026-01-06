@@ -4,7 +4,6 @@
 //! dependency injection, event-driven architecture, and service management.
 
 use p2p_ai_agents::agent::{DefaultAgent, ResourceLimits};
-use p2p_ai_agents::core::config::ConfigValue;
 use p2p_ai_agents::core::events::{AgentStarted, TaskCompleted};
 use p2p_ai_agents::core::services::ServiceRegistry;
 use p2p_ai_agents::prelude::*;
@@ -33,30 +32,34 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("\n🔧 Configuration Management Demo");
     println!("-------------------------------");
 
-    // Set some configuration values
-    app.config_manager()
-        .set(
-            "demo.message",
-            ConfigValue::String("Hello from architecture demo!".to_string()),
-        )
-        .await?;
-
-    app.config_manager()
-        .set("demo.number", ConfigValue::Integer(42))
-        .await?;
-
-    app.config_manager()
-        .set("demo.enabled", ConfigValue::Boolean(true))
-        .await?;
-
     // Read configuration values
-    let message = app.config_manager().get("demo.message").await?;
-    let number = app.config_manager().get("demo.number").await?;
-    let enabled = app.config_manager().get("demo.enabled").await?;
+    {
+        let config_arc = app.config();
+        let config = config_arc.read().await;
+        println!("Listen Port: {}", config.listen_port);
+        println!("Max Peers: {}", config.max_peers);
+        println!("Log Level: {}", config.log_level);
+        println!("Storage Path: {:?}", config.storage_path);
+        println!("Health Check Interval: {} seconds", config.health_check_interval_secs);
+        println!("Max Memory: {} MB", config.max_memory_mb);
+    }
 
-    println!("Message: {:?}", message);
-    println!("Number: {:?}", number);
-    println!("Enabled: {:?}", enabled);
+    // Demonstrate configuration updates
+    println!("\nUpdating configuration...");
+    {
+        let config_arc = app.config();
+        let mut config = config_arc.write().await;
+        config.max_peers = 64;
+        config.log_level = "debug".to_string();
+    }
+
+    // Verify updates
+    {
+        let config_arc = app.config();
+        let config = config_arc.read().await;
+        println!("Updated Max Peers: {}", config.max_peers);
+        println!("Updated Log Level: {}", config.log_level);
+    }
 
     // Demonstrate event system
     println!("\n📡 Event System Demo");
@@ -124,6 +127,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("Added agent: {}", agent.id());
     println!("Agent status: {:?}", agent.status().await?);
 
+    // Register the application with the network
+    println!("\n📡 Registering Application");
+    println!("--------------------------");
+    app.register().await?;
+    println!("✅ Application registered successfully");
+
     // Start the application
     println!("\n🚀 Starting Application");
     println!("----------------------");
@@ -142,17 +151,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         app.event_bus().publish(event).await?;
         sleep(Duration::from_millis(100)).await;
     }
-
-    // Demonstrate configuration updates
-    println!("\n🔄 Configuration Updates");
-    println!("------------------------");
-
-    app.config_manager()
-        .set("demo.counter", ConfigValue::Integer(100))
-        .await?;
-
-    let counter = app.config_manager().get("demo.counter").await?;
-    println!("Updated counter: {:?}", counter);
 
     // Show application state
     println!("\n📊 Application State");
