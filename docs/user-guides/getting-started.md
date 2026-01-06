@@ -47,7 +47,35 @@ brew install openssl pkg-config
 - macOS (10.15+)
 - Windows 10/11 (with WSL recommended for easier dependency management)
 
+## Troubleshooting
+### WSL / Headless Linux: DBus Secret Service Error
+If you encounter errors like `Platform secure storage failure: zbus error: ... ServiceUnknown`, it means the system keychain service is missing. This is common in WSL orheadless environments.
+
+**Fix:** Install and run `gnome-keyring`:
+
+1.  **Install gnome-keyring**:
+    ```bash
+    sudo apt-get update
+    sudo apt-get install -y gnome-keyring
+    ```
+
+2.  **Start DBus session** (add to `~/.bashrc` or run manually):
+    ```bash
+    if [ -z "$DBUS_SESSION_BUS_ADDRESS" ]; then
+        eval $(dbus-launch --sh-syntax)
+    fi
+    ```
+
+3.  **Initialize keyring** (run once per session):
+    ```bash
+    # Create directory and unlock a new keyring with a dummy password
+    mkdir -p ~/.local/share/keyrings
+    echo -n "test" | gnome-keyring-daemon --unlock --components=secrets
+    ```
+    *Note: The password ("test") is temporary for the session.*
+
 ## Installation
+
 
 ### 1. Install Rust
 
