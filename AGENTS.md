@@ -1,6 +1,7 @@
 # P2P AI Agents - AI Agent Guide
 
 > **⚠️ WORK IN PROGRESS DISCLAIMER**
+>
 > 
 > This project is currently in early development and serves as a foundational boilerplate for building distributed peer-to-peer AI agents. The current implementation provides basic structure and components, but many features are still being developed. This is not yet ready for production use.
 
