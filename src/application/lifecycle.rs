@@ -305,6 +305,7 @@ impl LifecycleManager {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use tempfile::TempDir;
 
     #[tokio::test]
     async fn test_lifecycle_state_creation() {
@@ -336,9 +337,6 @@ mod tests {
         // The lifecycle manager implementation is correct, but Application has a lock ordering issue
         // TODO: Fix Application::initialize() to avoid holding write lock during async operations
 
-        // Ensure data directory exists
-        let _ = tokio::fs::create_dir_all("data").await;
-
         // Simple test of state management without full application init
         let lifecycle_state = LifecycleState::new("test-peer".to_string());
         assert_eq!(lifecycle_state.peer_id, "test-peer");
@@ -351,29 +349,23 @@ mod tests {
 
         assert!(updated_state.last_stopped.is_some());
         assert_eq!(updated_state.successful_shutdowns, 1);
-
-        // Clean up
-        let _ = tokio::fs::remove_file("data/lifecycle_state.json").await;
     }
 
     #[tokio::test]
     async fn test_crash_recovery_state() {
         // Test crash recovery logic without full application init
-        // Ensure data directory exists
-        let _ = tokio::fs::create_dir_all("data").await;
+        // Use temp dir for isolation
+        let temp_dir = TempDir::new().unwrap();
+        let state_path = temp_dir.path().join("lifecycle_state.json");
 
         // Create and persist an unclean shutdown state (simulating crash)
         let mut state = LifecycleState::new("crash-test-peer".to_string());
         state.last_stopped = None; // Simulates crash
         let state_json = serde_json::to_string_pretty(&state).unwrap();
-        tokio::fs::write("data/lifecycle_state.json", state_json)
-            .await
-            .unwrap();
+        tokio::fs::write(&state_path, state_json).await.unwrap();
 
         // Simulate recovery: read state and detect unclean shutdown
-        let recovered_json = tokio::fs::read_to_string("data/lifecycle_state.json")
-            .await
-            .unwrap();
+        let recovered_json = tokio::fs::read_to_string(&state_path).await.unwrap();
         let recovered_state: LifecycleState = serde_json::from_str(&recovered_json).unwrap();
 
         // Verify crash detection
@@ -387,8 +379,5 @@ mod tests {
         let mut updated_state = recovered_state;
         updated_state.unclean_shutdowns += 1;
         assert_eq!(updated_state.unclean_shutdowns, 1);
-
-        // Clean up
-        let _ = tokio::fs::remove_file("data/lifecycle_state.json").await;
     }
 }
