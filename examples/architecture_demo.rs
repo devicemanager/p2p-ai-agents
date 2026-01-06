@@ -127,6 +127,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("Added agent: {}", agent.id());
     println!("Agent status: {:?}", agent.status().await?);
 
+    // Register the application with the network
+    println!("\n📡 Registering Application");
+    println!("--------------------------");
+    app.register().await?;
+    println!("✅ Application registered successfully");
+
     // Start the application
     println!("\n🚀 Starting Application");
     println!("----------------------");
