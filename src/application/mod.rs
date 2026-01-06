@@ -132,7 +132,8 @@ impl Application {
 
     /// Initialize the application
     pub async fn initialize(&self) -> Result<(), ApplicationError> {
-        self.transition_state(ApplicationState::Initializing).await?;
+        self.transition_state(ApplicationState::Initializing)
+            .await?;
 
         // Load configuration
         self.load_configuration().await?;
@@ -166,7 +167,7 @@ impl Application {
 
         // Perform network registration tasks
         tracing::info!("Registering with network...");
-        
+
         // Start network manager if available
         if let Some(_network_manager) = self.network_manager.read().await.as_ref() {
             // Network registration would happen here
@@ -209,7 +210,8 @@ impl Application {
 
     /// Stop the application
     pub async fn stop(&self) -> Result<(), ApplicationError> {
-        self.transition_state(ApplicationState::ShuttingDown).await?;
+        self.transition_state(ApplicationState::ShuttingDown)
+            .await?;
 
         // Stop agents
         let agents = self.agents.read().await;
@@ -223,7 +225,7 @@ impl Application {
         if let Err(e) = self.service_registry.stop_all().await {
             tracing::warn!("Failed to stop some services: {}", e);
         }
-        
+
         // Shutdown core components (Network, Storage)
         if let Err(e) = self.shutdown_components().await {
             tracing::warn!("Failed to shutdown components: {}", e);
@@ -243,7 +245,7 @@ impl Application {
                 tracing::warn!("Failed to gracefully shutdown network manager: {}", e);
             }
         }
-        
+
         // Shutdown storage manager
         let storage_manager = self.storage_manager.read().await;
         if let Some(manager) = storage_manager.as_ref() {
@@ -260,7 +262,7 @@ impl Application {
     /// Transition to a new state with validation and logging
     async fn transition_state(&self, next_state: ApplicationState) -> Result<(), ApplicationError> {
         let mut state = self.state.write().await;
-        
+
         // Validate transition
         if !state.can_transition_to(&next_state) {
             return Err(ApplicationError::InitializationFailed(format!(
@@ -342,8 +344,7 @@ impl Application {
         let status_path = config.storage_path.join("node_status.json");
         drop(config);
 
-        let status_manager = status::StatusManager::new(self.clone())
-            .with_status_file(status_path);
+        let status_manager = status::StatusManager::new(self.clone()).with_status_file(status_path);
 
         self.service_registry
             .register(Arc::new(status_manager))
@@ -670,31 +671,43 @@ mod tests {
     #[tokio::test]
     async fn test_state_descriptions() {
         assert_eq!(ApplicationState::Stopped.description(), "Node is stopped");
-        assert_eq!(ApplicationState::Initializing.description(), "Node is initializing");
-        assert_eq!(ApplicationState::Registering.description(), "Node is registering with network");
-        assert_eq!(ApplicationState::Active.description(), "Node is active and processing");
-        assert_eq!(ApplicationState::ShuttingDown.description(), "Node is shutting down");
+        assert_eq!(
+            ApplicationState::Initializing.description(),
+            "Node is initializing"
+        );
+        assert_eq!(
+            ApplicationState::Registering.description(),
+            "Node is registering with network"
+        );
+        assert_eq!(
+            ApplicationState::Active.description(),
+            "Node is active and processing"
+        );
+        assert_eq!(
+            ApplicationState::ShuttingDown.description(),
+            "Node is shutting down"
+        );
     }
 
     #[tokio::test]
     async fn test_full_lifecycle() {
         let app = Application::new();
-        
+
         // Start from Stopped
         assert_eq!(app.state().await, ApplicationState::Stopped);
-        
+
         // Initialize
         app.initialize().await.expect("Should initialize");
         assert_eq!(app.state().await, ApplicationState::Registering);
-        
+
         // Register and become active
         app.register().await.expect("Should register");
         assert_eq!(app.state().await, ApplicationState::Active);
-        
+
         // Start services
         app.start().await.expect("Should start");
         assert_eq!(app.state().await, ApplicationState::Active);
-        
+
         // Shutdown
         app.stop().await.expect("Should stop");
         assert_eq!(app.state().await, ApplicationState::Stopped);
@@ -703,11 +716,11 @@ mod tests {
     #[tokio::test]
     async fn test_shutdown_during_init() {
         let app = Application::new();
-        
+
         // Initialize
         app.initialize().await.expect("Should initialize");
         assert_eq!(app.state().await, ApplicationState::Registering);
-        
+
         // Should be able to shutdown during registration
         app.stop().await.expect("Should stop");
         assert_eq!(app.state().await, ApplicationState::Stopped);

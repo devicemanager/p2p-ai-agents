@@ -130,11 +130,11 @@ async fn cmd_init(force: bool) -> Result<()> {
     use p2p_ai_agents::core::identity::storage::default_identity_path;
 
     let identity_path = default_identity_path();
-    
+
     if identity_path.exists() && !force {
         info!("✅ Identity already exists at: {}", identity_path.display());
         info!("   Use --force to regenerate (WARNING: destroys existing identity!)");
-        
+
         // Load and display existing identity
         let identity = load_or_create_identity()
             .await
@@ -173,29 +173,29 @@ async fn cmd_status(cli: &Cli) -> Result<()> {
 
     // Try to load dynamic status
     let status_path = std::path::Path::new("data/node_status.json");
-    
+
     if status_path.exists() {
         match tokio::fs::read_to_string(status_path).await {
-            Ok(content) => {
-                match serde_json::from_str::<NodeStatus>(&content) {
-                    Ok(status) => {
-                        info!("Node ID:         {}", status.node_id);
-                        info!("State:           {}", status.state);
-                        info!("Version:         {}", status.version);
-                        info!("Uptime:          {}s", status.uptime_seconds);
-                        info!("Peers:           {}", status.connected_peers);
-                        info!("Agents:          {}", status.active_agents);
-                        info!("Tasks Processed: {}", status.tasks_processed);
-                        info!("Memory:          {:.2} MB / {:.2} MB", 
-                             status.memory_usage_bytes as f64 / 1024.0 / 1024.0,
-                             status.total_memory_bytes as f64 / 1024.0 / 1024.0);
-                        info!("CPU Usage:       {:.1}%", status.cpu_usage_percent);
-                        info!("Last Update:     {}", status.timestamp.to_rfc3339());
-                        return Ok(());
-                    },
-                    Err(e) => {
-                        tracing::warn!("Failed to parse status file: {}", e);
-                    }
+            Ok(content) => match serde_json::from_str::<NodeStatus>(&content) {
+                Ok(status) => {
+                    info!("Node ID:         {}", status.node_id);
+                    info!("State:           {}", status.state);
+                    info!("Version:         {}", status.version);
+                    info!("Uptime:          {}s", status.uptime_seconds);
+                    info!("Peers:           {}", status.connected_peers);
+                    info!("Agents:          {}", status.active_agents);
+                    info!("Tasks Processed: {}", status.tasks_processed);
+                    info!(
+                        "Memory:          {:.2} MB / {:.2} MB",
+                        status.memory_usage_bytes as f64 / 1024.0 / 1024.0,
+                        status.total_memory_bytes as f64 / 1024.0 / 1024.0
+                    );
+                    info!("CPU Usage:       {:.1}%", status.cpu_usage_percent);
+                    info!("Last Update:     {}", status.timestamp.to_rfc3339());
+                    return Ok(());
+                }
+                Err(e) => {
+                    tracing::warn!("Failed to parse status file: {}", e);
                 }
             },
             Err(e) => {
@@ -214,8 +214,8 @@ async fn cmd_status(cli: &Cli) -> Result<()> {
     // Load identity
     match load_or_create_identity().await {
         Ok(identity) => {
-             display_identity(&identity)?;
-        },
+            display_identity(&identity)?;
+        }
         Err(e) => {
             info!("  Identity: Not found or error loading ({})", e);
         }
@@ -228,13 +228,13 @@ async fn cmd_status(cli: &Cli) -> Result<()> {
             info!("Configuration:");
             info!("  Listen Port: {}", cli.port.unwrap_or(9000));
             info!("  Max Peers: {}", cli.max_peers.unwrap_or(32));
-            
+
             if let Some(bootstrap) = &cli.bootstrap {
                 info!("  Bootstrap Nodes: {}", bootstrap);
             }
-        },
+        }
         Err(e) => {
-             info!("  Configuration: Error loading ({})", e);
+            info!("  Configuration: Error loading ({})", e);
         }
     }
 
@@ -245,25 +245,23 @@ async fn cmd_status(cli: &Cli) -> Result<()> {
 async fn cmd_peers() -> Result<()> {
     // Try to load dynamic status
     let status_path = std::path::Path::new("data/node_status.json");
-    
+
     if status_path.exists() {
         match tokio::fs::read_to_string(status_path).await {
-            Ok(content) => {
-                match serde_json::from_str::<NodeStatus>(&content) {
-                    Ok(status) => {
-                        info!("Connected Peers ({})", status.connected_peers);
-                        info!("════════════════");
-                        if status.peers.is_empty() {
-                            info!("No peers connected.");
-                        } else {
-                            for peer in status.peers {
-                                info!("- {}", peer);
-                            }
+            Ok(content) => match serde_json::from_str::<NodeStatus>(&content) {
+                Ok(status) => {
+                    info!("Connected Peers ({})", status.connected_peers);
+                    info!("════════════════");
+                    if status.peers.is_empty() {
+                        info!("No peers connected.");
+                    } else {
+                        for peer in status.peers {
+                            info!("- {}", peer);
                         }
-                    },
-                    Err(e) => {
-                        tracing::warn!("Failed to parse status file: {}", e);
                     }
+                }
+                Err(e) => {
+                    tracing::warn!("Failed to parse status file: {}", e);
                 }
             },
             Err(e) => {
@@ -280,14 +278,14 @@ async fn cmd_peers() -> Result<()> {
 /// Monitor node status
 async fn cmd_monitor(interval: u64) -> Result<()> {
     info!("Starting monitor (Ctrl+C to stop)...");
-    
+
     loop {
         // Clear screen (ANSI escape code)
         print!("\x1B[2J\x1B[1;1H");
-        
+
         let cli = Cli::parse(); // Re-parse just to pass to cmd_status, inefficient but simple
         cmd_status(&cli).await?;
-        
+
         tokio::time::sleep(std::time::Duration::from_secs(interval)).await;
     }
 }
@@ -297,11 +295,11 @@ async fn cmd_node_id() -> Result<()> {
     let identity = load_or_create_identity()
         .await
         .context("Failed to load identity")?;
-    
+
     let node_id = identity
         .derive_node_id()
         .context("Failed to derive node ID")?;
-    
+
     println!("{}", node_id);
     Ok(())
 }
@@ -314,12 +312,14 @@ async fn cmd_start(cli: &Cli) -> Result<()> {
     if cli.daemon {
         #[cfg(not(unix))]
         {
-            anyhow::bail!("Daemon mode is not supported on Windows. Please run in foreground mode.");
+            anyhow::bail!(
+                "Daemon mode is not supported on Windows. Please run in foreground mode."
+            );
         }
 
         #[cfg(unix)]
         {
-            use p2p_ai_agents::daemon::{PidFileManager, daemonize, default_log_path};
+            use p2p_ai_agents::daemon::{daemonize, default_log_path, PidFileManager};
 
             info!("🔧 Configuring daemon mode...");
 
@@ -327,8 +327,7 @@ async fn cmd_start(cli: &Cli) -> Result<()> {
             let pid_file_path = if let Some(path) = &cli.pid_file {
                 PathBuf::from(path)
             } else {
-                PidFileManager::default_path()
-                    .context("Failed to get default PID file path")?
+                PidFileManager::default_path().context("Failed to get default PID file path")?
             };
 
             let pid_manager = PidFileManager::new(pid_file_path);
@@ -344,16 +343,14 @@ async fn cmd_start(cli: &Cli) -> Result<()> {
             }
 
             // Get log file path
-            let log_path = default_log_path()
-                .context("Failed to get default log path")?;
+            let log_path = default_log_path().context("Failed to get default log path")?;
 
             info!("📝 Log file: {}", log_path.display());
             info!("📋 PID file: {}", pid_manager.path().display());
             info!("🔀 Forking to background...");
 
             // Daemonize the process (this will fork and exit the parent)
-            daemonize(log_path.clone())
-                .context("Failed to daemonize process")?;
+            daemonize(log_path.clone()).context("Failed to daemonize process")?;
 
             // After daemonization, re-initialize logging
             let log_format = match cli.log_format.to_lowercase().as_str() {
@@ -375,17 +372,14 @@ async fn cmd_start(cli: &Cli) -> Result<()> {
             info!("📝 Logs: {}", log_path.display());
 
             // Write PID file
-            pid_manager.write()
-                .context("Failed to write PID file")?;
+            pid_manager.write().context("Failed to write PID file")?;
 
             // Setup cleanup on exit
             let pid_manager_clone = PidFileManager::new(pid_manager.path().to_path_buf());
             let cleanup_result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
                 // Run the node
                 let runtime = tokio::runtime::Runtime::new().unwrap();
-                runtime.block_on(async {
-                    run_node(cli).await
-                })
+                runtime.block_on(async { run_node(cli).await })
             }));
 
             // Clean up PID file
@@ -411,7 +405,6 @@ use std::path::PathBuf;
 
 /// Run the node (common logic for daemon and foreground modes)
 async fn run_node(cli: &Cli) -> Result<()> {
-
     // Ensure default config file exists
     match Config::save_default_if_missing().await {
         Ok(config_path) => {
@@ -444,9 +437,10 @@ async fn run_node(cli: &Cli) -> Result<()> {
     }
 
     // Validate configuration after all overrides
-    config.validate()
+    config
+        .validate()
         .context("Configuration validation failed")?;
-    
+
     info!("✅ Configuration validated successfully");
 
     // Initialize or load node identity
@@ -458,16 +452,18 @@ async fn run_node(cli: &Cli) -> Result<()> {
     let node_id = identity
         .derive_node_id()
         .context("Failed to derive node ID")?;
-    
+
     info!("✅ Node ID: {}", node_id);
-    info!("📡 Public Key: {}...{}", 
-          &identity.public_key_hex[..8], 
-          &identity.public_key_hex[identity.public_key_hex.len()-8..]);
+    info!(
+        "📡 Public Key: {}...{}",
+        &identity.public_key_hex[..8],
+        &identity.public_key_hex[identity.public_key_hex.len() - 8..]
+    );
 
     // Run event loop
     info!("🌐 Node ready - starting event loop");
     info!("   Press Ctrl+C to stop");
-    
+
     run_event_loop(&config, &identity).await?;
 
     Ok(())
@@ -482,9 +478,11 @@ fn display_identity(identity: &NodeIdentityData) -> Result<()> {
     info!("");
     info!("Identity:");
     info!("  Node ID: {}", node_id);
-    info!("  Public Key: {}...{}", 
-          &identity.public_key_hex[..8], 
-          &identity.public_key_hex[identity.public_key_hex.len()-8..]);
+    info!(
+        "  Public Key: {}...{}",
+        &identity.public_key_hex[..8],
+        &identity.public_key_hex[identity.public_key_hex.len() - 8..]
+    );
     info!("  Generated: {}", identity.generated_at);
     info!("  Version: {}", identity.version);
 
@@ -493,36 +491,38 @@ fn display_identity(identity: &NodeIdentityData) -> Result<()> {
 
 /// Main event loop with proper lifecycle management
 async fn run_event_loop(_config: &Config, _identity: &NodeIdentityData) -> Result<()> {
-    use p2p_ai_agents::application::{Application, lifecycle::LifecycleManager};
+    use p2p_ai_agents::application::{lifecycle::LifecycleManager, Application};
     use std::sync::Arc;
 
     info!("Event loop running...");
-    
+
     // Create application
     let app = Application::new();
-    
+
     // Create lifecycle manager
     let lifecycle_manager = Arc::new(LifecycleManager::new(app.clone()));
-    
+
     // Initialize, register, and start the application
     info!("Initializing application...");
-    lifecycle_manager.startup().await
+    lifecycle_manager
+        .startup()
+        .await
         .context("Failed to start application")?;
 
     info!("✅ Application started successfully");
-    
+
     // Setup signal handling
     let shutdown_manager = lifecycle_manager.clone();
-    
+
     #[cfg(unix)]
     {
         use tokio::signal::unix::{signal, SignalKind};
-        
-        let mut sigterm = signal(SignalKind::terminate())
-            .context("Failed to register SIGTERM handler")?;
-        let mut sigint = signal(SignalKind::interrupt())
-            .context("Failed to register SIGINT handler")?;
-        
+
+        let mut sigterm =
+            signal(SignalKind::terminate()).context("Failed to register SIGTERM handler")?;
+        let mut sigint =
+            signal(SignalKind::interrupt()).context("Failed to register SIGINT handler")?;
+
         tokio::select! {
             _ = sigterm.recv() => {
                 info!("Received SIGTERM, initiating graceful shutdown");
@@ -532,21 +532,23 @@ async fn run_event_loop(_config: &Config, _identity: &NodeIdentityData) -> Resul
             }
         }
     }
-    
+
     #[cfg(not(unix))]
     {
         tokio::signal::ctrl_c()
             .await
             .context("Failed to listen for Ctrl+C")?;
-        
+
         info!("Received Ctrl+C, initiating graceful shutdown");
     }
-    
+
     // Gracefully shutdown
     info!("Shutting down application...");
-    shutdown_manager.shutdown().await
+    shutdown_manager
+        .shutdown()
+        .await
         .context("Failed to shutdown application gracefully")?;
-    
+
     info!("✅ Application shutdown complete");
     Ok(())
 }
@@ -566,8 +568,10 @@ mod tests {
     fn test_cli_with_options() {
         let cli = Cli::parse_from(&[
             "p2p-ai-agents",
-            "--port", "9001",
-            "--max-peers", "50",
+            "--port",
+            "9001",
+            "--max-peers",
+            "50",
             "start",
         ]);
         assert_eq!(cli.port, Some(9001));
@@ -576,11 +580,7 @@ mod tests {
 
     #[test]
     fn test_daemon_flag() {
-        let cli = Cli::parse_from(&[
-            "p2p-ai-agents",
-            "--daemon",
-            "start",
-        ]);
+        let cli = Cli::parse_from(&["p2p-ai-agents", "--daemon", "start"]);
         assert!(cli.daemon);
     }
 
@@ -589,7 +589,8 @@ mod tests {
         let cli = Cli::parse_from(&[
             "p2p-ai-agents",
             "--daemon",
-            "--pid-file", "/tmp/custom.pid",
+            "--pid-file",
+            "/tmp/custom.pid",
             "start",
         ]);
         assert!(cli.daemon);

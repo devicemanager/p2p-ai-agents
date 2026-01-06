@@ -23,7 +23,7 @@ pub use super::NodeIdentityData as NodeIdentity;
 /// # Example
 /// ```no_run
 /// use p2p_ai_agents::core::identity::generator::generate_keypair;
-/// 
+///
 /// let (signing_key, verifying_key) = generate_keypair().expect("keypair generation");
 /// ```
 pub fn generate_keypair() -> Result<(SigningKey, VerifyingKey), IdentityError> {
@@ -40,10 +40,7 @@ pub fn generate_keypair() -> Result<(SigningKey, VerifyingKey), IdentityError> {
 ///
 /// # Returns
 /// Tuple of (private_key_hex, public_key_hex)
-pub fn keypair_to_hex(
-    signing_key: &SigningKey,
-    verifying_key: &VerifyingKey,
-) -> (String, String) {
+pub fn keypair_to_hex(signing_key: &SigningKey, verifying_key: &VerifyingKey) -> (String, String) {
     let private_hex = hex::encode(signing_key.to_bytes());
     let public_hex = hex::encode(verifying_key.to_bytes());
     (private_hex, public_hex)
@@ -56,7 +53,7 @@ pub fn keypair_to_hex(
 pub fn create_new_identity() -> Result<NodeIdentityData, IdentityError> {
     let (signing_key, verifying_key) = generate_keypair()?;
     let (private_hex, public_hex) = keypair_to_hex(&signing_key, &verifying_key);
-    
+
     Ok(NodeIdentityData {
         version: "1.0".to_string(),
         generated_at: Utc::now().to_rfc3339(),
@@ -99,11 +96,11 @@ mod tests {
     fn test_hex_encoding() {
         let (signing, verifying) = generate_keypair().expect("keypair generation");
         let (priv_hex, pub_hex) = keypair_to_hex(&signing, &verifying);
-        
+
         // Verify hex strings are correct length (32 bytes * 2 = 64 hex chars)
         assert_eq!(priv_hex.len(), 64);
         assert_eq!(pub_hex.len(), 64);
-        
+
         // Verify they're valid hex
         hex::decode(&priv_hex).expect("valid private key hex");
         hex::decode(&pub_hex).expect("valid public key hex");
@@ -112,16 +109,16 @@ mod tests {
     #[test]
     fn test_create_new_identity() {
         let identity = create_new_identity().expect("create identity");
-        
+
         // Verify structure
         assert_eq!(identity.version, "1.0");
         assert!(!identity.generated_at.is_empty());
         assert_eq!(identity.public_key_hex.len(), 64);
         assert_eq!(identity.private_key_hex.len(), 64);
-        
+
         // Verify timestamp is recent
-        let timestamp = chrono::DateTime::parse_from_rfc3339(&identity.generated_at)
-            .expect("valid timestamp");
+        let timestamp =
+            chrono::DateTime::parse_from_rfc3339(&identity.generated_at).expect("valid timestamp");
         let now = Utc::now();
         let duration = now.signed_duration_since(timestamp);
         assert!(duration.num_seconds() < 5, "Timestamp should be recent");
@@ -131,7 +128,7 @@ mod tests {
     fn test_multiple_keypairs_are_unique() {
         let (signing1, verifying1) = generate_keypair().expect("keypair 1");
         let (signing2, verifying2) = generate_keypair().expect("keypair 2");
-        
+
         // Different keypairs should have different keys
         assert_ne!(signing1.to_bytes(), signing2.to_bytes());
         assert_ne!(verifying1.to_bytes(), verifying2.to_bytes());

@@ -31,7 +31,7 @@ impl PidFileManager {
     fn is_process_running(pid: i32) -> bool {
         use nix::sys::signal::kill;
         use nix::unistd::Pid;
-        
+
         // Signal 0 (null signal) doesn't send a signal, but checks if we can
         // This is a standard way to check if a process exists
         match kill(Pid::from_raw(pid), None) {
@@ -52,21 +52,22 @@ impl PidFileManager {
         }
 
         // Read existing PID
-        let mut file = File::open(&self.pid_file_path)
-            .context("Failed to open PID file")?;
-        
+        let mut file = File::open(&self.pid_file_path).context("Failed to open PID file")?;
+
         let mut contents = String::new();
         file.read_to_string(&mut contents)
             .context("Failed to read PID file")?;
 
-        let pid: i32 = contents.trim().parse()
-            .context("Invalid PID in PID file")?;
+        let pid: i32 = contents.trim().parse().context("Invalid PID in PID file")?;
 
         // Check if process is still running
         if Self::is_process_running(pid) {
             Ok(Some(pid))
         } else {
-            warn!("Stale PID file found (process {} not running), removing", pid);
+            warn!(
+                "Stale PID file found (process {} not running), removing",
+                pid
+            );
             self.remove()?;
             Ok(None)
         }
@@ -76,8 +77,7 @@ impl PidFileManager {
     pub fn write(&self) -> Result<()> {
         // Ensure parent directory exists
         if let Some(parent) = self.pid_file_path.parent() {
-            std::fs::create_dir_all(parent)
-                .context("Failed to create PID file directory")?;
+            std::fs::create_dir_all(parent).context("Failed to create PID file directory")?;
         }
 
         let pid = std::process::id();
@@ -88,18 +88,20 @@ impl PidFileManager {
             .open(&self.pid_file_path)
             .context("Failed to create PID file")?;
 
-        write!(file, "{}", pid)
-            .context("Failed to write PID to file")?;
+        write!(file, "{}", pid).context("Failed to write PID to file")?;
 
-        info!("PID file created: {} (PID: {})", self.pid_file_path.display(), pid);
+        info!(
+            "PID file created: {} (PID: {})",
+            self.pid_file_path.display(),
+            pid
+        );
         Ok(())
     }
 
     /// Remove the PID file
     pub fn remove(&self) -> Result<()> {
         if self.pid_file_path.exists() {
-            std::fs::remove_file(&self.pid_file_path)
-                .context("Failed to remove PID file")?;
+            std::fs::remove_file(&self.pid_file_path).context("Failed to remove PID file")?;
             info!("PID file removed: {}", self.pid_file_path.display());
         }
         Ok(())
@@ -120,15 +122,15 @@ pub fn daemonize(log_path: PathBuf) -> Result<()> {
 
     // Ensure log directory exists
     if let Some(parent) = log_path.parent() {
-        std::fs::create_dir_all(parent)
-            .context("Failed to create log directory")?;
+        std::fs::create_dir_all(parent).context("Failed to create log directory")?;
     }
 
     // Create or open log file
     let stdout = File::create(&log_path)
         .with_context(|| format!("Failed to create log file: {}", log_path.display()))?;
-    
-    let stderr = stdout.try_clone()
+
+    let stderr = stdout
+        .try_clone()
         .context("Failed to duplicate log file handle")?;
 
     info!("Log output will be redirected to: {}", log_path.display());
@@ -143,8 +145,7 @@ pub fn daemonize(log_path: PathBuf) -> Result<()> {
         });
 
     // Fork and detach
-    daemon.start()
-        .context("Failed to daemonize process")?;
+    daemon.start().context("Failed to daemonize process")?;
 
     // Re-initialize logging after daemonization
     // The parent process will have already logged, but the child needs to reinit
@@ -155,7 +156,9 @@ pub fn daemonize(log_path: PathBuf) -> Result<()> {
 
 #[cfg(not(unix))]
 pub fn daemonize(_log_path: PathBuf) -> Result<()> {
-    anyhow::bail!("Daemon mode is not supported on this platform (Windows). Please run in foreground mode.")
+    anyhow::bail!(
+        "Daemon mode is not supported on this platform (Windows). Please run in foreground mode."
+    )
 }
 
 /// Get the default log file path for daemon mode

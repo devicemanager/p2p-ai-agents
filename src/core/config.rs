@@ -7,8 +7,8 @@
 //! 4. Built-in defaults
 
 use serde::{Deserialize, Serialize};
-use std::path::PathBuf;
 use std::env;
+use std::path::PathBuf;
 use thiserror::Error;
 use tokio::fs;
 
@@ -41,7 +41,7 @@ impl Default for Config {
             .unwrap_or_else(|| PathBuf::from("."))
             .join(".p2p-ai-agents")
             .join("data");
-        
+
         Self {
             listen_port: 9000,
             bootstrap_nodes: vec![],
@@ -58,7 +58,7 @@ impl Config {
     /// Load configuration from cascade of sources
     pub async fn load() -> Result<Self, ConfigError> {
         let mut config = Self::default();
-        
+
         // 1. Load from file if exists
         let config_path = default_config_path();
         if config_path.exists() {
@@ -67,7 +67,7 @@ impl Config {
                 .map_err(|e| ConfigError::ParseError(e.to_string()))?;
             config = config.merge(file_config);
         }
-        
+
         // 2. Load from environment variables
         if let Ok(port) = env::var("P2P_LISTEN_PORT") {
             if let Ok(p) = port.parse() {
@@ -75,9 +75,7 @@ impl Config {
             }
         }
         if let Ok(nodes) = env::var("P2P_BOOTSTRAP_NODES") {
-            config.bootstrap_nodes = nodes.split(',')
-                .map(|s| s.trim().to_string())
-                .collect();
+            config.bootstrap_nodes = nodes.split(',').map(|s| s.trim().to_string()).collect();
         }
         if let Ok(peers) = env::var("P2P_MAX_PEERS") {
             if let Ok(p) = peers.parse() {
@@ -108,23 +106,26 @@ impl Config {
     pub fn validate(&self) -> Result<(), ConfigError> {
         // Validate listen_port: must be in range 1024-65535
         if self.listen_port < 1024 {
-            return Err(ConfigError::ValidationError(
-                format!("listen_port must be at least 1024, got {}", self.listen_port)
-            ));
+            return Err(ConfigError::ValidationError(format!(
+                "listen_port must be at least 1024, got {}",
+                self.listen_port
+            )));
         }
 
         // Validate max_peers: must be in range 1-256
         if self.max_peers < 1 || self.max_peers > 256 {
-            return Err(ConfigError::ValidationError(
-                format!("max_peers must be between 1 and 256, got {}", self.max_peers)
-            ));
+            return Err(ConfigError::ValidationError(format!(
+                "max_peers must be between 1 and 256, got {}",
+                self.max_peers
+            )));
         }
 
         // Validate max_memory_mb: must be in range 128-16384
         if self.max_memory_mb < 128 || self.max_memory_mb > 16384 {
-            return Err(ConfigError::ValidationError(
-                format!("max_memory_mb must be between 128 and 16384, got {}", self.max_memory_mb)
-            ));
+            return Err(ConfigError::ValidationError(format!(
+                "max_memory_mb must be between 128 and 16384, got {}",
+                self.max_memory_mb
+            )));
         }
 
         Ok(())
@@ -133,7 +134,7 @@ impl Config {
     /// Create default configuration file if it doesn't exist
     pub async fn save_default_if_missing() -> Result<PathBuf, ConfigError> {
         let config_path = default_config_path();
-        
+
         // If config file already exists, return its path
         if config_path.exists() {
             return Ok(config_path);
@@ -148,15 +149,16 @@ impl Config {
         let default_config = Self::default();
         let yaml = serde_yaml::to_string(&default_config)
             .map_err(|e| ConfigError::ParseError(e.to_string()))?;
-        
+
         fs::write(&config_path, yaml).await?;
-        
+
         Ok(config_path)
     }
 
     /// Merge another config into this one
     fn merge(mut self, other: Config) -> Self {
-        if other.listen_port != 9000 { // Assuming 9000 is default
+        if other.listen_port != 9000 {
+            // Assuming 9000 is default
             self.listen_port = other.listen_port;
         }
         if !other.bootstrap_nodes.is_empty() {
@@ -227,15 +229,15 @@ mod tests {
     #[test]
     fn test_validate_port_boundary_values() {
         let mut config = Config::default();
-        
+
         // Test lower boundary
         config.listen_port = 1024;
         assert!(config.validate().is_ok());
-        
+
         // Test upper boundary (u16 max is 65535)
         config.listen_port = 65535;
         assert!(config.validate().is_ok());
-        
+
         // Test just below lower boundary
         config.listen_port = 1023;
         assert!(config.validate().is_err());
@@ -262,11 +264,11 @@ mod tests {
     #[test]
     fn test_validate_max_peers_boundary_values() {
         let mut config = Config::default();
-        
+
         // Test lower boundary
         config.max_peers = 1;
         assert!(config.validate().is_ok());
-        
+
         // Test upper boundary
         config.max_peers = 256;
         assert!(config.validate().is_ok());
@@ -293,11 +295,11 @@ mod tests {
     #[test]
     fn test_validate_max_memory_boundary_values() {
         let mut config = Config::default();
-        
+
         // Test lower boundary
         config.max_memory_mb = 128;
         assert!(config.validate().is_ok());
-        
+
         // Test upper boundary
         config.max_memory_mb = 16384;
         assert!(config.validate().is_ok());
@@ -307,21 +309,21 @@ mod tests {
     async fn test_save_default_if_missing_creates_file() {
         let temp_dir = TempDir::new().unwrap();
         let config_path = temp_dir.path().join("test_config.yaml");
-        
+
         // Temporarily override the default path (we'll use a test helper)
         // For this test, we'll manually test the save logic
         let config = Config::default();
         let yaml = serde_yaml::to_string(&config).unwrap();
-        
+
         // Ensure parent directory exists
         if let Some(parent) = config_path.parent() {
             tokio::fs::create_dir_all(parent).await.unwrap();
         }
-        
+
         tokio::fs::write(&config_path, yaml).await.unwrap();
-        
+
         assert!(config_path.exists());
-        
+
         // Verify we can read it back
         let content = tokio::fs::read_to_string(&config_path).await.unwrap();
         let loaded_config: Config = serde_yaml::from_str(&content).unwrap();
@@ -333,7 +335,7 @@ mod tests {
     async fn test_load_from_yaml_file() {
         let temp_dir = TempDir::new().unwrap();
         let config_path = temp_dir.path().join("config.yaml");
-        
+
         // Create a test config file
         let yaml_content = r#"
 listen_port: 8080
@@ -346,11 +348,11 @@ health_check_interval_secs: 60
 max_memory_mb: 1024
 "#;
         tokio::fs::write(&config_path, yaml_content).await.unwrap();
-        
+
         // Load and verify
         let content = tokio::fs::read_to_string(&config_path).await.unwrap();
         let config: Config = serde_yaml::from_str(&content).unwrap();
-        
+
         assert_eq!(config.listen_port, 8080);
         assert_eq!(config.max_peers, 50);
         assert_eq!(config.log_level, "debug");
@@ -362,13 +364,13 @@ max_memory_mb: 1024
     #[tokio::test]
     async fn test_merge_configs() {
         let default_config = Config::default();
-        
+
         let mut custom_config = Config::default();
         custom_config.listen_port = 8080;
         custom_config.max_peers = 50;
-        
+
         let merged = default_config.merge(custom_config);
-        
+
         assert_eq!(merged.listen_port, 8080);
         assert_eq!(merged.max_peers, 50);
         // Other fields should remain at defaults
@@ -384,15 +386,15 @@ max_memory_mb: 1024
         env::set_var("P2P_MAX_MEMORY_MB", "1024");
         env::set_var("P2P_HEALTH_CHECK_INTERVAL_SECS", "45");
         env::set_var("P2P_LOG_LEVEL", "debug");
-        
+
         let config = Config::load().await.unwrap();
-        
+
         assert_eq!(config.listen_port, 7070);
         assert_eq!(config.max_peers, 64);
         assert_eq!(config.max_memory_mb, 1024);
         assert_eq!(config.health_check_interval_secs, 45);
         assert_eq!(config.log_level, "debug");
-        
+
         // Clean up
         env::remove_var("P2P_LISTEN_PORT");
         env::remove_var("P2P_MAX_PEERS");
@@ -405,7 +407,7 @@ max_memory_mb: 1024
     fn test_config_serialization() {
         let config = Config::default();
         let yaml = serde_yaml::to_string(&config).unwrap();
-        
+
         assert!(yaml.contains("listen_port: 9000"));
         assert!(yaml.contains("max_peers: 32"));
         assert!(yaml.contains("health_check_interval_secs: 30"));
