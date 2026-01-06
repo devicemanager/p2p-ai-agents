@@ -358,14 +358,10 @@ mod tests {
         let mut state = LifecycleState::new("crash-test-peer".to_string());
         state.last_stopped = None; // Simulates crash
         let state_json = serde_json::to_string_pretty(&state).unwrap();
-        tokio::fs::write(&state_path, state_json)
-            .await
-            .unwrap();
+        tokio::fs::write(&state_path, state_json).await.unwrap();
 
         // Simulate recovery: read state and detect unclean shutdown
-        let recovered_json = tokio::fs::read_to_string(&state_path)
-            .await
-            .unwrap();
+        let recovered_json = tokio::fs::read_to_string(&state_path).await.unwrap();
         let recovered_state: LifecycleState = serde_json::from_str(&recovered_json).unwrap();
 
         // Verify crash detection
