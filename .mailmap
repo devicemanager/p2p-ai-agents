@@ -1,0 +1,8 @@
+# Canonicalize devicemanager contributions
+# Format: Canonical Name <canonical@email> Commit Name <commit@email>
+
+devicemanager <1844069+devicemanager@users.noreply.github.com> <12345678+devicemanager@users.noreply.github.com>
+devicemanager <1844069+devicemanager@users.noreply.github.com> <devicemanager@users.noreply.github.com>
+devicemanager <1844069+devicemanager@users.noreply.github.com> DeviceManager <devicemanager@users.noreply.github.com>
+devicemanager <1844069+devicemanager@users.noreply.github.com> Device Manager <12345678+devicemanager@users.noreply.github.com>
+devicemanager <1844069+devicemanager@users.noreply.github.com> devicemanager <12345678+devicemanager@users.noreply.github.com>
