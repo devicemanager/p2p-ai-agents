@@ -77,9 +77,13 @@ jobs:
           # Create keyring directory
           mkdir -p ~/.local/share/keyrings
           
-          # Start gnome-keyring daemon in the background
+          # Start gnome-keyring daemon and unlock it
           eval $(echo -n "test" | gnome-keyring-daemon --unlock --components=secrets)
-          echo "GNOME_KEYRING_CONTROL=$GNOME_KEYRING_CONTROL" >> $GITHUB_ENV
+          
+          # Export keyring control socket if set
+          if [ -n "$GNOME_KEYRING_CONTROL" ]; then
+            echo "GNOME_KEYRING_CONTROL=$GNOME_KEYRING_CONTROL" >> $GITHUB_ENV
+          fi
       
       - name: Cache cargo registry
         uses: actions/cache@v4
@@ -142,9 +146,13 @@ jobs:
           # Create keyring directory
           mkdir -p ~/.local/share/keyrings
           
-          # Start gnome-keyring daemon in the background
+          # Start gnome-keyring daemon and unlock it
           eval $(echo -n "test" | gnome-keyring-daemon --unlock --components=secrets)
-          echo "GNOME_KEYRING_CONTROL=$GNOME_KEYRING_CONTROL" >> $GITHUB_ENV
+          
+          # Export keyring control socket if set
+          if [ -n "$GNOME_KEYRING_CONTROL" ]; then
+            echo "GNOME_KEYRING_CONTROL=$GNOME_KEYRING_CONTROL" >> $GITHUB_ENV
+          fi
       
       - name: Cache cargo registry
         uses: actions/cache@v4
@@ -206,9 +214,13 @@ jobs:
           # Create keyring directory
           mkdir -p ~/.local/share/keyrings
           
-          # Start gnome-keyring daemon in the background
+          # Start gnome-keyring daemon and unlock it
           eval $(echo -n "test" | gnome-keyring-daemon --unlock --components=secrets)
-          echo "GNOME_KEYRING_CONTROL=$GNOME_KEYRING_CONTROL" >> $GITHUB_ENV
+          
+          # Export keyring control socket if set
+          if [ -n "$GNOME_KEYRING_CONTROL" ]; then
+            echo "GNOME_KEYRING_CONTROL=$GNOME_KEYRING_CONTROL" >> $GITHUB_ENV
+          fi
       
       - name: Install cargo-llvm-cov
         uses: taiki-e/install-action@cargo-llvm-cov

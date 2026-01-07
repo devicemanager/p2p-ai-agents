@@ -55,7 +55,7 @@ fi
 
 # Initialize keyring (once per session)
 mkdir -p ~/.local/share/keyrings
-echo -n "test" | gnome-keyring-daemon --unlock --components=secrets
+eval $(echo -n "test" | gnome-keyring-daemon --unlock --components=secrets)
 ```
 
 **Note**: The GitHub Actions CI workflows automatically configure this environment for all test runs.
