@@ -2,7 +2,7 @@
 
 #[cfg(test)]
 mod identity_stress_tests {
-    use p2p_ai_agents::core::identity::{load_or_create_identity, storage::load_identity};
+    use p2p_ai_agents::core::identity::storage::load_identity;
     use tempfile::tempdir;
 
     #[tokio::test]

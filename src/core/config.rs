@@ -12,26 +12,39 @@ use std::path::PathBuf;
 use thiserror::Error;
 use tokio::fs;
 
+/// Errors that can occur during configuration operations
 #[derive(Debug, Error)]
 pub enum ConfigError {
+    /// Configuration file was not found at the specified path
     #[error("Configuration file not found: {0}")]
     NotFound(String),
+    /// Failed to parse the configuration file
     #[error("Failed to parse config: {0}")]
     ParseError(String),
+    /// Configuration validation failed
     #[error("Invalid configuration: {0}")]
     ValidationError(String),
+    /// I/O error occurred while reading or writing configuration
     #[error("I/O error: {0}")]
     IoError(#[from] std::io::Error),
 }
 
+/// Configuration for the P2P AI Agents system
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Config {
+    /// Port to listen on for P2P connections
     pub listen_port: u16,
+    /// List of bootstrap nodes to connect to
     pub bootstrap_nodes: Vec<String>,
+    /// Maximum number of peers to connect to
     pub max_peers: usize,
+    /// Log level (e.g., "info", "debug", "warn", "error")
     pub log_level: String,
+    /// Path to store persistent data
     pub storage_path: PathBuf,
+    /// Interval in seconds between health checks
     pub health_check_interval_secs: u64,
+    /// Maximum memory usage in megabytes
     pub max_memory_mb: u64,
 }
 
