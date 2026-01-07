@@ -12,26 +12,39 @@ use std::path::PathBuf;
 use thiserror::Error;
 use tokio::fs;
 
+/// Errors that can occur during configuration operations
 #[derive(Debug, Error)]
 pub enum ConfigError {
+    /// Configuration file was not found at the specified path
     #[error("Configuration file not found: {0}")]
     NotFound(String),
+    /// Failed to parse the configuration file
     #[error("Failed to parse config: {0}")]
     ParseError(String),
+    /// Configuration validation failed
     #[error("Invalid configuration: {0}")]
     ValidationError(String),
+    /// I/O error occurred while reading or writing configuration
     #[error("I/O error: {0}")]
     IoError(#[from] std::io::Error),
 }
 
+/// Configuration for the P2P AI Agents system
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Config {
+    /// Port to listen on for P2P connections
     pub listen_port: u16,
+    /// List of bootstrap nodes to connect to
     pub bootstrap_nodes: Vec<String>,
+    /// Maximum number of peers to connect to
     pub max_peers: usize,
+    /// Log level (e.g., "info", "debug", "warn", "error")
     pub log_level: String,
+    /// Path to store persistent data
     pub storage_path: PathBuf,
+    /// Interval in seconds between health checks
     pub health_check_interval_secs: u64,
+    /// Maximum memory usage in megabytes
     pub max_memory_mb: u64,
 }
 
@@ -219,8 +232,10 @@ mod tests {
 
     #[test]
     fn test_validate_port_too_low() {
-        let mut config = Config::default();
-        config.listen_port = 1023;
+        let config = Config {
+            listen_port: 1023,
+            ..Config::default()
+        };
         let result = config.validate();
         assert!(result.is_err());
         assert!(result.unwrap_err().to_string().contains("listen_port"));
@@ -228,25 +243,34 @@ mod tests {
 
     #[test]
     fn test_validate_port_boundary_values() {
-        let mut config = Config::default();
-
         // Test lower boundary
-        config.listen_port = 1024;
-        assert!(config.validate().is_ok());
+        let config_lower = Config {
+            listen_port: 1024,
+            ..Config::default()
+        };
+        assert!(config_lower.validate().is_ok());
 
         // Test upper boundary (u16 max is 65535)
-        config.listen_port = 65535;
-        assert!(config.validate().is_ok());
+        let config_upper = Config {
+            listen_port: 65535,
+            ..Config::default()
+        };
+        assert!(config_upper.validate().is_ok());
 
         // Test just below lower boundary
-        config.listen_port = 1023;
-        assert!(config.validate().is_err());
+        let config_below = Config {
+            listen_port: 1023,
+            ..Config::default()
+        };
+        assert!(config_below.validate().is_err());
     }
 
     #[test]
     fn test_validate_max_peers_too_low() {
-        let mut config = Config::default();
-        config.max_peers = 0;
+        let config = Config {
+            max_peers: 0,
+            ..Config::default()
+        };
         let result = config.validate();
         assert!(result.is_err());
         assert!(result.unwrap_err().to_string().contains("max_peers"));
@@ -254,8 +278,10 @@ mod tests {
 
     #[test]
     fn test_validate_max_peers_too_high() {
-        let mut config = Config::default();
-        config.max_peers = 257;
+        let config = Config {
+            max_peers: 257,
+            ..Config::default()
+        };
         let result = config.validate();
         assert!(result.is_err());
         assert!(result.unwrap_err().to_string().contains("max_peers"));
@@ -263,21 +289,27 @@ mod tests {
 
     #[test]
     fn test_validate_max_peers_boundary_values() {
-        let mut config = Config::default();
-
         // Test lower boundary
-        config.max_peers = 1;
-        assert!(config.validate().is_ok());
+        let config_lower = Config {
+            max_peers: 1,
+            ..Config::default()
+        };
+        assert!(config_lower.validate().is_ok());
 
         // Test upper boundary
-        config.max_peers = 256;
-        assert!(config.validate().is_ok());
+        let config_upper = Config {
+            max_peers: 256,
+            ..Config::default()
+        };
+        assert!(config_upper.validate().is_ok());
     }
 
     #[test]
     fn test_validate_max_memory_too_low() {
-        let mut config = Config::default();
-        config.max_memory_mb = 127;
+        let config = Config {
+            max_memory_mb: 127,
+            ..Config::default()
+        };
         let result = config.validate();
         assert!(result.is_err());
         assert!(result.unwrap_err().to_string().contains("max_memory_mb"));
@@ -285,8 +317,10 @@ mod tests {
 
     #[test]
     fn test_validate_max_memory_too_high() {
-        let mut config = Config::default();
-        config.max_memory_mb = 16385;
+        let config = Config {
+            max_memory_mb: 16385,
+            ..Config::default()
+        };
         let result = config.validate();
         assert!(result.is_err());
         assert!(result.unwrap_err().to_string().contains("max_memory_mb"));
@@ -294,15 +328,19 @@ mod tests {
 
     #[test]
     fn test_validate_max_memory_boundary_values() {
-        let mut config = Config::default();
-
         // Test lower boundary
-        config.max_memory_mb = 128;
-        assert!(config.validate().is_ok());
+        let config_lower = Config {
+            max_memory_mb: 128,
+            ..Config::default()
+        };
+        assert!(config_lower.validate().is_ok());
 
         // Test upper boundary
-        config.max_memory_mb = 16384;
-        assert!(config.validate().is_ok());
+        let config_upper = Config {
+            max_memory_mb: 16384,
+            ..Config::default()
+        };
+        assert!(config_upper.validate().is_ok());
     }
 
     #[tokio::test]
@@ -365,9 +403,11 @@ max_memory_mb: 1024
     async fn test_merge_configs() {
         let default_config = Config::default();
 
-        let mut custom_config = Config::default();
-        custom_config.listen_port = 8080;
-        custom_config.max_peers = 50;
+        let custom_config = Config {
+            listen_port: 8080,
+            max_peers: 50,
+            ..Config::default()
+        };
 
         let merged = default_config.merge(custom_config);
 

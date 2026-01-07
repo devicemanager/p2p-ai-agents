@@ -560,13 +560,13 @@ mod tests {
     #[test]
     fn test_cli_parsing() {
         // Test basic parsing
-        let cli = Cli::parse_from(&["p2p-ai-agents", "start"]);
+        let cli = Cli::parse_from(["p2p-ai-agents", "start"]);
         assert!(matches!(cli.command, Some(Commands::Start)));
     }
 
     #[test]
     fn test_cli_with_options() {
-        let cli = Cli::parse_from(&[
+        let cli = Cli::parse_from([
             "p2p-ai-agents",
             "--port",
             "9001",
@@ -580,13 +580,13 @@ mod tests {
 
     #[test]
     fn test_daemon_flag() {
-        let cli = Cli::parse_from(&["p2p-ai-agents", "--daemon", "start"]);
+        let cli = Cli::parse_from(["p2p-ai-agents", "--daemon", "start"]);
         assert!(cli.daemon);
     }
 
     #[test]
     fn test_daemon_with_custom_pid_file() {
-        let cli = Cli::parse_from(&[
+        let cli = Cli::parse_from([
             "p2p-ai-agents",
             "--daemon",
             "--pid-file",

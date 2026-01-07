@@ -44,61 +44,88 @@ async fn test_config_validation_success() {
 
 #[tokio::test]
 async fn test_config_validation_port_boundaries() {
-    let mut config = Config::default();
-
     // Valid lower boundary
-    config.listen_port = 1024;
-    assert!(config.validate().is_ok());
+    let config_lower = Config {
+        listen_port: 1024,
+        ..Config::default()
+    };
+    assert!(config_lower.validate().is_ok());
 
     // Valid upper boundary
-    config.listen_port = 65535;
-    assert!(config.validate().is_ok());
+    let config_upper = Config {
+        listen_port: 65535,
+        ..Config::default()
+    };
+    assert!(config_upper.validate().is_ok());
 
     // Invalid - below minimum
-    config.listen_port = 1023;
-    assert!(config.validate().is_err());
+    let config_invalid = Config {
+        listen_port: 1023,
+        ..Config::default()
+    };
+    assert!(config_invalid.validate().is_err());
 }
 
 #[tokio::test]
 async fn test_config_validation_max_peers_boundaries() {
-    let mut config = Config::default();
-
     // Valid lower boundary
-    config.max_peers = 1;
-    assert!(config.validate().is_ok());
+    let config_lower = Config {
+        max_peers: 1,
+        ..Config::default()
+    };
+    assert!(config_lower.validate().is_ok());
 
     // Valid upper boundary
-    config.max_peers = 256;
-    assert!(config.validate().is_ok());
+    let config_upper = Config {
+        max_peers: 256,
+        ..Config::default()
+    };
+    assert!(config_upper.validate().is_ok());
 
     // Invalid - below minimum
-    config.max_peers = 0;
-    assert!(config.validate().is_err());
+    let config_too_low = Config {
+        max_peers: 0,
+        ..Config::default()
+    };
+    assert!(config_too_low.validate().is_err());
 
     // Invalid - above maximum
-    config.max_peers = 257;
-    assert!(config.validate().is_err());
+    let config_too_high = Config {
+        max_peers: 257,
+        ..Config::default()
+    };
+    assert!(config_too_high.validate().is_err());
 }
 
 #[tokio::test]
 async fn test_config_validation_max_memory_boundaries() {
-    let mut config = Config::default();
-
     // Valid lower boundary
-    config.max_memory_mb = 128;
-    assert!(config.validate().is_ok());
+    let config_lower = Config {
+        max_memory_mb: 128,
+        ..Config::default()
+    };
+    assert!(config_lower.validate().is_ok());
 
     // Valid upper boundary
-    config.max_memory_mb = 16384;
-    assert!(config.validate().is_ok());
+    let config_upper = Config {
+        max_memory_mb: 16384,
+        ..Config::default()
+    };
+    assert!(config_upper.validate().is_ok());
 
     // Invalid - below minimum
-    config.max_memory_mb = 127;
-    assert!(config.validate().is_err());
+    let config_too_low = Config {
+        max_memory_mb: 127,
+        ..Config::default()
+    };
+    assert!(config_too_low.validate().is_err());
 
     // Invalid - above maximum
-    config.max_memory_mb = 16385;
-    assert!(config.validate().is_err());
+    let config_too_high = Config {
+        max_memory_mb: 16385,
+        ..Config::default()
+    };
+    assert!(config_too_high.validate().is_err());
 }
 
 #[tokio::test]
@@ -158,6 +185,9 @@ async fn test_environment_variable_overrides() {
         "/ip4/1.2.3.4/tcp/9000,/ip4/5.6.7.8/tcp/9001",
     );
 
+    // Drop the lock before awaiting
+    drop(_lock);
+
     // Load config (this will pick up env vars)
     let config = Config::load().await.unwrap();
 
@@ -214,6 +244,9 @@ async fn test_config_cascade_priority() {
     env::set_var("P2P_MAX_PEERS", "64");
     env::set_var("P2P_LOG_LEVEL", "debug");
 
+    // Drop the lock before awaiting
+    drop(_lock);
+
     // 2. Load config
     let config = Config::load().await.unwrap();
 
@@ -245,25 +278,30 @@ async fn test_config_cascade_priority() {
 
 #[tokio::test]
 async fn test_validation_error_messages() {
-    let mut config = Config::default();
-
     // Test port validation error message
-    config.listen_port = 500;
-    let err = config.validate().unwrap_err();
+    let config_port = Config {
+        listen_port: 500,
+        ..Config::default()
+    };
+    let err = config_port.validate().unwrap_err();
     assert!(err.to_string().contains("listen_port"));
     assert!(err.to_string().contains("1024"));
 
     // Test max_peers validation error message
-    config = Config::default();
-    config.max_peers = 300;
-    let err = config.validate().unwrap_err();
+    let config_peers = Config {
+        max_peers: 300,
+        ..Config::default()
+    };
+    let err = config_peers.validate().unwrap_err();
     assert!(err.to_string().contains("max_peers"));
     assert!(err.to_string().contains("256"));
 
     // Test max_memory_mb validation error message
-    config = Config::default();
-    config.max_memory_mb = 100;
-    let err = config.validate().unwrap_err();
+    let config_memory = Config {
+        max_memory_mb: 100,
+        ..Config::default()
+    };
+    let err = config_memory.validate().unwrap_err();
     assert!(err.to_string().contains("max_memory_mb"));
     assert!(err.to_string().contains("128"));
 }
@@ -281,6 +319,10 @@ async fn test_full_lifecycle_with_validation() {
     // 1. Create default config file
     let default_config = Config::default();
     let yaml = serde_yaml::to_string(&default_config).unwrap();
+
+    // Drop the lock before awaiting
+    drop(_lock);
+
     fs::write(&config_file, yaml).await.unwrap();
 
     // 2. Load config
@@ -307,6 +349,9 @@ async fn test_invalid_config_caught_after_overrides() {
 
     // This test verifies that validation catches invalid configurations
     // even after CLI overrides
+
+    // Drop the lock before awaiting
+    drop(_lock);
 
     // 1. Load config
     let mut config = Config::load().await.unwrap();

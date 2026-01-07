@@ -2,7 +2,7 @@
 
 #[cfg(test)]
 mod identity_stress_tests {
-    use p2p_ai_agents::core::identity::{load_or_create_identity, storage::load_identity};
+    use p2p_ai_agents::core::identity::storage::load_identity;
     use tempfile::tempdir;
 
     #[tokio::test]
@@ -24,9 +24,10 @@ mod identity_stress_tests {
 
         // Simulate 1000 restarts (loads)
         for i in 0..1000 {
+            let error_msg = format!("load identity iteration {}", i);
             let loaded = load_identity(&identity_path)
                 .await
-                .expect(&format!("load identity iteration {}", i));
+                .expect(&error_msg);
 
             // Verify consistency
             assert_eq!(
