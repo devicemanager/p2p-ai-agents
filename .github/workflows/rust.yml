@@ -65,8 +65,21 @@ jobs:
       - name: Install system dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y build-essential lld
+          sudo apt-get install -y build-essential lld gnome-keyring
         continue-on-error: true
+      
+      - name: Setup DBus and gnome-keyring for tests
+        run: |
+          # Start DBus session
+          export $(dbus-launch)
+          echo "DBUS_SESSION_BUS_ADDRESS=$DBUS_SESSION_BUS_ADDRESS" >> $GITHUB_ENV
+          
+          # Create keyring directory
+          mkdir -p ~/.local/share/keyrings
+          
+          # Start gnome-keyring daemon in the background
+          eval $(echo -n "test" | gnome-keyring-daemon --unlock --components=secrets)
+          echo "GNOME_KEYRING_CONTROL=$GNOME_KEYRING_CONTROL" >> $GITHUB_ENV
       
       - name: Cache cargo registry
         uses: actions/cache@v4
@@ -117,8 +130,21 @@ jobs:
       - name: Install system dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y build-essential lld
+          sudo apt-get install -y build-essential lld gnome-keyring
         continue-on-error: true
+      
+      - name: Setup DBus and gnome-keyring for tests
+        run: |
+          # Start DBus session
+          export $(dbus-launch)
+          echo "DBUS_SESSION_BUS_ADDRESS=$DBUS_SESSION_BUS_ADDRESS" >> $GITHUB_ENV
+          
+          # Create keyring directory
+          mkdir -p ~/.local/share/keyrings
+          
+          # Start gnome-keyring daemon in the background
+          eval $(echo -n "test" | gnome-keyring-daemon --unlock --components=secrets)
+          echo "GNOME_KEYRING_CONTROL=$GNOME_KEYRING_CONTROL" >> $GITHUB_ENV
       
       - name: Cache cargo registry
         uses: actions/cache@v4
@@ -168,8 +194,21 @@ jobs:
       - name: Install system dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y build-essential lld
+          sudo apt-get install -y build-essential lld gnome-keyring
         continue-on-error: true
+      
+      - name: Setup DBus and gnome-keyring for tests
+        run: |
+          # Start DBus session
+          export $(dbus-launch)
+          echo "DBUS_SESSION_BUS_ADDRESS=$DBUS_SESSION_BUS_ADDRESS" >> $GITHUB_ENV
+          
+          # Create keyring directory
+          mkdir -p ~/.local/share/keyrings
+          
+          # Start gnome-keyring daemon in the background
+          eval $(echo -n "test" | gnome-keyring-daemon --unlock --components=secrets)
+          echo "GNOME_KEYRING_CONTROL=$GNOME_KEYRING_CONTROL" >> $GITHUB_ENV
       
       - name: Install cargo-llvm-cov
         uses: taiki-e/install-action@cargo-llvm-cov
