@@ -116,6 +116,9 @@ impl From<NetworkError> for ServiceError {
                 ServiceError::RequestFailed(format!("Discovery error: {}", msg))
             }
             NetworkError::Io(err) => ServiceError::RequestFailed(format!("IO error: {}", err)),
+            NetworkError::Libp2p(msg) => {
+                ServiceError::RequestFailed(format!("Libp2p error: {}", msg))
+            }
         }
     }
 }
@@ -459,16 +462,9 @@ impl Service for NetworkServiceImpl {
                     }
                     NetworkServiceRequest::ConnectToPeer(addr) => {
                         let network_manager = self.network_manager.read().await;
-                        match addr.0.parse() {
-                            Ok(socket_addr) => {
-                                network_manager.add_connected_peer(socket_addr).await;
-                                self.update_stats(|stats| stats.connected_peers += 1).await;
-                                Ok(NetworkServiceResponse::Connected(Ok(())))
-                            }
-                            Err(e) => Ok(NetworkServiceResponse::Connected(Err(format!(
-                                "Invalid address: {}",
-                                e
-                            )))),
+                        match network_manager.dial(addr).await {
+                            Ok(_) => Ok(NetworkServiceResponse::Connected(Ok(()))),
+                            Err(e) => Ok(NetworkServiceResponse::Connected(Err(e.to_string()))),
                         }
                     }
                     NetworkServiceRequest::DisconnectFromPeer(_peer_id) => {

@@ -4,6 +4,12 @@
 //! cryptographic identities for agents, including key generation,
 //! signing, and verification.
 
+pub mod protected;
+pub mod keychain;
+pub mod rotation;
+pub mod replay;
+pub mod backup;
+
 use crate::core::CorrelationId;
 use aes_gcm::{
     aead::{Aead, AeadCore, KeyInit, OsRng as AeadOsRng},
@@ -17,6 +23,10 @@ use rand::RngCore;
 use std::path::Path;
 use thiserror::Error;
 use zeroize::Zeroize;
+
+use self::protected::ProtectedKey;
+use self::replay::ReplayDetector;
+use self::rotation::KeyMetadata;
 
 /// Cryptographic identity for an agent
 ///
@@ -39,6 +49,12 @@ pub struct Identity {
     signing_key: SigningKey,
     /// Verifying key (public key) for the agent
     verifying_key: VerifyingKey,
+    /// Protected key copy for mlock support
+    _protected_key: Option<ProtectedKey>,
+    /// Replay detector for message verification
+    replay_detector: ReplayDetector,
+    /// Metadata for key rotation
+    key_metadata: KeyMetadata,
 }
 
 /// Error type for identity operations
@@ -72,6 +88,10 @@ pub enum IdentityError {
     #[error("Decryption error: {0}")]
     Decryption(String),
 
+    /// PeerId error
+    #[error("PeerId error: {0}")]
+    PeerId(String),
+
     /// Base64 decoding error
     #[error("Base64 error: {0}")]
     Base64(#[from] base64::DecodeError),
@@ -84,6 +104,30 @@ impl Identity {
         Ok(Self {
             verifying_key: signing_key.verifying_key(),
             signing_key,
+            _protected_key: None,
+            replay_detector: ReplayDetector::new(1000, 300), // Default values
+            key_metadata: KeyMetadata::new(),
+        })
+    }
+
+    /// Create identity from raw private key bytes
+    pub fn from_bytes(bytes: &[u8]) -> Result<Self> {
+        if bytes.len() != 32 {
+            return Err(IdentityError::InvalidKey("Invalid key length".into()));
+        }
+        let mut key_array = [0u8; 32];
+        key_array.copy_from_slice(bytes);
+        let signing_key = SigningKey::from_bytes(&key_array);
+        
+        // Create protected key copy
+        let protected = ProtectedKey::new(bytes.to_vec());
+
+        Ok(Self {
+            verifying_key: signing_key.verifying_key(),
+            signing_key,
+            _protected_key: Some(protected),
+            replay_detector: ReplayDetector::new(1000, 300),
+            key_metadata: KeyMetadata::new(),
         })
     }
 
@@ -96,15 +140,64 @@ impl Identity {
         let mut key_bytes = [0u8; 32];
         key_bytes.copy_from_slice(&data);
         let signing_key = SigningKey::from_bytes(&key_bytes);
+        
+        // Create protected key copy
+        let protected = ProtectedKey::new(data);
+
         Ok(Self {
             verifying_key: signing_key.verifying_key(),
             signing_key,
+            _protected_key: Some(protected),
+            replay_detector: ReplayDetector::new(1000, 300),
+            key_metadata: KeyMetadata::new(),
         })
     }
 
     /// Save the identity to a file
     pub fn save(&self, path: impl AsRef<Path>) -> Result<()> {
         std::fs::write(path, self.signing_key.to_bytes())?;
+        Ok(())
+    }
+
+    /// Verify a signature on a message with replay protection
+    pub fn verify_with_replay_protection(
+        &self,
+        message: &[u8],
+        signature: &Signature,
+        message_id: &str,
+        timestamp: u64,
+        nonce: u128,
+    ) -> Result<()> {
+        // Check replay first
+        self.replay_detector
+            .check_message(message_id, timestamp, nonce)
+            .map_err(|e| IdentityError::PeerId(e.to_string()))?; // Reuse PeerId error for now or add new variant
+
+        // Then verify signature
+        self.verifying_key
+            .verify(message, signature)
+            .map_err(|e| IdentityError::InvalidKey(e.to_string()))
+    }
+
+    /// Check if key rotation is needed
+    pub fn check_rotation(&mut self) -> rotation::RotationStatus {
+        // Default 90 days for now, should be configurable
+        self.key_metadata.check_rotation_status(90)
+    }
+
+    /// Rotate the key if needed
+    pub fn rotate_key(&mut self) -> Result<()> {
+        let mut csprng = OsRng;
+        let new_signing_key = SigningKey::generate(&mut csprng);
+        let new_verifying_key = new_signing_key.verifying_key();
+
+        // TODO: Implement transition period logic (keep old key)
+        // For now, just replace
+        self.signing_key = new_signing_key;
+        self.verifying_key = new_verifying_key;
+        
+        self.key_metadata.rotate();
+        
         Ok(())
     }
 
@@ -225,6 +318,20 @@ impl Identity {
     }
 
     /// Derive libp2p PeerId from public key
+    /// Export identity as encrypted backup
+    pub fn export_backup(&self, passphrase: &str) -> Result<Vec<u8>> {
+        let key_bytes = self.signing_key.to_bytes();
+        backup::backup_key(&key_bytes, passphrase).map_err(|e| IdentityError::Encryption(e.to_string()))
+    }
+
+    /// Import identity from encrypted backup
+    pub fn import_backup(backup: &[u8], passphrase: &str) -> Result<Self> {
+        let key_bytes = backup::restore_key(backup, passphrase)
+            .map_err(|e| IdentityError::Encryption(e.to_string()))?;
+        
+        Self::from_bytes(&key_bytes)
+    }
+
     pub fn peer_id(&self) -> Result<String> {
         // Create Ed25519 keypair from our signing key for libp2p compatibility
         let keypair = libp2p_identity::Keypair::ed25519_from_bytes(self.signing_key.to_bytes())
@@ -352,9 +459,15 @@ impl Identity {
         let signing_key = SigningKey::from_bytes(&key_array);
         key_array.zeroize(); // Zero the array
 
+        // Create protected key copy
+        let protected = ProtectedKey::new(key_bytes);
+
         let identity = Self {
             verifying_key: signing_key.verifying_key(),
             signing_key,
+            _protected_key: Some(protected),
+            replay_detector: ReplayDetector::new(1000, 300),
+            key_metadata: KeyMetadata::new(), // TODO: Load metadata from disk
         };
 
         let peer_id = identity.peer_id()?;

@@ -62,6 +62,8 @@ impl std::fmt::Display for AgentId {
 pub struct AgentConfig {
     /// Agent identifier
     pub id: AgentId,
+    /// Network port to listen on
+    pub network_port: u16,
     /// Resource limits
     pub resource_limits: ResourceLimits,
 }
@@ -594,6 +596,7 @@ mod tests {
 
         let config = AgentConfig {
             id: agent_id.clone(),
+            network_port: 8080,
             resource_limits: limits.clone(),
         };
 
@@ -606,6 +609,7 @@ mod tests {
     fn test_agent_config_serialization() {
         let config = AgentConfig {
             id: AgentId::from_string("agent-1".to_string()),
+            network_port: 8080,
             resource_limits: ResourceLimits {
                 max_cpu: 0.8,
                 max_memory: 1024 * 1024 * 1024,
@@ -719,6 +723,7 @@ mod tests {
     async fn test_agent_creation() {
         let config = AgentConfig {
             id: AgentId("test-agent".to_string()),
+            network_port: 8080,
             resource_limits: ResourceLimits {
                 max_cpu: 0.8,
                 max_memory: 1024 * 1024 * 1024,       // 1GB
@@ -737,6 +742,7 @@ mod tests {
     async fn test_agent_network_integration() {
         let config = AgentConfig {
             id: AgentId::new(),
+            network_port: 8080,
             resource_limits: ResourceLimits {
                 max_cpu: 0.5,
                 max_memory: 512 * 1024 * 1024,

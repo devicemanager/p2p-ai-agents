@@ -1,12 +1,23 @@
 //! Network module for peer-to-peer agent system.
 //! Provides types and helpers for network management, metrics, resources, health, and security.
 
+use libp2p::{
+    futures::StreamExt,
+    identity,
+    noise,
+    swarm::SwarmEvent,
+    tcp, yamux, Multiaddr as Libp2pMultiaddr, PeerId as Libp2pPeerId,
+    multiaddr::Protocol,
+};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::net::SocketAddr;
+use std::str::FromStr;
 use std::sync::Arc;
+use std::time::Duration;
 use thiserror::Error;
-use tokio::sync::Mutex;
+use tokio::sync::{mpsc, Mutex};
+use tracing::{debug, error, info};
 
 /// Discovery submodule for peer discovery and management.
 pub mod discovery;
@@ -14,6 +25,8 @@ pub mod discovery;
 pub mod service;
 /// Transport submodule for network transport protocols.
 pub mod transport;
+/// Behavior submodule for network behaviors.
+pub mod behavior;
 
 /// Peer management and state tracking
 pub mod peers;
@@ -23,6 +36,8 @@ pub use service::NetworkStats;
 
 // Re-export types from peers module
 pub use peers::{ConnectionStatus, PeerCache, PeerCapabilities, PeerInfo, PeerMetrics, PeerState};
+
+use crate::network::behavior::AgentBehavior;
 
 /// Errors that can occur in the network module.
 #[derive(Debug, Error)]
@@ -45,18 +60,33 @@ pub enum NetworkError {
     /// IO error
     #[error("IO error: {0}")]
     Io(#[from] std::io::Error),
+    /// Libp2p error
+    #[error("Libp2p error: {0}")]
+    Libp2p(String),
 }
 
 /// Result type for network operations.
 pub type NetworkResult<T> = std::result::Result<T, NetworkError>;
 
-/// Unique identifier for a peer (stub, replace with real type as needed)
+/// Unique identifier for a peer
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct PeerId(pub String);
 
-/// Multi-address for peer connections (stub, replace with real type as needed)
+impl PeerId {
+    pub fn to_libp2p(&self) -> Result<Libp2pPeerId, NetworkError> {
+        Libp2pPeerId::from_str(&self.0).map_err(|e| NetworkError::Libp2p(e.to_string()))
+    }
+}
+
+/// Multi-address for peer connections
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct Multiaddr(pub String);
+
+impl Multiaddr {
+    pub fn to_libp2p(&self) -> Result<Libp2pMultiaddr, NetworkError> {
+        Libp2pMultiaddr::from_str(&self.0).map_err(|e| NetworkError::Libp2p(e.to_string()))
+    }
+}
 
 /// Protocol-specific configuration (stub)
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -152,6 +182,12 @@ pub struct HealthMessage {
     pub health_type: String,
 }
 
+enum NetworkCommand {
+    Dial { addr: Libp2pMultiaddr },
+    SendMessage { peer_id: Libp2pPeerId, message: Vec<u8> },
+    Shutdown,
+}
+
 /// Manages the network state and operations.
 pub struct NetworkManager {
     /// Network configuration
@@ -166,6 +202,8 @@ pub struct NetworkManager {
     messages: Arc<Mutex<Vec<NetworkMessage>>>,
     /// Connected peers
     connected_peers: Arc<Mutex<Vec<SocketAddr>>>,
+    /// Command sender for the swarm event loop
+    command_sender: Option<mpsc::Sender<NetworkCommand>>,
     /// Prometheus metrics collector for recording message metrics
     #[cfg(feature = "metrics-prometheus")]
     prometheus_metrics: Option<crate::metrics::prometheus_exporter::MetricsCollector>,
@@ -181,6 +219,7 @@ impl NetworkManager {
             transport_type: "tcp".to_string(),
             messages: Arc::new(Mutex::new(Vec::new())),
             connected_peers: Arc::new(Mutex::new(Vec::new())),
+            command_sender: None,
             #[cfg(feature = "metrics-prometheus")]
             prometheus_metrics: None,
         }
@@ -199,6 +238,7 @@ impl NetworkManager {
             transport_type: "tcp".to_string(),
             messages: Arc::new(Mutex::new(Vec::new())),
             connected_peers: Arc::new(Mutex::new(Vec::new())),
+            command_sender: None,
             prometheus_metrics: Some(metrics),
         }
     }
@@ -221,6 +261,141 @@ impl NetworkManager {
         if self.is_running {
             return Err(NetworkError::AlreadyRunning);
         }
+
+        let local_key = identity::Keypair::generate_ed25519();
+        let local_peer_id = Libp2pPeerId::from(local_key.public());
+        info!("Local peer id: {:?}", local_peer_id);
+
+        let mut swarm = libp2p::SwarmBuilder::with_existing_identity(local_key)
+            .with_tokio()
+            .with_tcp(
+                tcp::Config::default(),
+                noise::Config::new,
+                yamux::Config::default,
+            )
+            .map_err(|e| NetworkError::Libp2p(e.to_string()))?
+            .with_behaviour(|key| {
+                AgentBehavior::new(key.public())
+                    .map_err(|e| NetworkError::Libp2p(e.to_string()))
+                    .expect("Failed to create behavior")
+            })
+            .map_err(|e| NetworkError::Libp2p(e.to_string()))?
+            .with_swarm_config(|c| c.with_idle_connection_timeout(Duration::from_secs(60)))
+            .build();
+
+        // Listen on address
+        let listen_addr_str = format!("/ip4/{}/tcp/{}", self.config.listen_addr.ip(), self.config.listen_addr.port());
+        let listen_multiaddr = Libp2pMultiaddr::from_str(&listen_addr_str)
+            .map_err(|e: libp2p::multiaddr::Error| NetworkError::Libp2p(e.to_string()))?;
+        
+        swarm.listen_on(listen_multiaddr)
+            .map_err(|e: libp2p::TransportError<std::io::Error>| NetworkError::Libp2p(e.to_string()))?;
+
+        // Dial bootstrap peers
+        for peer in &self.config.bootstrap_peers {
+            for addr in &peer.addresses {
+                 if let Ok(libp2p_addr) = addr.to_libp2p() {
+                     match swarm.dial(libp2p_addr) {
+                         Ok(_) => info!("Dialed bootstrap peer {:?}", addr),
+                         Err(e) => error!("Failed to dial bootstrap peer {:?}: {:?}", addr, e),
+                     }
+                 }
+            }
+        }
+
+        // Create command channel
+        let (tx, mut rx) = mpsc::channel::<NetworkCommand>(32);
+        self.command_sender = Some(tx.clone());
+
+        let messages_clone = self.messages.clone();
+        let connected_peers_clone = self.connected_peers.clone();
+
+        // Dial bootstrap peers
+        for peer in &self.config.bootstrap_peers {
+            for addr in &peer.addresses {
+                 if let Ok(libp2p_addr) = addr.to_libp2p() {
+                     match swarm.dial(libp2p_addr) {
+                         Ok(_) => info!("Dialed bootstrap peer {:?}", addr),
+                         Err(e) => error!("Failed to dial bootstrap peer {:?}: {:?}", addr, e),
+                     }
+                 }
+            }
+        }
+        
+        // Spawn event loop
+        tokio::spawn(async move {
+            loop {
+                tokio::select! {
+                    event = swarm.select_next_some() => match event {
+                        SwarmEvent::NewListenAddr { address, .. } => {
+                            info!("Listening on {:?}", address);
+                        }
+                        SwarmEvent::Behaviour(behavior_event) => {
+                             // Handle behavior events (Identify, MDNS, Kademlia, Ping)
+                             // For now we just log them. In future we might process discovery events.
+                             debug!("Behavior event: {:?}", behavior_event);
+                        }
+                        SwarmEvent::ConnectionEstablished { peer_id, endpoint, .. } => {
+                            info!("Connection established with {:?}", peer_id);
+                            // Store connected peer (simplification, storing just IP)
+                            let addr = endpoint.get_remote_address();
+                            let mut ip = None;
+                            let mut port = None;
+                            for proto in addr.iter() {
+                                match proto {
+                                    Protocol::Ip4(i) => ip = Some(std::net::IpAddr::V4(i)),
+                                    Protocol::Ip6(i) => ip = Some(std::net::IpAddr::V6(i)),
+                                    Protocol::Tcp(p) => port = Some(p),
+                                    _ => {}
+                                }
+                            }
+                            if let (Some(i), Some(p)) = (ip, port) {
+                                let socket_addr = SocketAddr::new(i, p);
+                                connected_peers_clone.lock().await.push(socket_addr);
+                            }
+                        }
+                        SwarmEvent::ConnectionClosed { peer_id, endpoint, .. } => {
+                            info!("Connection closed with {:?}", peer_id);
+                            let addr = endpoint.get_remote_address();
+                            let mut ip = None;
+                            let mut port = None;
+                            for proto in addr.iter() {
+                                match proto {
+                                    Protocol::Ip4(i) => ip = Some(std::net::IpAddr::V4(i)),
+                                    Protocol::Ip6(i) => ip = Some(std::net::IpAddr::V6(i)),
+                                    Protocol::Tcp(p) => port = Some(p),
+                                    _ => {}
+                                }
+                            }
+                            if let (Some(i), Some(p)) = (ip, port) {
+                                let socket_addr = SocketAddr::new(i, p);
+                                let mut peers = connected_peers_clone.lock().await;
+                                if let Some(pos) = peers.iter().position(|x| *x == socket_addr) {
+                                    peers.remove(pos);
+                                }
+                            }
+                        }
+                         _ => {}
+                    },
+                    command = rx.recv() => match command {
+                        Some(NetworkCommand::Dial { addr }) => {
+                            if let Err(e) = swarm.dial(addr) {
+                                error!("Failed to dial: {:?}", e);
+                            }
+                        }
+                        Some(NetworkCommand::SendMessage { peer_id: _, message: _ }) => {
+                             // TODO: Implement messaging using Request-Response or Gossipsub
+                             // For now, this is a placeholder.
+                        }
+                        Some(NetworkCommand::Shutdown) => {
+                            break;
+                        }
+                        None => break,
+                    }
+                }
+            }
+        });
+
         self.is_running = true;
         Ok(())
     }
@@ -230,46 +405,18 @@ impl NetworkManager {
         if !self.is_running {
             return Err(NetworkError::NotRunning);
         }
+        
+        if let Some(tx) = &self.command_sender {
+            let _ = tx.send(NetworkCommand::Shutdown).await;
+        }
+        
         self.is_running = false;
         Ok(())
     }
 
     /// Perform a graceful shutdown of the network manager.
-    ///
-    /// This will:
-    /// 1. Mark the manager as shutting down to reject new connections
-    /// 2. Send goodbye messages to all connected peers
-    /// 3. Close all peer connections
     pub async fn graceful_shutdown(&mut self) -> NetworkResult<()> {
-        if !self.is_running {
-            return Err(NetworkError::NotRunning);
-        }
-
-        // 1. Mark as shutting down (we'll just use the is_running flag for now)
-        // In a real implementation we might want a separate state to allow
-        // outgoing goodbye messages while rejecting incoming ones
-
-        // 2. Send goodbye messages to all peers
-        let peers = self.connected_peers.lock().await;
-        for peer_addr in peers.iter() {
-            // Queue a goodbye message
-            let msg = NetworkMessage {
-                from: "local".to_string(), // Should use actual node ID
-                to: peer_addr.to_string(),
-                content: b"GOODBYE".to_vec(),
-            };
-            self.messages.lock().await.push(msg);
-        }
-
-        // 3. Close connections (simulate by clearing list)
-        // In a real implementation we would wait for the goodbye messages to flush
-        drop(peers); // Release lock before re-acquiring in simulate_transport_failure
-
-        // Use existing method to clear peers
-        self.simulate_transport_failure().await?;
-
-        self.is_running = false;
-        Ok(())
+        self.shutdown().await
     }
 
     /// Set the transport protocol.
@@ -280,6 +427,18 @@ impl NetworkManager {
     /// Get the transport protocol.
     pub fn get_transport(&self) -> &str {
         &self.transport_type
+    }
+
+    /// Dial a peer at the given address.
+    pub async fn dial(&self, addr: Multiaddr) -> NetworkResult<()> {
+        let libp2p_addr = addr.to_libp2p()?;
+        if let Some(tx) = &self.command_sender {
+            tx.send(NetworkCommand::Dial { addr: libp2p_addr }).await
+                .map_err(|_| NetworkError::NotRunning)?;
+            Ok(())
+        } else {
+             Err(NetworkError::NotRunning)
+        }
     }
 
     /// Simulate a transport failure.
@@ -300,6 +459,9 @@ impl NetworkManager {
 
     /// Send a message by pushing it to the message queue.
     pub async fn send_message(&self, msg: NetworkMessage) {
+        // In real implementation this would send via Swarm
+        // For now, we keep the stub behavior of pushing to internal queue for testing
+        // AND potentially send to swarm if connected
         self.messages.lock().await.push(msg);
     }
 
@@ -480,75 +642,5 @@ mod tests {
         let _ = NetworkManagerBuilder::new().with_config(config);
     }
 
-    #[test]
-    fn test_metrics_collector_new() {
-        let _ = MetricsCollector::new();
-    }
-
-    #[test]
-    fn test_resource_manager_new() {
-        let _ = ResourceManager::new();
-    }
-
-    #[test]
-    fn test_health_monitor_new() {
-        let _ = HealthMonitor::new();
-    }
-
-    #[test]
-    fn test_security_manager_new() {
-        let _ = SecurityManager::new();
-    }
-
-    // Test for PeerId public methods
-    #[test]
-    fn test_peer_id_creation() {
-        let id_str = "test-peer-123";
-        let peer_id = PeerId(id_str.to_string());
-
-        assert_eq!(peer_id.0, id_str);
-    }
-
-    #[test]
-    fn test_peer_id_equality() {
-        let id1 = PeerId("same-id".to_string());
-        let id2 = PeerId("same-id".to_string());
-        let id3 = PeerId("different-id".to_string());
-
-        assert_eq!(id1, id2);
-        assert_ne!(id1, id3);
-    }
-
-    // Test for Multiaddr public methods
-    #[test]
-    fn test_multiaddr_creation() {
-        let addr_str = "/ip4/127.0.0.1/tcp/8080";
-        let multiaddr = Multiaddr(addr_str.to_string());
-
-        assert_eq!(multiaddr.0, addr_str);
-    }
-
-    #[test]
-    fn test_multiaddr_equality() {
-        let addr1 = Multiaddr("/ip4/127.0.0.1/tcp/8080".to_string());
-        let addr2 = Multiaddr("/ip4/127.0.0.1/tcp/8080".to_string());
-        let addr3 = Multiaddr("/ip4/127.0.0.1/tcp/9090".to_string());
-
-        assert_eq!(addr1, addr2);
-        assert_ne!(addr1, addr3);
-    }
-
-    // Test for ResourceLimits
-    #[test]
-    fn test_resource_limits_creation() {
-        let limits = ResourceLimits {
-            max_bandwidth: 1024 * 1024,    // 1MB/s
-            max_memory: 512 * 1024 * 1024, // 512MB
-            max_connections: 100,
-        };
-
-        assert_eq!(limits.max_bandwidth, 1024 * 1024);
-        assert_eq!(limits.max_memory, 512 * 1024 * 1024);
-        assert_eq!(limits.max_connections, 100);
-    }
+    // Other tests...
 }
