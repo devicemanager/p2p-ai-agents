@@ -1,6 +1,9 @@
 -- Supabase-compatible database initialization
 -- This sets up the database exactly as Supabase would for our storage adapter
 
+-- Enable pgvector for embedding/vector features
+CREATE EXTENSION IF NOT EXISTS "vector";
+
 -- Create required roles
 DO $$ 
 BEGIN
