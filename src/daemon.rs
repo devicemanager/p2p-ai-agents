@@ -34,10 +34,7 @@ impl PidFileManager {
 
         // Signal 0 (null signal) doesn't send a signal, but checks if we can
         // This is a standard way to check if a process exists
-        match kill(Pid::from_raw(pid), None) {
-            Ok(_) => true,
-            Err(_) => false,
-        }
+        kill(Pid::from_raw(pid), None).is_ok()
     }
 
     #[cfg(not(unix))]
