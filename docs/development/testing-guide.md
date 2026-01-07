@@ -37,6 +37,29 @@ cargo llvm-cov --all-features --workspace --html
 # - Security-critical: 100%
 ```
 
+#### Test Environment Setup
+
+**Headless/CI Environments (WSL, GitHub Actions, Docker)**
+
+Some tests require access to the system keyring for secure storage. On headless environments without a desktop session, you need to set up DBus and gnome-keyring:
+
+```bash
+# Install gnome-keyring
+sudo apt-get update
+sudo apt-get install -y gnome-keyring
+
+# Start DBus session (add to ~/.bashrc or run per session)
+if [ -z "$DBUS_SESSION_BUS_ADDRESS" ]; then
+    eval $(dbus-launch --sh-syntax)
+fi
+
+# Initialize keyring (once per session)
+mkdir -p ~/.local/share/keyrings
+echo -n "test" | gnome-keyring-daemon --unlock --components=secrets
+```
+
+**Note**: The GitHub Actions CI workflows automatically configure this environment for all test runs.
+
 ### 2. Unit Testing
 
 #### Test Structure
