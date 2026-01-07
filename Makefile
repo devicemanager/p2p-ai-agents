@@ -47,7 +47,7 @@ check:
 # Run tests
 test:
 	@echo "Running tests..."
-	$(CARGO_ENV) cargo test --all-features --workspace
+	$(CARGO_ENV) RUST_TEST_THREADS=1 cargo test --all-features --workspace
 
 # Build all targets
 build:
