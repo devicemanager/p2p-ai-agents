@@ -25,9 +25,7 @@ mod identity_stress_tests {
         // Simulate 1000 restarts (loads)
         for i in 0..1000 {
             let error_msg = format!("load identity iteration {}", i);
-            let loaded = load_identity(&identity_path)
-                .await
-                .expect(&error_msg);
+            let loaded = load_identity(&identity_path).await.expect(&error_msg);
 
             // Verify consistency
             assert_eq!(

@@ -225,9 +225,7 @@ mod tests {
         // Load 10 times and verify consistency
         for i in 0..10 {
             let error_msg = format!("load identity iteration {}", i);
-            let loaded = load_identity(&identity_path)
-                .await
-                .expect(&error_msg);
+            let loaded = load_identity(&identity_path).await.expect(&error_msg);
             assert_eq!(loaded.public_key_hex, original.public_key_hex);
             assert_eq!(loaded.private_key_hex, original.private_key_hex);
         }
