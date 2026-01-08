@@ -61,12 +61,12 @@ impl ReplayDetector {
         // Using (message_id, nonce) as key.
         // Actually, nonce should be enough if it's globally unique, but per-message nonce is safer.
         let key = (format!("{}:{}", message_id, nonce), timestamp);
-        
+
         let mut cache = self.cache.lock().unwrap();
         if cache.contains(&key) {
             return Err(ReplayError::ReplayDetected);
         }
-        
+
         cache.put(key, ());
         Ok(())
     }
@@ -112,10 +112,10 @@ mod tests {
     fn test_replay_detection() {
         let detector = ReplayDetector::new(100, 300);
         let now = Utc::now().timestamp() as u64;
-        
+
         // First time ok
         assert!(detector.check_message("msg1", now, 123).is_ok());
-        
+
         // Second time fails
         assert!(matches!(
             detector.check_message("msg1", now, 123),
@@ -127,7 +127,7 @@ mod tests {
     fn test_different_nonces_ok() {
         let detector = ReplayDetector::new(100, 300);
         let now = Utc::now().timestamp() as u64;
-        
+
         assert!(detector.check_message("msg1", now, 123).is_ok());
         assert!(detector.check_message("msg1", now, 124).is_ok());
     }

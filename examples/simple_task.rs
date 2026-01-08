@@ -23,6 +23,8 @@ async fn main() -> Result<(), Box<dyn Error>> {
     // Initialize agent with task processing capabilities
     let config = AgentConfig {
         id: AgentId::from_string("task-processor".to_string()),
+        network_port: 8080,
+        network_port: 8080,
         resource_limits: ResourceLimits {
             max_cpu: 0.7,
             max_memory: 1024 * 1024 * 1024,
@@ -205,6 +207,7 @@ mod tests {
     async fn test_task_submission() -> Result<(), Box<dyn Error>> {
         let config = AgentConfig {
             id: AgentId::from_string("test-task-agent".to_string()),
+            network_port: 8080,
             resource_limits: ResourceLimits {
                 max_cpu: 0.5,
                 max_memory: 512 * 1024 * 1024,
@@ -241,6 +244,7 @@ mod tests {
     async fn test_task_priorities() -> Result<(), Box<dyn Error>> {
         let config = AgentConfig {
             id: AgentId::new(),
+            network_port: 8080,
             resource_limits: ResourceLimits {
                 max_cpu: 0.8,
                 max_memory: 1024 * 1024 * 1024,

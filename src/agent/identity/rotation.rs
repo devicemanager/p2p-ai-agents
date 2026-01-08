@@ -75,15 +75,15 @@ mod tests {
         let mut metadata = KeyMetadata::new();
         // Simulate 61 days old
         metadata.created_at = Utc::now() - chrono::Duration::days(61);
-        
+
         match metadata.check_rotation_status(90) {
             RotationStatus::Warning(days) => assert_eq!(days, 29),
             _ => panic!("Expected warning"),
         }
-        
+
         // Warning sent flag should be set
         assert!(metadata.rotation_warning_sent);
-        
+
         // Subsequent check should be Ok (warning already sent)
         assert_eq!(metadata.check_rotation_status(90), RotationStatus::Ok);
     }
@@ -93,7 +93,7 @@ mod tests {
         let mut metadata = KeyMetadata::new();
         // Simulate 91 days old
         metadata.created_at = Utc::now() - chrono::Duration::days(91);
-        
+
         assert_eq!(metadata.check_rotation_status(90), RotationStatus::Required);
         assert!(metadata.rotation_required);
     }
@@ -111,6 +111,11 @@ mod tests {
         assert!(!metadata.rotation_required);
         assert!(!metadata.rotation_warning_sent);
         // Created at should be recent
-        assert!(Utc::now().signed_duration_since(metadata.created_at).num_seconds() < 5);
+        assert!(
+            Utc::now()
+                .signed_duration_since(metadata.created_at)
+                .num_seconds()
+                < 5
+        );
     }
 }

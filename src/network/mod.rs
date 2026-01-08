@@ -2,12 +2,8 @@
 //! Provides types and helpers for network management, metrics, resources, health, and security.
 
 use libp2p::{
-    futures::StreamExt,
-    identity,
-    noise,
-    swarm::SwarmEvent,
-    tcp, yamux, Multiaddr as Libp2pMultiaddr, PeerId as Libp2pPeerId,
-    multiaddr::Protocol,
+    futures::StreamExt, identity, multiaddr::Protocol, noise, swarm::SwarmEvent, tcp, yamux,
+    Multiaddr as Libp2pMultiaddr, PeerId as Libp2pPeerId,
 };
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -19,14 +15,14 @@ use thiserror::Error;
 use tokio::sync::{mpsc, Mutex};
 use tracing::{debug, error, info};
 
+/// Behavior submodule for network behaviors.
+pub mod behavior;
 /// Discovery submodule for peer discovery and management.
 pub mod discovery;
 /// Service submodule for the NetworkService implementation.
 pub mod service;
 /// Transport submodule for network transport protocols.
 pub mod transport;
-/// Behavior submodule for network behaviors.
-pub mod behavior;
 
 /// Peer management and state tracking
 pub mod peers;
@@ -183,8 +179,13 @@ pub struct HealthMessage {
 }
 
 enum NetworkCommand {
-    Dial { addr: Libp2pMultiaddr },
-    SendMessage { peer_id: Libp2pPeerId, message: Vec<u8> },
+    Dial {
+        addr: Libp2pMultiaddr,
+    },
+    SendMessage {
+        peer_id: Libp2pPeerId,
+        message: Vec<u8>,
+    },
     Shutdown,
 }
 
@@ -284,22 +285,27 @@ impl NetworkManager {
             .build();
 
         // Listen on address
-        let listen_addr_str = format!("/ip4/{}/tcp/{}", self.config.listen_addr.ip(), self.config.listen_addr.port());
+        let listen_addr_str = format!(
+            "/ip4/{}/tcp/{}",
+            self.config.listen_addr.ip(),
+            self.config.listen_addr.port()
+        );
         let listen_multiaddr = Libp2pMultiaddr::from_str(&listen_addr_str)
             .map_err(|e: libp2p::multiaddr::Error| NetworkError::Libp2p(e.to_string()))?;
-        
-        swarm.listen_on(listen_multiaddr)
-            .map_err(|e: libp2p::TransportError<std::io::Error>| NetworkError::Libp2p(e.to_string()))?;
+
+        swarm.listen_on(listen_multiaddr).map_err(
+            |e: libp2p::TransportError<std::io::Error>| NetworkError::Libp2p(e.to_string()),
+        )?;
 
         // Dial bootstrap peers
         for peer in &self.config.bootstrap_peers {
             for addr in &peer.addresses {
-                 if let Ok(libp2p_addr) = addr.to_libp2p() {
-                     match swarm.dial(libp2p_addr) {
-                         Ok(_) => info!("Dialed bootstrap peer {:?}", addr),
-                         Err(e) => error!("Failed to dial bootstrap peer {:?}: {:?}", addr, e),
-                     }
-                 }
+                if let Ok(libp2p_addr) = addr.to_libp2p() {
+                    match swarm.dial(libp2p_addr) {
+                        Ok(_) => info!("Dialed bootstrap peer {:?}", addr),
+                        Err(e) => error!("Failed to dial bootstrap peer {:?}: {:?}", addr, e),
+                    }
+                }
             }
         }
 
@@ -313,15 +319,15 @@ impl NetworkManager {
         // Dial bootstrap peers
         for peer in &self.config.bootstrap_peers {
             for addr in &peer.addresses {
-                 if let Ok(libp2p_addr) = addr.to_libp2p() {
-                     match swarm.dial(libp2p_addr) {
-                         Ok(_) => info!("Dialed bootstrap peer {:?}", addr),
-                         Err(e) => error!("Failed to dial bootstrap peer {:?}: {:?}", addr, e),
-                     }
-                 }
+                if let Ok(libp2p_addr) = addr.to_libp2p() {
+                    match swarm.dial(libp2p_addr) {
+                        Ok(_) => info!("Dialed bootstrap peer {:?}", addr),
+                        Err(e) => error!("Failed to dial bootstrap peer {:?}: {:?}", addr, e),
+                    }
+                }
             }
         }
-        
+
         // Spawn event loop
         tokio::spawn(async move {
             loop {
@@ -405,11 +411,11 @@ impl NetworkManager {
         if !self.is_running {
             return Err(NetworkError::NotRunning);
         }
-        
+
         if let Some(tx) = &self.command_sender {
             let _ = tx.send(NetworkCommand::Shutdown).await;
         }
-        
+
         self.is_running = false;
         Ok(())
     }
@@ -433,11 +439,12 @@ impl NetworkManager {
     pub async fn dial(&self, addr: Multiaddr) -> NetworkResult<()> {
         let libp2p_addr = addr.to_libp2p()?;
         if let Some(tx) = &self.command_sender {
-            tx.send(NetworkCommand::Dial { addr: libp2p_addr }).await
+            tx.send(NetworkCommand::Dial { addr: libp2p_addr })
+                .await
                 .map_err(|_| NetworkError::NotRunning)?;
             Ok(())
         } else {
-             Err(NetworkError::NotRunning)
+            Err(NetworkError::NotRunning)
         }
     }
 

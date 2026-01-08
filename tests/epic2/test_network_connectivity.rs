@@ -23,7 +23,7 @@ async fn test_two_agents_connectivity() {
     let registry1 = Arc::new(ServiceRegistry::new());
     let agent1 = DefaultAgent::new(config1, registry1).await.unwrap();
     agent1.start().await.unwrap();
-    
+
     // Connect Agent 1 to network
     agent1.connect_to_network(vec![]).await.unwrap();
 
@@ -48,18 +48,19 @@ async fn test_two_agents_connectivity() {
     let status1 = agent1.network_status().await.unwrap();
     let peer_id1 = status1.local_peer_id;
     assert!(!peer_id1.is_empty(), "Agent 1 should have a Peer ID");
-    
+
     let addr1 = format!("/ip4/127.0.0.1/tcp/8011/p2p/{}", peer_id1);
     agent2.connect_to_network(vec![addr1]).await.unwrap();
 
     // Wait for connection
     let mut connected = false;
-    for _ in 0..30 { // Wait up to 30 seconds
+    for _ in 0..30 {
+        // Wait up to 30 seconds
         sleep(Duration::from_secs(1)).await;
-        
+
         let status1 = agent1.network_status().await.unwrap();
         let status2 = agent2.network_status().await.unwrap();
-        
+
         if status1.peer_count > 0 && status2.peer_count > 0 {
             connected = true;
             break;

@@ -115,6 +115,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Create a demo agent
     let agent_config = AgentConfig {
         id: AgentId::new(),
+        network_port: 8080,
         resource_limits: ResourceLimits {
             max_cpu: 0.5,
             max_memory: 512 * 1024 * 1024,       // 512MB

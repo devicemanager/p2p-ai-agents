@@ -5,10 +5,10 @@
 //! signing, and verification.
 
 pub mod protected;
-pub mod keychain;
-pub mod rotation;
-pub mod replay;
+
 pub mod backup;
+pub mod replay;
+pub mod rotation;
 
 use crate::core::CorrelationId;
 use aes_gcm::{
@@ -118,7 +118,7 @@ impl Identity {
         let mut key_array = [0u8; 32];
         key_array.copy_from_slice(bytes);
         let signing_key = SigningKey::from_bytes(&key_array);
-        
+
         // Create protected key copy
         let protected = ProtectedKey::new(bytes.to_vec());
 
@@ -140,7 +140,7 @@ impl Identity {
         let mut key_bytes = [0u8; 32];
         key_bytes.copy_from_slice(&data);
         let signing_key = SigningKey::from_bytes(&key_bytes);
-        
+
         // Create protected key copy
         let protected = ProtectedKey::new(data);
 
@@ -195,9 +195,9 @@ impl Identity {
         // For now, just replace
         self.signing_key = new_signing_key;
         self.verifying_key = new_verifying_key;
-        
+
         self.key_metadata.rotate();
-        
+
         Ok(())
     }
 
@@ -321,14 +321,15 @@ impl Identity {
     /// Export identity as encrypted backup
     pub fn export_backup(&self, passphrase: &str) -> Result<Vec<u8>> {
         let key_bytes = self.signing_key.to_bytes();
-        backup::backup_key(&key_bytes, passphrase).map_err(|e| IdentityError::Encryption(e.to_string()))
+        backup::backup_key(&key_bytes, passphrase)
+            .map_err(|e| IdentityError::Encryption(e.to_string()))
     }
 
     /// Import identity from encrypted backup
     pub fn import_backup(backup: &[u8], passphrase: &str) -> Result<Self> {
         let key_bytes = backup::restore_key(backup, passphrase)
             .map_err(|e| IdentityError::Encryption(e.to_string()))?;
-        
+
         Self::from_bytes(&key_bytes)
     }
 

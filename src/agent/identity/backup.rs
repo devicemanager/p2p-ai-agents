@@ -49,7 +49,7 @@ mod tests {
     fn test_backup_restore_roundtrip() {
         let key = vec![1, 2, 3, 4, 5, 6, 7, 8];
         let passphrase = "secure-password-123";
-        
+
         let backup = backup_key(&key, passphrase).unwrap();
         assert!(!backup.is_empty());
         assert_ne!(backup, key); // Should be encrypted
@@ -63,10 +63,10 @@ mod tests {
         let key = vec![1, 2, 3, 4];
         let passphrase = "password";
         let wrong_passphrase = "wrong-password";
-        
+
         let backup = backup_key(&key, passphrase).unwrap();
         let result = restore_key(&backup, wrong_passphrase);
-        
+
         assert!(result.is_err());
     }
 
@@ -74,13 +74,13 @@ mod tests {
     fn test_restore_corrupted_data() {
         let key = vec![1, 2, 3, 4];
         let passphrase = "password";
-        
+
         let mut backup = backup_key(&key, passphrase).unwrap();
         // Corrupt the data
         if let Some(last) = backup.last_mut() {
             *last ^= 0xFF;
         }
-        
+
         let result = restore_key(&backup, passphrase);
         assert!(result.is_err());
     }

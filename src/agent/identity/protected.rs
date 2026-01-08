@@ -21,7 +21,7 @@ impl ProtectedKey {
         // Platform-specific mlock would go here.
         // For now, we focus on the structure and zeroize.
         // In a real implementation, we'd use libc::mlock on unix.
-        
+
         #[cfg(unix)]
         unsafe {
             // Best effort mlock - ignoring errors for now as this requires privileges or limits

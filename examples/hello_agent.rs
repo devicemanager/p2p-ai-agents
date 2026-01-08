@@ -16,6 +16,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     // Step 1: Create agent configuration
     let config = AgentConfig {
         id: AgentId::from_string("hello-agent".to_string()),
+        network_port: 8080,
         resource_limits: ResourceLimits {
             max_cpu: 0.5,                        // 50% CPU
             max_memory: 512 * 1024 * 1024,       // 512MB
@@ -65,6 +66,7 @@ mod tests {
     async fn test_agent_initialization() -> Result<(), Box<dyn Error>> {
         let config = AgentConfig {
             id: AgentId::from_string("test-agent".to_string()),
+            network_port: 8080,
             resource_limits: ResourceLimits {
                 max_cpu: 0.5,
                 max_memory: 256 * 1024 * 1024,
@@ -92,6 +94,7 @@ mod tests {
     async fn test_agent_lifecycle() -> Result<(), Box<dyn Error>> {
         let config = AgentConfig {
             id: AgentId::new(),
+            network_port: 8080,
             resource_limits: ResourceLimits {
                 max_cpu: 0.8,
                 max_memory: 1024 * 1024 * 1024,
