@@ -24,7 +24,6 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let config = AgentConfig {
         id: AgentId::from_string("task-processor".to_string()),
         network_port: 8080,
-        network_port: 8080,
         resource_limits: ResourceLimits {
             max_cpu: 0.7,
             max_memory: 1024 * 1024 * 1024,

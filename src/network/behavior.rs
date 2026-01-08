@@ -1,14 +1,22 @@
+#![allow(missing_docs)]
+
 use libp2p::{identify, kad, mdns, ping};
 
+/// Agent network behavior combining multiple libp2p protocols
 #[derive(libp2p::swarm::NetworkBehaviour)]
 pub struct AgentBehavior {
+    /// Identity protocol for peer identification
     pub identify: identify::Behaviour,
+    /// mDNS protocol for local peer discovery
     pub mdns: mdns::tokio::Behaviour,
+    /// Ping protocol for connection health checks
     pub ping: ping::Behaviour,
+    /// Kademlia DHT for distributed peer routing
     pub kademlia: kad::Behaviour<kad::store::MemoryStore>,
 }
 
 impl AgentBehavior {
+    /// Create a new AgentBehavior with the given public key
     pub fn new(
         local_public_key: libp2p::identity::PublicKey,
     ) -> Result<Self, Box<dyn std::error::Error>> {

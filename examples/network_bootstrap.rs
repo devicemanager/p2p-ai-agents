@@ -53,6 +53,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     let config = AgentConfig {
         id: agent_id,
+        network_port: 8001,
         resource_limits,
     };
 
@@ -142,11 +143,13 @@ mod tests {
         let agent_id = AgentId::from_string("test-bootstrap".to_string());
         let config = AgentConfig {
             id: agent_id,
+            network_port: 8001,
             resource_limits: ResourceLimits {
                 max_cpu: 0.4,
                 max_memory: 512 * 1024 * 1024,
                 max_storage: 1024 * 1024 * 1024,
                 max_bandwidth: 1024 * 1024,
+                max_connections: 20,
             },
         };
 

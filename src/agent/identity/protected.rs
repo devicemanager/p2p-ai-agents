@@ -32,6 +32,7 @@ impl ProtectedKey {
     }
 
     /// Access the underlying data as a slice.
+    #[allow(dead_code)]
     pub fn as_bytes(&self) -> &[u8] {
         &self.data
     }

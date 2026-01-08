@@ -62,6 +62,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     let config = AgentConfig {
         id: agent_id,
+        network_port: 8002,
         resource_limits,
     };
 

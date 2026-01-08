@@ -20,7 +20,7 @@ use tokio::time::sleep;
 async fn test_hello_agent_compiles() -> Result<(), Box<dyn Error>> {
     // Verify the example compiles
     let output = Command::new("cargo")
-        .args(["check", "--example", "hello_agent"])
+        .args(["check", "--example", "hello_agent", "--all-features"])
         .output()?;
 
     assert!(
@@ -36,7 +36,7 @@ async fn test_hello_agent_compiles() -> Result<(), Box<dyn Error>> {
 async fn test_simple_task_compiles() -> Result<(), Box<dyn Error>> {
     // Verify the example compiles
     let output = Command::new("cargo")
-        .args(["check", "--example", "simple_task"])
+        .args(["check", "--example", "simple_task", "--all-features"])
         .output()?;
 
     assert!(
@@ -52,7 +52,7 @@ async fn test_simple_task_compiles() -> Result<(), Box<dyn Error>> {
 async fn test_network_examples_compiles() -> Result<(), Box<dyn Error>> {
     // Verify the network examples compile
     let bootstrap_output = Command::new("cargo")
-        .args(["check", "--example", "network_bootstrap"])
+        .args(["check", "--example", "network_bootstrap", "--all-features"])
         .output()?;
 
     assert!(
@@ -62,7 +62,7 @@ async fn test_network_examples_compiles() -> Result<(), Box<dyn Error>> {
     );
 
     let peer_output = Command::new("cargo")
-        .args(["check", "--example", "network_peer"])
+        .args(["check", "--example", "network_peer", "--all-features"])
         .output()?;
 
     assert!(
@@ -80,6 +80,7 @@ async fn test_hello_agent_runs() -> Result<(), Box<dyn Error>> {
     let agent_id = AgentId::from_string("test-hello-agent".to_string());
     let config = AgentConfig {
         id: agent_id.clone(),
+        network_port: 8080,
         resource_limits: ResourceLimits {
             max_cpu: 0.3,
             max_memory: 256 * 1024 * 1024,
@@ -109,6 +110,7 @@ async fn test_task_processing_workflow() -> Result<(), Box<dyn Error>> {
     let agent_id = AgentId::from_string("test-task-agent".to_string());
     let config = AgentConfig {
         id: agent_id,
+        network_port: 8080,
         resource_limits: ResourceLimits {
             max_cpu: 0.4,
             max_memory: 512 * 1024 * 1024,
@@ -163,6 +165,7 @@ async fn test_batch_task_processing() -> Result<(), Box<dyn Error>> {
     let agent_id = AgentId::from_string("test-batch-agent".to_string());
     let config = AgentConfig {
         id: agent_id,
+        network_port: 8080,
         resource_limits: ResourceLimits {
             max_cpu: 0.5,
             max_memory: 512 * 1024 * 1024,
@@ -215,6 +218,7 @@ async fn test_task_cancellation() -> Result<(), Box<dyn Error>> {
     let agent_id = AgentId::from_string("test-cancel-agent".to_string());
     let config = AgentConfig {
         id: agent_id,
+        network_port: 8080,
         resource_limits: ResourceLimits {
             max_cpu: 0.3,
             max_memory: 256 * 1024 * 1024,
@@ -254,6 +258,7 @@ async fn test_network_peer_communication() -> Result<(), Box<dyn Error>> {
     let agent_id1 = AgentId::from_string("net-test-1".to_string());
     let config1 = AgentConfig {
         id: agent_id1,
+        network_port: 8080,
         resource_limits: ResourceLimits {
             max_cpu: 0.3,
             max_memory: 256 * 1024 * 1024,
@@ -266,6 +271,7 @@ async fn test_network_peer_communication() -> Result<(), Box<dyn Error>> {
     let agent_id2 = AgentId::from_string("net-test-2".to_string());
     let config2 = AgentConfig {
         id: agent_id2,
+        network_port: 8080,
         resource_limits: ResourceLimits {
             max_cpu: 0.3,
             max_memory: 256 * 1024 * 1024,
@@ -298,6 +304,7 @@ async fn test_complete_workflow_integration() -> Result<(), Box<dyn Error>> {
     let agent_id = AgentId::from_string("integration-test-agent".to_string());
     let config = AgentConfig {
         id: agent_id,
+        network_port: 8080,
         resource_limits: ResourceLimits {
             max_cpu: 0.6,
             max_memory: 1024 * 1024 * 1024,
@@ -382,7 +389,7 @@ fn test_examples_directory_structure() -> Result<(), Box<dyn Error>> {
 fn test_examples_compile() -> Result<(), Box<dyn Error>> {
     // Run cargo check on all examples
     let output = Command::new("cargo")
-        .args(["check", "--examples"])
+        .args(["check", "--examples", "--all-features"])
         .output()?;
 
     assert!(

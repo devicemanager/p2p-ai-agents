@@ -69,6 +69,7 @@ pub type NetworkResult<T> = std::result::Result<T, NetworkError>;
 pub struct PeerId(pub String);
 
 impl PeerId {
+    /// Convert this PeerId to a libp2p PeerId
     pub fn to_libp2p(&self) -> Result<Libp2pPeerId, NetworkError> {
         Libp2pPeerId::from_str(&self.0).map_err(|e| NetworkError::Libp2p(e.to_string()))
     }
@@ -79,6 +80,7 @@ impl PeerId {
 pub struct Multiaddr(pub String);
 
 impl Multiaddr {
+    /// Convert this Multiaddr to a libp2p Multiaddr
     pub fn to_libp2p(&self) -> Result<Libp2pMultiaddr, NetworkError> {
         Libp2pMultiaddr::from_str(&self.0).map_err(|e| NetworkError::Libp2p(e.to_string()))
     }
@@ -182,6 +184,7 @@ enum NetworkCommand {
     Dial {
         addr: Libp2pMultiaddr,
     },
+    #[allow(dead_code)]
     SendMessage {
         peer_id: Libp2pPeerId,
         message: Vec<u8>,
@@ -313,7 +316,7 @@ impl NetworkManager {
         let (tx, mut rx) = mpsc::channel::<NetworkCommand>(32);
         self.command_sender = Some(tx.clone());
 
-        let messages_clone = self.messages.clone();
+        let _messages_clone = self.messages.clone();
         let connected_peers_clone = self.connected_peers.clone();
 
         // Dial bootstrap peers

@@ -333,6 +333,7 @@ impl Identity {
         Self::from_bytes(&key_bytes)
     }
 
+    /// Get the libp2p peer ID for this identity
     pub fn peer_id(&self) -> Result<String> {
         // Create Ed25519 keypair from our signing key for libp2p compatibility
         let keypair = libp2p_identity::Keypair::ed25519_from_bytes(self.signing_key.to_bytes())
