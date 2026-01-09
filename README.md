@@ -195,7 +195,25 @@ for issue in result.issues {
    ./scripts/tasks.sh complete task-name.md
    ```
 
-4. **CI/CD Status**
+4. **BMAD-METHOD AI-Assisted Development**
+   
+   This project uses BMAD-METHOD for AI-assisted development:
+   ```bash
+   # Update BMAD or enable OpenCode support
+   ./scripts/update-bmad.sh
+   
+   # Or update manually
+   npx bmad-method@alpha install
+   ```
+   
+   **Current Setup:**
+   - Version: 6.0.0-alpha.22
+   - IDE: GitHub Copilot
+   - Location: `_bmad/` directory
+   
+   📚 [BMAD Update Guide](docs/development/bmad-method-update-guide.md) | [Quick Reference](docs/development/bmad-quick-reference.md)
+
+5. **CI/CD Status**
    - ✅ **Rust CI**: Automated building, testing, and linting
    - ✅ **Documentation**: Automated quality checks and maintenance
    - ✅ **Code Coverage**: Automated coverage reporting via Codecov
