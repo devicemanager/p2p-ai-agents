@@ -605,6 +605,10 @@ max_memory_mb: 1024
         let elapsed = start.elapsed();
 
         // Validation should complete 1000 times in less than 100ms
-        assert!(elapsed.as_millis() < 100, "Validation took too long: {:?}", elapsed);
+        assert!(
+            elapsed.as_millis() < 100,
+            "Validation took too long: {:?}",
+            elapsed
+        );
     }
 }

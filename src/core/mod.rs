@@ -13,6 +13,7 @@ pub mod events;
 pub mod identity;
 pub mod load_tests;
 pub mod logging;
+pub mod metadata;
 pub mod services;
 pub mod system_tests;
 
@@ -32,4 +33,7 @@ pub use identity::{
 };
 pub use load_tests::{LoadTestConfig, LoadTestResult, LoadTestRunner};
 pub use logging::{init_default_logging, init_logging, LogFormat, LoggingConfig, LoggingError};
+pub use metadata::{
+    build_timestamp, git_commit, version_display, version_info, NodeMetadata, UptimeTracker,
+};
 pub use services::{Service, ServiceError, ServiceRegistry};

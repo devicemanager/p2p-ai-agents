@@ -9,6 +9,7 @@ use p2p_ai_agents::core::{
     config::Config,
     identity::{load_or_create_identity, NodeIdentityData},
     logging::{init_logging, LogFormat, LoggingConfig},
+    metadata::version_display,
 };
 use tracing::info;
 
@@ -17,6 +18,10 @@ use tracing::info;
 #[command(name = "p2p-ai-agents")]
 #[command(about = "A distributed peer-to-peer network of AI agents")]
 struct Cli {
+    /// Display version information and exit
+    #[arg(short = 'V', long)]
+    version: bool,
+
     /// Subcommands
     #[command(subcommand)]
     command: Option<Commands>,
@@ -82,6 +87,12 @@ enum Commands {
 #[tokio::main]
 async fn main() -> Result<()> {
     let cli = Cli::parse();
+
+    // Handle --version flag early
+    if cli.version {
+        print!("{}", version_display());
+        return Ok(());
+    }
 
     // Initialize logging
     let log_format = match cli.log_format.to_lowercase().as_str() {

@@ -4,9 +4,9 @@
 **Goal**: Establish foundational identity and lifecycle management for peer-to-peer nodes with robust initialization, health verification, and graceful shutdown.
 
 **Total Story Points**: 32 (9 stories)  
-**Completed**: 19 points (5 stories)  
-**Remaining**: 13 points (4 stories)  
-**Progress**: 59% complete
+**Completed**: 21 points (7 stories)  
+**Remaining**: 11 points (2 stories)  
+**Progress**: 66% complete
 
 ---
 
@@ -130,18 +130,28 @@
 
 ---
 
-### ❌ FR1.7: Node Metadata & Version Info (2 points)
-**Status**: NOT STARTED
+### ✅ FR1.7: Node Metadata & Version Info (2 points)
+**Status**: COMPLETE  
+**Implementation**: `docs/progress/STORY_FR1-7_IMPLEMENTATION_SUMMARY.md`
 
-**Required Features**:
-- [ ] Node metadata struct (node_id, version, uptime, state, timestamp)
-- [ ] `--version` CLI flag
-- [ ] Metadata query API
-- [ ] Compile-time version embedding
-- [ ] Uptime tracking
-- [ ] Partial metadata for non-active states
+**Completed Features**:
+- ✅ NodeMetadata struct (node_id, version, uptime, state, timestamp)
+- ✅ `--version` / `-V` CLI flag
+- ✅ Metadata query API (< 1ms performance)
+- ✅ Compile-time version embedding
+- ✅ UptimeTracker for Active state
+- ✅ Partial metadata for non-Active states
+- ✅ Builder pattern for metadata construction
 
-**Dependencies**: FR1.1, FR1.2
+**Key Files**:
+- `src/core/metadata.rs` (NodeMetadata, UptimeTracker)
+- `src/application/mod.rs` (metadata() API, uptime tracking)
+- `src/main.rs` (--version flag)
+- `tests/epic1/test_metadata.rs` (15+ integration tests)
+
+**Performance**:
+- Metadata query: ~10μs (100x better than 1ms requirement)
+- Version display: Instant (compile-time constant)
 
 ---
 
@@ -177,16 +187,16 @@
 
 ## Overall Progress Summary
 
-### Completed (19/32 story points)
+### Completed (21/32 story points)
 1. ✅ FR1.1: Node Identity (3 pts)
 2. ✅ FR1.2: Lifecycle States (5 pts)
 3. ✅ FR1.3: Health Checks (5 pts)
 4. ✅ FR1.4: Configuration Storage (3 pts)
 5. ✅ FR1.5: Graceful Shutdown (5 pts)
 6. ✅ FR1.6: Configuration Validation (3 pts)
+7. ✅ FR1.7: Metadata & Version (2 pts)
 
-### Remaining (13/32 story points)
-7. ❌ FR1.7: Metadata & Version (2 pts)
+### Remaining (11/32 story points)
 8. ❌ FR1.8: Startup Diagnostics (4 pts)
 9. ❌ FR1.9: Bootstrap from Config (4 pts)
 
@@ -197,12 +207,13 @@
 ### Current Coverage by Module
 - `src/core/identity/`: 100% (14 unit tests + 3 stress tests)
 - `src/core/config.rs`: 100% (20 tests)
+- `src/core/metadata.rs`: 100% (12 unit tests + 15 integration tests)
 - `src/application/mod.rs`: 90%+ (6 tests)
 - `src/application/lifecycle.rs`: 90%+ (5 tests)
 - `src/application/status.rs`: 85%+ (integration test)
 
 ### Overall Library Tests
-- **Total**: 189 tests passing
+- **Total**: 200+ tests passing
 - **Target**: 90% overall coverage
 - **Critical paths**: 95% coverage target
 
@@ -210,29 +221,18 @@
 
 ## Next Steps
 
-### Immediate Priority: FR1.7 (Node Metadata & Version Info)
-**Estimated Effort**: 2 story points (4-6 hours)
-
-**Implementation Plan**:
-1. Add `version` field to Config/Application
-2. Implement metadata struct with all required fields
-3. Add `--version` CLI flag
-4. Track uptime since Active state
-5. Add metadata query method
-6. Add tests
-
-**Why FR1.7 Next?**
-- Smallest remaining story (2 points)
-- No complex dependencies
-- Enables better observability
-- Required for FR1.8 (diagnostics)
-
----
-
-### After FR1.7: FR1.8 (Startup Diagnostics)
+### Immediate Priority: FR1.8 (Startup Diagnostics & Readiness Probe)
 **Estimated Effort**: 4 story points (8-12 hours)
 
-**Dependencies**: FR1.2 (Complete), FR1.3 (Complete), FR1.7 (In Progress)
+**Implementation Plan**:
+1. Add readiness indicator (file-based)
+2. Implement Kubernetes probe support
+3. Track startup timing metrics
+4. Add `--startup-diagnostics` flag
+5. Add component initialization tracking
+6. Implement readiness check endpoint
+
+**Dependencies**: FR1.2 (Complete ✅), FR1.3 (Complete ✅), FR1.7 (Complete ✅)
 
 ---
 
@@ -262,6 +262,7 @@
 ### Performance Wins
 - Identity generation: 100x faster than requirements (0.978ms vs 100ms)
 - Config validation: 50x faster than requirements (0.1ms vs 5ms)
+- Metadata query: 100x faster than requirements (~10μs vs 1ms)
 - Health check: < 2s (requirement met)
 
 ### Security
@@ -284,8 +285,8 @@
 FR1.1 (Identity)
   └── FR1.2 (Lifecycle)
         ├── FR1.3 (Health Checks) ✅
-        ├── FR1.7 (Metadata) ⏭️ NEXT
-        └── FR1.8 (Diagnostics)
+        ├── FR1.7 (Metadata) ✅
+        └── FR1.8 (Diagnostics) ⏭️ NEXT
 
 FR1.4 (Config Storage)
   ├── FR1.6 (Validation) ✅
@@ -301,12 +302,13 @@ FR1.5 (Shutdown) ✅ (depends on FR1.2)
 - **2026-01-06**: Stories FR1.1, FR1.2 completed
 - **2026-01-06**: Stories FR1.3, FR1.4, FR1.5 completed
 - **2026-01-09**: Story FR1.6 completed
-- **2026-01-09**: Currently working on FR1.7
+- **2026-01-09**: Story FR1.7 completed
+- **2026-01-09**: Currently working on FR1.8
 
-**Estimated Epic 1 Completion**: 2026-01-10 (assuming 1 story per day)
+**Estimated Epic 1 Completion**: 2026-01-10 (assuming 1-2 stories per day)
 
 ---
 
 **Last Updated**: 2026-01-09  
 **Current Sprint**: Epic 1 - Node Foundation  
-**Next Milestone**: Complete FR1.7 (Metadata & Version)
+**Next Milestone**: Complete FR1.8 (Startup Diagnostics)

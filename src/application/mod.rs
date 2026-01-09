@@ -11,6 +11,7 @@ use crate::core::{
     config::{Config, ConfigError},
     container::Container,
     events::{EventBus, EventHandler, EventResult},
+    metadata::{NodeMetadata, UptimeTracker},
     services::{Service, ServiceError, ServiceRegistry},
 };
 use crate::network::{NetworkConfig, NetworkManager};
@@ -113,6 +114,7 @@ pub struct Application {
     agents: Arc<RwLock<Vec<Arc<dyn Agent>>>>,
     pub(crate) network_manager: Arc<RwLock<Option<NetworkManager>>>,
     storage_manager: Arc<RwLock<Option<StorageManager>>>,
+    uptime_tracker: Arc<RwLock<UptimeTracker>>,
 }
 
 impl Application {
@@ -127,6 +129,7 @@ impl Application {
             agents: Arc::new(RwLock::new(Vec::new())),
             network_manager: Arc::new(RwLock::new(None)),
             storage_manager: Arc::new(RwLock::new(None)),
+            uptime_tracker: Arc::new(RwLock::new(UptimeTracker::new())),
         }
     }
 
@@ -175,6 +178,14 @@ impl Application {
         }
 
         self.transition_state(ApplicationState::Active).await?;
+
+        // Start uptime tracking when entering Active state
+        let mut uptime_tracker = self.uptime_tracker.write().await;
+        uptime_tracker.start();
+        drop(uptime_tracker);
+
+        tracing::info!("Node is now Active, uptime tracking started");
+
         Ok(())
     }
 
@@ -212,6 +223,11 @@ impl Application {
     pub async fn stop(&self) -> Result<(), ApplicationError> {
         self.transition_state(ApplicationState::ShuttingDown)
             .await?;
+
+        // Stop uptime tracking when leaving Active state
+        let mut uptime_tracker = self.uptime_tracker.write().await;
+        uptime_tracker.stop();
+        drop(uptime_tracker);
 
         // Stop agents
         let agents = self.agents.read().await;
@@ -287,6 +303,38 @@ impl Application {
     pub async fn state(&self) -> ApplicationState {
         let state = self.state.read().await;
         state.clone()
+    }
+
+    /// Get node metadata
+    ///
+    /// Returns current node metadata including version, uptime, and state.
+    /// Uptime is only available when the node is in Active state.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use p2p_ai_agents::application::Application;
+    /// # tokio_test::block_on(async {
+    /// let app = Application::new();
+    /// let metadata = app.metadata().await;
+    /// assert!(metadata.version.len() > 0);
+    /// # })
+    /// ```
+    pub async fn metadata(&self) -> NodeMetadata {
+        let state = self.state.read().await;
+        let uptime_tracker = self.uptime_tracker.read().await;
+
+        let agents = self.agents.read().await;
+        let node_id = if let Some(agent) = agents.first() {
+            agent.id().as_str().to_string()
+        } else {
+            "initializing".to_string()
+        };
+
+        let uptime_seconds = uptime_tracker.uptime_seconds();
+        let current_state = format!("{:?}", *state);
+
+        NodeMetadata::new(node_id, current_state, uptime_seconds)
     }
 
     /// Get the event bus
@@ -432,6 +480,7 @@ impl Clone for Application {
             agents: self.agents.clone(),
             network_manager: self.network_manager.clone(),
             storage_manager: self.storage_manager.clone(),
+            uptime_tracker: self.uptime_tracker.clone(),
         }
     }
 }

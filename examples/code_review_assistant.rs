@@ -103,7 +103,12 @@ async fn main() {
     println!("Issues Found: {}\n", result.issues.len());
 
     for (i, issue) in result.issues.iter().enumerate() {
-        println!("Issue #{}: {} ({})", i + 1, issue.severity, issue.confidence);
+        println!(
+            "Issue #{}: {} ({})",
+            i + 1,
+            issue.severity,
+            issue.confidence
+        );
         println!("  Line: {}", issue.line);
         println!("  Problem: {}", issue.description);
         println!("  Why: {}", issue.reasoning);
@@ -136,8 +141,9 @@ async fn simulate_expert_review(query: CodeReviewQuery) -> Result<CodeReviewResu
             reasoning: "The Mutex lock is held while awaiting, which blocks other tasks. \
                        If multiple tasks do this simultaneously, they can deadlock."
                 .to_string(),
-            suggested_fix: "Move the lock() call after the await, or use a smaller critical section"
-                .to_string(),
+            suggested_fix:
+                "Move the lock() call after the await, or use a smaller critical section"
+                    .to_string(),
             confidence: 0.92,
             rule_id: "RUST-ASYNC-001".to_string(),
         },
