@@ -5,17 +5,24 @@
 steps:
   # 1. Set up Rust toolchain
   - name: Setup Rust
-    uses: actions-rust-lang/setup-rust-toolchain@v1
+    uses: dtolnay/rust-toolchain@stable
     with:
-      toolchain: stable
       components: rustfmt, clippy, llvm-tools-preview
+  
+  # 2. Install system dependencies (required for tests)
+  - name: Install system dependencies
+    run: |
+      sudo apt-get update
+      sudo apt-get install -y build-essential lld dbus-x11 gnome-keyring
+    shell: bash
+    continue-on-error: true
 
-  # 2. Install cargo-llvm-cov for coverage reports
+  # 3. Install cargo-llvm-cov for coverage reports
   - name: Install cargo-llvm-cov
     run: cargo install cargo-llvm-cov --locked
     shell: bash
 
-  # 3. Verify Rust installation
+  # 4. Verify Rust installation
   - name: Verify Rust installation
     run: |
       rustc --version
@@ -24,27 +31,27 @@ steps:
       cargo clippy --version
     shell: bash
 
-  # 4. Check compilation
+  # 5. Check compilation
   - name: Check compilation
     run: cargo check --all-targets --all-features
     shell: bash
 
-  # 5. Run code formatter check
+  # 6. Run code formatter check
   - name: Check code formatting
     run: cargo fmt --all -- --check
     shell: bash
 
-  # 6. Run clippy linter
+  # 7. Run clippy linter
   - name: Run clippy
     run: cargo clippy --all-targets --all-features -- -D warnings
     shell: bash
 
-  # 7. Build the project
+  # 8. Build the project
   - name: Build project
     run: cargo build --all-targets --all-features
     shell: bash
 
-  # 8. Run tests
+  # 9. Run tests
   - name: Run tests
     run: RUST_TEST_THREADS=1 cargo test --all-features --workspace
     shell: bash
