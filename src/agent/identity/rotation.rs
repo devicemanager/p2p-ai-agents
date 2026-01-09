@@ -1,15 +1,26 @@
+//! Key rotation management for cryptographic identities.
+//!
+//! This module provides key lifecycle management including rotation tracking,
+//! warning thresholds, and automatic expiration detection.
+
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
+/// Metadata tracking key lifecycle and rotation status
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct KeyMetadata {
+    /// Timestamp when the key was created
     pub created_at: DateTime<Utc>,
+    /// Timestamp of the last key rotation, if any
     pub last_rotated_at: Option<DateTime<Utc>>,
+    /// Whether a rotation warning has been sent
     pub rotation_warning_sent: bool,
+    /// Whether key rotation is required
     pub rotation_required: bool,
 }
 
 impl KeyMetadata {
+    /// Create new key metadata with current timestamp
     pub fn new() -> Self {
         Self {
             created_at: Utc::now(),
@@ -19,6 +30,13 @@ impl KeyMetadata {
         }
     }
 
+    /// Check if key rotation is needed based on age
+    ///
+    /// # Arguments
+    /// * `max_age_days` - Maximum allowed key age in days
+    ///
+    /// # Returns
+    /// The rotation status based on key age
     pub fn check_rotation_status(&mut self, max_age_days: i64) -> RotationStatus {
         let now = Utc::now();
         let age_days = now.signed_duration_since(self.created_at).num_days();
@@ -38,6 +56,7 @@ impl KeyMetadata {
         }
     }
 
+    /// Mark the key as rotated and reset metadata
     pub fn rotate(&mut self) {
         self.last_rotated_at = Some(Utc::now());
         self.created_at = Utc::now();
@@ -46,10 +65,14 @@ impl KeyMetadata {
     }
 }
 
+/// Status of key rotation checks
 #[derive(Debug, PartialEq)]
 pub enum RotationStatus {
+    /// Key is within acceptable age limits
     Ok,
-    Warning(i64), // Days remaining
+    /// Key is approaching rotation threshold (days remaining)
+    Warning(i64),
+    /// Key rotation is required immediately
     Required,
 }
 

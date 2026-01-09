@@ -16,8 +16,8 @@ supabase-up:
 	@echo "Starting Supabase containers with local environment variables..."
 	cd lab/docker && docker compose --env-file .env up -d
 
-# Default target
-all: supabase-up fmt-check clippy-strict check test
+# Default target - runs all code quality checks and tests
+all: fmt-check clippy-strict check test
 
 help:
 	@echo "Available targets:"
@@ -31,7 +31,8 @@ help:
 	@echo "  coverage   - Generate code coverage report"
 	@echo "  clean      - Clean build artifacts"
 	@echo "  install-tools - Install development tools"
-	@echo "  all        - Run check and test"
+	@echo "  all        - Run all code quality checks and tests (fmt-check, clippy-strict, check, test)"
+	@echo "  supabase-up - Start Supabase Docker containers"
 
 # Install required development tools
 install-tools:

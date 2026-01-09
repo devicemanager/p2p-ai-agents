@@ -1,17 +1,27 @@
+//! Encrypted backup and restore for cryptographic identities.
+//!
+//! This module provides passphrase-protected encryption for private keys
+//! using the age encryption format for secure backup and restore.
+
 use age::secrecy::Secret;
 use std::io::{Read, Write};
 use thiserror::Error;
 
+/// Errors that can occur during backup operations
 #[derive(Error, Debug)]
 pub enum BackupError {
+    /// Age encryption error
     #[error("Age encryption error: {0}")]
     Age(#[from] age::EncryptError),
+    /// Age decryption error
     #[error("Age decryption error: {0}")]
     AgeDecrypt(#[from] age::DecryptError),
+    /// IO error
     #[error("IO error: {0}")]
     Io(#[from] std::io::Error),
 }
 
+/// Result type for backup operations
 pub type Result<T> = std::result::Result<T, BackupError>;
 
 /// Encrypts a private key using a passphrase (Age format)

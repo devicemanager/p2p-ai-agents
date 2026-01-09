@@ -1,3 +1,8 @@
+//! Protected key storage with memory locking and zeroization.
+//!
+//! This module provides secure in-memory storage for sensitive cryptographic keys
+//! with automatic zeroization on drop and optional memory locking.
+
 use zeroize::Zeroize;
 
 /// A wrapper around sensitive key material that ensures it is zeroized on drop

@@ -10,14 +10,20 @@ use thiserror::Error;
 /// Maximum percentage of connections allowed from a single /24 subnet
 pub const MAX_SUBNET_PERCENTAGE: f32 = 0.20; // 20%
 
+/// Errors related to connection diversity enforcement
 #[derive(Debug, Error)]
 pub enum DiversityError {
+    /// Subnet connection limit exceeded
     #[error("Subnet limit exceeded: {subnet} ({current}/{max} connections)")]
     SubnetLimitExceeded {
+        /// The subnet that exceeded limits
         subnet: String,
+        /// Current number of connections from this subnet
         current: usize,
+        /// Maximum allowed connections from this subnet
         max: usize,
     },
+    /// No connections available in the pool
     #[error("No connections available")]
     NoConnections,
 }
@@ -112,12 +118,12 @@ impl DiversityManager {
     /// * `ip` - IP address of the connection to remove
     pub fn remove_connection(&mut self, ip: &IpAddr) {
         let subnet = get_subnet_prefix(ip);
-        
+
         if let Some(count) = self.subnet_counts.get_mut(&subnet) {
             if *count > 0 {
                 *count -= 1;
                 self.total_connections = self.total_connections.saturating_sub(1);
-                
+
                 if *count == 0 {
                     self.subnet_counts.remove(&subnet);
                 }
@@ -201,7 +207,7 @@ mod tests {
     #[test]
     fn test_add_connection() {
         let mut manager = DiversityManager::new();
-        
+
         assert!(manager.add_connection(&ip("192.168.1.1")).is_ok());
         assert_eq!(manager.total_connections(), 1);
         assert_eq!(manager.subnet_connection_count(&ip("192.168.1.1")), 1);
@@ -211,10 +217,10 @@ mod tests {
     fn test_remove_connection() {
         let mut manager = DiversityManager::new();
         let test_ip = ip("192.168.1.1");
-        
+
         manager.add_connection(&test_ip).unwrap();
         assert_eq!(manager.total_connections(), 1);
-        
+
         manager.remove_connection(&test_ip);
         assert_eq!(manager.total_connections(), 0);
         assert_eq!(manager.subnet_connection_count(&test_ip), 0);
@@ -223,11 +229,11 @@ mod tests {
     #[test]
     fn test_multiple_connections_same_subnet() {
         let mut manager = DiversityManager::new();
-        
+
         manager.add_connection(&ip("192.168.1.1")).unwrap();
         manager.add_connection(&ip("192.168.1.2")).unwrap();
         manager.add_connection(&ip("192.168.1.3")).unwrap();
-        
+
         assert_eq!(manager.total_connections(), 3);
         assert_eq!(manager.subnet_connection_count(&ip("192.168.1.1")), 3);
         assert_eq!(manager.unique_subnets(), 1);
@@ -236,11 +242,11 @@ mod tests {
     #[test]
     fn test_multiple_subnets() {
         let mut manager = DiversityManager::new();
-        
+
         manager.add_connection(&ip("192.168.1.1")).unwrap();
         manager.add_connection(&ip("192.168.2.1")).unwrap();
         manager.add_connection(&ip("10.0.0.1")).unwrap();
-        
+
         assert_eq!(manager.total_connections(), 3);
         assert_eq!(manager.unique_subnets(), 3);
         assert_eq!(manager.subnet_connection_count(&ip("192.168.1.1")), 1);
@@ -251,21 +257,26 @@ mod tests {
     #[test]
     fn test_subnet_limit_enforcement() {
         let mut manager = DiversityManager::new();
-        
+
         // Add 10 connections total to trigger 20% limit (max 2 per subnet)
         for i in 1..=8 {
-            manager.add_connection(&ip(&format!("10.0.{}.1", i))).unwrap();
+            manager
+                .add_connection(&ip(&format!("10.0.{}.1", i)))
+                .unwrap();
         }
-        
+
         // First connection to 192.168.1.x should succeed
         assert!(manager.add_connection(&ip("192.168.1.1")).is_ok());
-        
+
         // Second connection should succeed (2 out of 9 = 22%, but rounded up to 2)
         assert!(manager.add_connection(&ip("192.168.1.2")).is_ok());
-        
+
         // Third connection should fail (would be 3 out of 10 = 30% > 20%)
         let result = manager.add_connection(&ip("192.168.1.3"));
-        assert!(matches!(result, Err(DiversityError::SubnetLimitExceeded { .. })));
+        assert!(matches!(
+            result,
+            Err(DiversityError::SubnetLimitExceeded { .. })
+        ));
     }
 
     #[test]
@@ -277,11 +288,13 @@ mod tests {
     #[test]
     fn test_can_connect_under_limit() {
         let mut manager = DiversityManager::new();
-        
+
         for i in 1..=5 {
-            manager.add_connection(&ip(&format!("10.0.0.{}", i))).unwrap();
+            manager
+                .add_connection(&ip(&format!("10.0.0.{}", i)))
+                .unwrap();
         }
-        
+
         // Should allow 1 more from same subnet (1/6 = 16.7% < 20%)
         assert!(manager.can_connect(&ip("10.0.0.100")).is_ok());
     }
@@ -289,11 +302,11 @@ mod tests {
     #[test]
     fn test_subnet_stats() {
         let mut manager = DiversityManager::new();
-        
+
         manager.add_connection(&ip("192.168.1.1")).unwrap();
         manager.add_connection(&ip("192.168.1.2")).unwrap();
         manager.add_connection(&ip("10.0.0.1")).unwrap();
-        
+
         let stats = manager.subnet_stats();
         assert_eq!(stats.len(), 2);
         assert_eq!(stats.get("192.168.1.0/24"), Some(&2));
@@ -303,7 +316,7 @@ mod tests {
     #[test]
     fn test_remove_nonexistent_connection() {
         let mut manager = DiversityManager::new();
-        
+
         // Should not panic or error
         manager.remove_connection(&ip("192.168.1.1"));
         assert_eq!(manager.total_connections(), 0);
@@ -313,10 +326,10 @@ mod tests {
     fn test_remove_cleans_up_empty_subnets() {
         let mut manager = DiversityManager::new();
         let test_ip = ip("192.168.1.1");
-        
+
         manager.add_connection(&test_ip).unwrap();
         assert_eq!(manager.unique_subnets(), 1);
-        
+
         manager.remove_connection(&test_ip);
         assert_eq!(manager.unique_subnets(), 0);
     }
@@ -324,18 +337,22 @@ mod tests {
     #[test]
     fn test_max_connections_per_subnet_calculation() {
         let mut manager = DiversityManager::new();
-        
+
         // With 10 connections, max per subnet should be 2 (20%)
         for i in 1..=10 {
-            manager.add_connection(&ip(&format!("10.0.{}.1", i))).unwrap();
+            manager
+                .add_connection(&ip(&format!("10.0.{}.1", i)))
+                .unwrap();
         }
-        
+
         assert_eq!(manager.max_connections_per_subnet(), 2);
-        
+
         // With 5 connections, max per subnet should be 1 (20% of 5 = 1)
         let mut manager2 = DiversityManager::new();
         for i in 1..=5 {
-            manager2.add_connection(&ip(&format!("10.0.{}.1", i))).unwrap();
+            manager2
+                .add_connection(&ip(&format!("10.0.{}.1", i)))
+                .unwrap();
         }
         assert_eq!(manager2.max_connections_per_subnet(), 1);
     }
@@ -343,13 +360,13 @@ mod tests {
     #[test]
     fn test_ipv6_connections() {
         let mut manager = DiversityManager::new();
-        
+
         let ipv6_1 = ip("2001:0db8:85a3::1");
         let ipv6_2 = ip("2001:0db8:85a3::2");
-        
+
         manager.add_connection(&ipv6_1).unwrap();
         manager.add_connection(&ipv6_2).unwrap();
-        
+
         assert_eq!(manager.total_connections(), 2);
         assert_eq!(manager.subnet_connection_count(&ipv6_1), 2);
     }

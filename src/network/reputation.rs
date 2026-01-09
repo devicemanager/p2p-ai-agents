@@ -59,10 +59,13 @@ impl ReputationTier {
     }
 }
 
+/// Errors related to reputation management
 #[derive(Debug, Error)]
 pub enum ReputationError {
+    /// The specified agent was not found in the reputation system
     #[error("Agent not found: {0}")]
     AgentNotFound(String),
+    /// The reputation score is outside the valid range
     #[error("Reputation score out of bounds: {0}")]
     ScoreOutOfBounds(i32),
 }
@@ -214,7 +217,7 @@ mod tests {
     fn test_register_agent() {
         let mut manager = ReputationManager::new();
         manager.register_agent("agent1".to_string());
-        
+
         assert_eq!(manager.get_score("agent1").unwrap(), STARTING_REPUTATION);
         assert_eq!(manager.agent_count(), 1);
     }
@@ -232,7 +235,7 @@ mod tests {
     fn test_get_tier() {
         let mut manager = ReputationManager::new();
         manager.register_agent("agent1".to_string());
-        
+
         assert_eq!(
             manager.get_tier("agent1").unwrap(),
             ReputationTier::Newcomer
@@ -243,7 +246,7 @@ mod tests {
     fn test_increase_reputation() {
         let mut manager = ReputationManager::new();
         manager.register_agent("agent1".to_string());
-        
+
         let new_score = manager.increase_reputation("agent1", 50).unwrap();
         assert_eq!(new_score, 150);
         assert_eq!(manager.get_score("agent1").unwrap(), 150);
@@ -253,7 +256,7 @@ mod tests {
     fn test_increase_reputation_max_cap() {
         let mut manager = ReputationManager::new();
         manager.register_agent("agent1".to_string());
-        
+
         manager.increase_reputation("agent1", 2000).unwrap();
         assert_eq!(manager.get_score("agent1").unwrap(), MAX_REPUTATION);
     }
@@ -262,7 +265,7 @@ mod tests {
     fn test_decrease_reputation() {
         let mut manager = ReputationManager::new();
         manager.register_agent("agent1".to_string());
-        
+
         let new_score = manager.decrease_reputation("agent1", 30).unwrap();
         assert_eq!(new_score, 70);
         assert_eq!(manager.get_score("agent1").unwrap(), 70);
@@ -272,7 +275,7 @@ mod tests {
     fn test_decrease_reputation_min_cap() {
         let mut manager = ReputationManager::new();
         manager.register_agent("agent1".to_string());
-        
+
         manager.decrease_reputation("agent1", 2000).unwrap();
         assert_eq!(manager.get_score("agent1").unwrap(), MIN_REPUTATION);
     }
@@ -281,7 +284,7 @@ mod tests {
     fn test_can_accept_task() {
         let mut manager = ReputationManager::new();
         manager.register_agent("agent1".to_string());
-        
+
         // Newcomer tier has quota of 10
         assert!(manager.can_accept_task("agent1", 5).unwrap());
         assert!(manager.can_accept_task("agent1", 9).unwrap());
@@ -296,11 +299,11 @@ mod tests {
         manager.register_agent("established".to_string());
         manager.register_agent("trusted".to_string());
         manager.register_agent("elite".to_string());
-        
+
         manager.increase_reputation("established", 150).unwrap(); // 250
         manager.increase_reputation("trusted", 400).unwrap(); // 500
         manager.increase_reputation("elite", 650).unwrap(); // 750
-        
+
         assert!(!manager.can_accept_task("newcomer", 10).unwrap());
         assert!(manager.can_accept_task("established", 10).unwrap());
         assert!(!manager.can_accept_task("established", 50).unwrap());
@@ -315,10 +318,10 @@ mod tests {
         manager.register_agent("agent1".to_string());
         manager.register_agent("agent2".to_string());
         manager.register_agent("agent3".to_string());
-        
+
         manager.increase_reputation("agent1", 50).unwrap();
         manager.decrease_reputation("agent2", 20).unwrap();
-        
+
         assert_eq!(manager.get_score("agent1").unwrap(), 150);
         assert_eq!(manager.get_score("agent2").unwrap(), 80);
         assert_eq!(manager.get_score("agent3").unwrap(), 100);
@@ -330,7 +333,7 @@ mod tests {
         let mut manager = ReputationManager::new();
         manager.register_agent("agent1".to_string());
         manager.register_agent("agent2".to_string());
-        
+
         let scores = manager.all_scores();
         assert_eq!(scores.len(), 2);
         assert_eq!(scores.get("agent1"), Some(&100));
@@ -342,10 +345,10 @@ mod tests {
         let mut manager = ReputationManager::new();
         manager.register_agent("agent1".to_string());
         manager.increase_reputation("agent1", 50).unwrap();
-        
+
         let json = serde_json::to_string(&manager).unwrap();
         let deserialized: ReputationManager = serde_json::from_str(&json).unwrap();
-        
+
         assert_eq!(deserialized.get_score("agent1").unwrap(), 150);
     }
 }

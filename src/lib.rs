@@ -7,6 +7,7 @@
 #![warn(missing_docs)]
 #![warn(rustdoc::missing_crate_level_docs)]
 
+/// Agent identity, task management, and resource monitoring
 pub mod agent;
 /// Application layer
 pub mod application;
@@ -16,6 +17,7 @@ pub mod core;
 pub mod daemon;
 /// Metrics collection and monitoring
 pub mod metrics;
+/// Network layer for peer-to-peer communication
 pub mod network;
 /// The storage module provides the pluggable storage layer for the system.
 pub mod storage;

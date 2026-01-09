@@ -1,15 +1,24 @@
+//! Replay attack protection using timestamp validation and nonce caching.
+//!
+//! This module prevents replay attacks by tracking message identifiers and timestamps,
+//! ensuring that each message is processed only once within its validity period.
+
 use chrono::Utc;
 use lru::LruCache;
 use std::num::NonZeroUsize;
 use std::sync::{Arc, Mutex};
 use thiserror::Error;
 
+/// Errors that can occur during replay detection
 #[derive(Error, Debug)]
 pub enum ReplayError {
+    /// Message timestamp is too far in the future
     #[error("Message timestamp too far in future")]
     FutureTimestamp,
+    /// Message timestamp has expired
     #[error("Message timestamp expired")]
     ExpiredTimestamp,
+    /// Message replay was detected
     #[error("Message replay detected")]
     ReplayDetected,
 }
@@ -34,6 +43,11 @@ impl std::fmt::Debug for ReplayDetector {
 }
 
 impl ReplayDetector {
+    /// Create a new replay detector
+    ///
+    /// # Arguments
+    /// * `cache_size` - Maximum number of message identifiers to track
+    /// * `max_age_seconds` - Maximum age of messages to accept
     pub fn new(cache_size: usize, max_age_seconds: u64) -> Self {
         let cache_size = NonZeroUsize::new(cache_size).unwrap_or(NonZeroUsize::new(1000).unwrap());
         Self {
@@ -43,6 +57,18 @@ impl ReplayDetector {
         }
     }
 
+    /// Check if a message is valid (not replayed, not expired)
+    ///
+    /// # Arguments
+    /// * `message_id` - Unique message identifier
+    /// * `timestamp` - Unix timestamp when message was created
+    /// * `nonce` - Cryptographic nonce for uniqueness
+    ///
+    /// # Errors
+    /// Returns `ReplayError` if the message is:
+    /// - From the future (beyond clock skew tolerance)
+    /// - Expired (older than max_age_seconds)
+    /// - Already seen (replay detected)
     pub fn check_message(&self, message_id: &str, timestamp: u64, nonce: u128) -> Result<()> {
         let now = Utc::now().timestamp() as u64;
 

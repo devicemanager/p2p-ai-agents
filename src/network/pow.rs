@@ -23,12 +23,16 @@ const TIME_COST: u32 = 3;
 /// Parallelism factor
 const PARALLELISM: u32 = 1;
 
+/// Errors related to proof-of-work operations
 #[derive(Debug, Error)]
 pub enum ProofOfWorkError {
+    /// The provided difficulty level is outside valid range
     #[error("Invalid difficulty level: {0}")]
     InvalidDifficulty(u32),
+    /// Proof verification failed
     #[error("Proof verification failed")]
     VerificationFailed,
+    /// Argon2 hashing error
     #[error("Argon2 error: {0}")]
     Argon2Error(String),
 }
@@ -71,7 +75,7 @@ impl ProofOfWork {
         public_key: &VerifyingKey,
         difficulty: u32,
     ) -> Result<(Self, Duration), ProofOfWorkError> {
-        if difficulty < MIN_DIFFICULTY || difficulty > MAX_DIFFICULTY {
+        if !(MIN_DIFFICULTY..=MAX_DIFFICULTY).contains(&difficulty) {
             return Err(ProofOfWorkError::InvalidDifficulty(difficulty));
         }
 
@@ -80,7 +84,7 @@ impl ProofOfWork {
 
         for nonce in 0..u64::MAX {
             let hash = compute_hash(public_key_bytes, nonce)?;
-            
+
             if check_difficulty(&hash, difficulty) {
                 let duration = start.elapsed();
                 return Ok((
@@ -112,7 +116,7 @@ impl ProofOfWork {
         }
 
         let hash = compute_hash(public_key.as_bytes(), self.nonce)?;
-        
+
         if hash != self.hash {
             return Err(ProofOfWorkError::VerificationFailed);
         }
@@ -127,30 +131,18 @@ impl ProofOfWork {
 
 /// Compute Argon2id hash for given public key and nonce.
 fn compute_hash(public_key: &[u8], nonce: u64) -> Result<Vec<u8>, ProofOfWorkError> {
-    let mut params_builder = ParamsBuilder::new();
-    params_builder
+    let params = ParamsBuilder::new()
         .m_cost(MEMORY_COST)
-        .map_err(|e| ProofOfWorkError::Argon2Error(e.to_string()))?;
-    params_builder
         .t_cost(TIME_COST)
-        .map_err(|e| ProofOfWorkError::Argon2Error(e.to_string()))?;
-    params_builder
         .p_cost(PARALLELISM)
-        .map_err(|e| ProofOfWorkError::Argon2Error(e.to_string()))?;
-    
-    let params = params_builder
         .build()
         .map_err(|e| ProofOfWorkError::Argon2Error(e.to_string()))?;
 
-    let argon2 = Argon2::new(
-        argon2::Algorithm::Argon2id,
-        Version::V0x13,
-        params,
-    );
+    let argon2 = Argon2::new(argon2::Algorithm::Argon2id, Version::V0x13, params);
 
     let nonce_bytes = nonce.to_le_bytes();
     let mut output = vec![0u8; 32];
-    
+
     argon2
         .hash_password_into(&nonce_bytes, public_key, &mut output)
         .map_err(|e| ProofOfWorkError::Argon2Error(e.to_string()))?;
@@ -193,7 +185,7 @@ mod tests {
     fn test_proof_generation_and_verification() {
         let public_key = create_test_key();
         let (proof, _duration) = ProofOfWork::generate(&public_key, MIN_DIFFICULTY).unwrap();
-        
+
         assert_eq!(proof.difficulty, MIN_DIFFICULTY);
         assert!(proof.verify(&public_key).is_ok());
     }
@@ -203,7 +195,7 @@ mod tests {
         let public_key1 = create_test_key();
         let signing_key2 = SigningKey::from_bytes(&[2u8; 32]);
         let public_key2 = signing_key2.verifying_key();
-        
+
         let (proof, _) = ProofOfWork::generate(&public_key1, MIN_DIFFICULTY).unwrap();
         assert!(proof.verify(&public_key2).is_err());
     }
@@ -212,14 +204,20 @@ mod tests {
     fn test_invalid_difficulty_too_low() {
         let public_key = create_test_key();
         let result = ProofOfWork::generate(&public_key, MIN_DIFFICULTY - 1);
-        assert!(matches!(result, Err(ProofOfWorkError::InvalidDifficulty(_))));
+        assert!(matches!(
+            result,
+            Err(ProofOfWorkError::InvalidDifficulty(_))
+        ));
     }
 
     #[test]
     fn test_invalid_difficulty_too_high() {
         let public_key = create_test_key();
         let result = ProofOfWork::generate(&public_key, MAX_DIFFICULTY + 1);
-        assert!(matches!(result, Err(ProofOfWorkError::InvalidDifficulty(_))));
+        assert!(matches!(
+            result,
+            Err(ProofOfWorkError::InvalidDifficulty(_))
+        ));
     }
 
     #[test]
@@ -230,17 +228,20 @@ mod tests {
             hash: vec![0u8; 32],
         };
         let public_key = create_test_key();
-        assert!(matches!(proof.verify(&public_key), Err(ProofOfWorkError::InvalidDifficulty(_))));
+        assert!(matches!(
+            proof.verify(&public_key),
+            Err(ProofOfWorkError::InvalidDifficulty(_))
+        ));
     }
 
     #[test]
     fn test_proof_verification_wrong_hash() {
         let public_key = create_test_key();
         let (mut proof, _) = ProofOfWork::generate(&public_key, MIN_DIFFICULTY).unwrap();
-        
+
         // Tamper with hash
         proof.hash[0] ^= 0xFF;
-        
+
         assert!(proof.verify(&public_key).is_err());
     }
 
@@ -280,10 +281,10 @@ mod tests {
     fn test_serialization() {
         let public_key = create_test_key();
         let (proof, _) = ProofOfWork::generate(&public_key, MIN_DIFFICULTY).unwrap();
-        
+
         let json = serde_json::to_string(&proof).unwrap();
         let deserialized: ProofOfWork = serde_json::from_str(&json).unwrap();
-        
+
         assert_eq!(proof, deserialized);
     }
 

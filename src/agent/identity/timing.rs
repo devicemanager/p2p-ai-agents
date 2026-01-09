@@ -8,8 +8,10 @@ use rand::Rng;
 use std::time::{Duration, Instant};
 
 /// Minimum jitter duration in microseconds
+#[allow(dead_code)]
 const MIN_JITTER_US: u64 = 100;
 /// Maximum jitter duration in microseconds
+#[allow(dead_code)]
 const MAX_JITTER_US: u64 = 500;
 
 /// Verify a signature with timing attack mitigation via random jitter.
@@ -39,6 +41,7 @@ const MAX_JITTER_US: u64 = 500;
 ///
 /// assert!(verify_with_jitter(&verifying_key, message, &signature).is_ok());
 /// ```
+#[allow(dead_code)]
 pub fn verify_with_jitter(
     public_key: &VerifyingKey,
     message: &[u8],
@@ -46,17 +49,17 @@ pub fn verify_with_jitter(
 ) -> Result<(), ed25519_dalek::SignatureError> {
     let start = Instant::now();
     let result = public_key.verify(message, signature);
-    
+
     // Add random jitter regardless of success/failure
     let jitter = rand::thread_rng().gen_range(MIN_JITTER_US..=MAX_JITTER_US);
     let jitter_duration = Duration::from_micros(jitter);
-    
+
     // Ensure minimum time has elapsed
     let elapsed = start.elapsed();
     if elapsed < jitter_duration {
         std::thread::sleep(jitter_duration - elapsed);
     }
-    
+
     result
 }
 
@@ -73,6 +76,7 @@ pub fn verify_with_jitter(
 /// # Returns
 ///
 /// `Ok(())` if the signature is valid, `Err` otherwise
+#[allow(dead_code)]
 pub async fn verify_with_jitter_async(
     public_key: &VerifyingKey,
     message: &[u8],
@@ -80,15 +84,15 @@ pub async fn verify_with_jitter_async(
 ) -> Result<(), ed25519_dalek::SignatureError> {
     let start = Instant::now();
     let result = public_key.verify(message, signature);
-    
+
     let jitter = rand::thread_rng().gen_range(MIN_JITTER_US..=MAX_JITTER_US);
     let jitter_duration = Duration::from_micros(jitter);
-    
+
     let elapsed = start.elapsed();
     if elapsed < jitter_duration {
         tokio::time::sleep(jitter_duration - elapsed).await;
     }
-    
+
     result
 }
 
@@ -120,41 +124,43 @@ pub async fn verify_with_jitter_async(
 /// let results = batch_verify_with_jitter(&verifications);
 /// assert!(results[0].is_ok());
 /// ```
+#[allow(dead_code)]
 pub fn batch_verify_with_jitter(
     verifications: &[(&VerifyingKey, &[u8], &Signature)],
 ) -> Vec<Result<(), ed25519_dalek::SignatureError>> {
     use rand::seq::SliceRandom;
-    
+
     let start = Instant::now();
-    
+
+    // Type alias for complex verification tuple
+    type VerificationTuple<'a> = (&'a VerifyingKey, &'a [u8], &'a Signature);
+
     // Create indexed vector for randomization
-    let mut indexed: Vec<(usize, &(&VerifyingKey, &[u8], &Signature))> = 
-        verifications.iter().enumerate().collect();
-    
+    let mut indexed: Vec<(usize, &VerificationTuple)> = verifications.iter().enumerate().collect();
+
     // Shuffle to prevent timing analysis of ordering
     indexed.shuffle(&mut rand::thread_rng());
-    
+
     // Perform verifications in random order
-    let mut results_shuffled: Vec<(usize, Result<(), ed25519_dalek::SignatureError>)> = 
-        indexed.iter()
-            .map(|(idx, (key, msg, sig))| {
-                (*idx, key.verify(msg, sig))
-            })
-            .collect();
-    
+    let mut results_shuffled: Vec<(usize, Result<(), ed25519_dalek::SignatureError>)> = indexed
+        .iter()
+        .map(|(idx, (key, msg, sig))| (*idx, key.verify(msg, sig)))
+        .collect();
+
     // Restore original order
     results_shuffled.sort_by_key(|(idx, _)| *idx);
     let results: Vec<_> = results_shuffled.into_iter().map(|(_, r)| r).collect();
-    
+
     // Add jitter proportional to batch size
-    let jitter = rand::thread_rng().gen_range(MIN_JITTER_US..=MAX_JITTER_US) * verifications.len() as u64;
+    let jitter =
+        rand::thread_rng().gen_range(MIN_JITTER_US..=MAX_JITTER_US) * verifications.len() as u64;
     let jitter_duration = Duration::from_micros(jitter);
-    
+
     let elapsed = start.elapsed();
     if elapsed < jitter_duration {
         std::thread::sleep(jitter_duration - elapsed);
     }
-    
+
     results
 }
 
@@ -232,12 +238,9 @@ mod tests {
     fn test_batch_verify_with_jitter_all_valid() {
         let (vk1, msg1, sig1) = create_test_signature();
         let (vk2, msg2, sig2) = create_test_signature();
-        
-        let verifications = vec![
-            (&vk1, &msg1[..], &sig1),
-            (&vk2, &msg2[..], &sig2),
-        ];
-        
+
+        let verifications = vec![(&vk1, &msg1[..], &sig1), (&vk2, &msg2[..], &sig2)];
+
         let results = batch_verify_with_jitter(&verifications);
         assert_eq!(results.len(), 2);
         assert!(results[0].is_ok());
@@ -249,12 +252,9 @@ mod tests {
         let (vk1, msg1, sig1) = create_test_signature();
         let (vk2, msg2, _) = create_test_signature();
         let invalid_sig = Signature::from_bytes(&[0u8; 64]);
-        
-        let verifications = vec![
-            (&vk1, &msg1[..], &sig1),
-            (&vk2, &msg2[..], &invalid_sig),
-        ];
-        
+
+        let verifications = vec![(&vk1, &msg1[..], &sig1), (&vk2, &msg2[..], &invalid_sig)];
+
         let results = batch_verify_with_jitter(&verifications);
         assert_eq!(results.len(), 2);
         assert!(results[0].is_ok());
@@ -270,18 +270,21 @@ mod tests {
 
     #[test]
     fn test_batch_verify_with_jitter_preserves_order() {
-        let sigs: Vec<_> = (0..5).map(|i| {
-            let key = SigningKey::from_bytes(&[i as u8; 32]);
-            let vk = key.verifying_key();
-            let msg = format!("message {}", i).into_bytes();
-            let sig = key.sign(&msg);
-            (vk, msg, sig)
-        }).collect();
-        
-        let verifications: Vec<_> = sigs.iter()
+        let sigs: Vec<_> = (0..5)
+            .map(|i| {
+                let key = SigningKey::from_bytes(&[i as u8; 32]);
+                let vk = key.verifying_key();
+                let msg = format!("message {}", i).into_bytes();
+                let sig = key.sign(&msg);
+                (vk, msg, sig)
+            })
+            .collect();
+
+        let verifications: Vec<_> = sigs
+            .iter()
             .map(|(vk, msg, sig)| (vk, &msg[..], sig))
             .collect();
-        
+
         let results = batch_verify_with_jitter(&verifications);
         assert_eq!(results.len(), 5);
         for result in results {
@@ -293,11 +296,11 @@ mod tests {
     fn test_batch_verify_adds_delay() {
         let (vk, msg, sig) = create_test_signature();
         let verifications = vec![(&vk, &msg[..], &sig)];
-        
+
         let start = Instant::now();
         let _ = batch_verify_with_jitter(&verifications);
         let elapsed = start.elapsed();
-        
+
         // Should take at least minimum jitter
         assert!(elapsed.as_micros() >= MIN_JITTER_US as u128);
     }
