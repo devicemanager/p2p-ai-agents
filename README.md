@@ -42,7 +42,6 @@ This project transforms how expert knowledge is shared and applied by creating a
 - 🔐 **Trustworthy & Auditable**: Full reasoning traces for compliance and verification
 
 **Target Use Cases:**
-- 🏥 Medical diagnosis decision support
 - ⚖️ Legal document analysis and case research
 - 💰 Financial risk assessment and compliance
 - 🔧 Technical troubleshooting and support
