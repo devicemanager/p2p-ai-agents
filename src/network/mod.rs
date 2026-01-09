@@ -27,6 +27,13 @@ pub mod transport;
 /// Peer management and state tracking
 pub mod peers;
 
+/// Proof-of-Work for Sybil resistance
+pub mod pow;
+/// Reputation system
+pub mod reputation;
+/// Connection diversity enforcement
+pub mod diversity;
+
 // Re-export NetworkStats from service module
 pub use service::NetworkStats;
 

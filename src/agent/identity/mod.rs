@@ -9,6 +9,7 @@ pub mod protected;
 pub mod backup;
 pub mod replay;
 pub mod rotation;
+pub mod timing;
 
 use crate::core::CorrelationId;
 use aes_gcm::{

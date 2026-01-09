@@ -25,6 +25,7 @@ aes-gcm = "0.10"
 zeroize = { version = "1.7", features = ["derive"] }
 sha2 = "0.10"
 hex = "0.4"
+argon2 = "0.5"
 
 # System integration  
 keyring = "2.3"
