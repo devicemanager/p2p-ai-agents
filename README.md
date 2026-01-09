@@ -74,14 +74,43 @@ This project transforms how expert knowledge is shared and applied by creating a
 
 ### How It Works
 
+**Example: Technical Code Review Assistant**
+
 ```
-1. Expert Query → "Patient has fever, cough, shortness of breath"
-2. Query Router → Identifies medical diagnosis domain
-3. Expert Selection → Finds qualified medical expert nodes
-4. Inference Engine → Applies diagnostic reasoning rules
-5. Multi-Expert Consultation → Synthesizes opinions if needed
-6. Result + Explanation → "Likely pneumonia because..."
-   └─ Reasoning Trace: Shows which rules were applied and why
+1. Query Submission → "Review this Rust async code for potential deadlocks"
+2. Query Router → Identifies concurrent programming domain
+3. Expert Selection → Finds Rust/async programming expert nodes
+4. Inference Engine → Applies concurrency safety rules and patterns
+5. Multi-Expert Consultation → Multiple experts review different aspects
+6. Result + Explanation → "Potential deadlock detected at line 42 because..."
+   └─ Reasoning Trace: Shows which rules triggered and why
+   └─ Evidence: Code patterns matched, similar issues database
+   └─ Confidence: 85% (based on rule certainty and expert consensus)
+```
+
+**Example Flow:**
+```rust
+// Submit query
+let query = Query::new()
+    .domain("rust-concurrency")
+    .code(source_code)
+    .question("Are there potential race conditions?");
+
+// Network routes to qualified experts
+let experts = network.find_experts(&query).await?;
+
+// Each expert applies their knowledge base
+let reviews = experts.review_in_parallel(query).await?;
+
+// Synthesize results with full reasoning traces
+let result = synthesize_with_explanations(reviews)?;
+
+println!("Found {} potential issues", result.issues.len());
+for issue in result.issues {
+    println!("  - {}: {}", issue.severity, issue.description);
+    println!("    Why: {}", issue.reasoning);
+    println!("    Fix: {}", issue.suggested_fix);
+}
 ```
 
 1. [Getting Started](docs/user-guides/getting-started.md)
