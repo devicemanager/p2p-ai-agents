@@ -116,29 +116,86 @@ impl Config {
     }
 
     /// Validate the configuration
+    ///
+    /// Collects all validation errors and returns them together,
+    /// rather than failing on the first error.
     pub fn validate(&self) -> Result<(), ConfigError> {
+        let mut errors = Vec::new();
+
         // Validate listen_port: must be in range 1024-65535
         if self.listen_port < 1024 {
-            return Err(ConfigError::ValidationError(format!(
-                "listen_port must be at least 1024, got {}",
+            errors.push(format!(
+                "listen_port must be at least 1024, got {}. Default: 9000",
                 self.listen_port
-            )));
+            ));
         }
 
         // Validate max_peers: must be in range 1-256
-        if self.max_peers < 1 || self.max_peers > 256 {
-            return Err(ConfigError::ValidationError(format!(
-                "max_peers must be between 1 and 256, got {}",
+        if self.max_peers < 1 {
+            errors.push(format!(
+                "max_peers must be at least 1, got {}. Default: 32",
                 self.max_peers
-            )));
+            ));
+        } else if self.max_peers > 256 {
+            errors.push(format!(
+                "max_peers must be at most 256, got {}. Default: 32",
+                self.max_peers
+            ));
         }
 
         // Validate max_memory_mb: must be in range 128-16384
-        if self.max_memory_mb < 128 || self.max_memory_mb > 16384 {
-            return Err(ConfigError::ValidationError(format!(
-                "max_memory_mb must be between 128 and 16384, got {}",
+        if self.max_memory_mb < 128 {
+            errors.push(format!(
+                "max_memory_mb must be at least 128, got {}. Default: 512",
                 self.max_memory_mb
-            )));
+            ));
+        } else if self.max_memory_mb > 16384 {
+            errors.push(format!(
+                "max_memory_mb must be at most 16384, got {}. Default: 512",
+                self.max_memory_mb
+            ));
+        }
+
+        // Validate storage_path: must be writable
+        if let Err(e) = Self::validate_storage_path(&self.storage_path) {
+            errors.push(format!(
+                "storage_path validation failed: {}. Default: ~/.p2p-ai-agents/data",
+                e
+            ));
+        }
+
+        if errors.is_empty() {
+            Ok(())
+        } else {
+            Err(ConfigError::ValidationError(errors.join("; ")))
+        }
+    }
+
+    /// Validate that a storage path is accessible and writable
+    fn validate_storage_path(path: &PathBuf) -> Result<(), String> {
+        // If parent directory exists, check if we can write to it
+        if let Some(parent) = path.parent() {
+            if parent.exists() {
+                // Check if parent is writable by attempting to create a temp file
+                let test_file = parent.join(".p2p-write-test");
+                if let Err(e) = std::fs::write(&test_file, b"test") {
+                    return Err(format!("parent directory not writable: {}", e));
+                }
+                let _ = std::fs::remove_file(&test_file);
+            }
+        }
+
+        // If path exists, verify it's a directory and writable
+        if path.exists() {
+            if !path.is_dir() {
+                return Err("path exists but is not a directory".to_string());
+            }
+            // Try to write a test file
+            let test_file = path.join(".p2p-write-test");
+            if let Err(e) = std::fs::write(&test_file, b"test") {
+                return Err(format!("directory not writable: {}", e));
+            }
+            let _ = std::fs::remove_file(&test_file);
         }
 
         Ok(())
@@ -238,7 +295,9 @@ mod tests {
         };
         let result = config.validate();
         assert!(result.is_err());
-        assert!(result.unwrap_err().to_string().contains("listen_port"));
+        let err_msg = result.unwrap_err().to_string();
+        assert!(err_msg.contains("listen_port"));
+        assert!(err_msg.contains("Default: 9000"));
     }
 
     #[test]
@@ -273,7 +332,9 @@ mod tests {
         };
         let result = config.validate();
         assert!(result.is_err());
-        assert!(result.unwrap_err().to_string().contains("max_peers"));
+        let err_msg = result.unwrap_err().to_string();
+        assert!(err_msg.contains("max_peers"));
+        assert!(err_msg.contains("Default: 32"));
     }
 
     #[test]
@@ -284,7 +345,9 @@ mod tests {
         };
         let result = config.validate();
         assert!(result.is_err());
-        assert!(result.unwrap_err().to_string().contains("max_peers"));
+        let err_msg = result.unwrap_err().to_string();
+        assert!(err_msg.contains("max_peers"));
+        assert!(err_msg.contains("Default: 32"));
     }
 
     #[test]
@@ -312,7 +375,9 @@ mod tests {
         };
         let result = config.validate();
         assert!(result.is_err());
-        assert!(result.unwrap_err().to_string().contains("max_memory_mb"));
+        let err_msg = result.unwrap_err().to_string();
+        assert!(err_msg.contains("max_memory_mb"));
+        assert!(err_msg.contains("Default: 512"));
     }
 
     #[test]
@@ -323,7 +388,9 @@ mod tests {
         };
         let result = config.validate();
         assert!(result.is_err());
-        assert!(result.unwrap_err().to_string().contains("max_memory_mb"));
+        let err_msg = result.unwrap_err().to_string();
+        assert!(err_msg.contains("max_memory_mb"));
+        assert!(err_msg.contains("Default: 512"));
     }
 
     #[test]
@@ -453,5 +520,91 @@ max_memory_mb: 1024
         assert!(yaml.contains("health_check_interval_secs: 30"));
         assert!(yaml.contains("max_memory_mb: 512"));
         assert!(yaml.contains("log_level: info"));
+    }
+
+    #[test]
+    fn test_validate_multiple_errors() {
+        // Config with multiple invalid values
+        let config = Config {
+            listen_port: 500,
+            max_peers: 300,
+            max_memory_mb: 50,
+            ..Config::default()
+        };
+
+        let result = config.validate();
+        assert!(result.is_err());
+
+        let err_msg = result.unwrap_err().to_string();
+        // Should contain all three error messages
+        assert!(err_msg.contains("listen_port"));
+        assert!(err_msg.contains("max_peers"));
+        assert!(err_msg.contains("max_memory_mb"));
+        // Should suggest defaults
+        assert!(err_msg.contains("Default: 9000"));
+        assert!(err_msg.contains("Default: 32"));
+        assert!(err_msg.contains("Default: 512"));
+    }
+
+    #[test]
+    fn test_validate_storage_path_valid() {
+        let temp_dir = TempDir::new().unwrap();
+        let storage_path = temp_dir.path().to_path_buf();
+
+        let config = Config {
+            storage_path,
+            ..Config::default()
+        };
+
+        // Should pass validation
+        assert!(config.validate().is_ok());
+    }
+
+    #[test]
+    fn test_validate_storage_path_nonexistent_but_writable_parent() {
+        let temp_dir = TempDir::new().unwrap();
+        let storage_path = temp_dir.path().join("new_storage_dir");
+
+        let config = Config {
+            storage_path,
+            ..Config::default()
+        };
+
+        // Should pass validation (parent exists and is writable)
+        assert!(config.validate().is_ok());
+    }
+
+    #[test]
+    fn test_validate_boundary_values_together() {
+        // Test all boundary values in one config
+        let config = Config {
+            listen_port: 1024,
+            max_peers: 1,
+            max_memory_mb: 128,
+            ..Config::default()
+        };
+        assert!(config.validate().is_ok());
+
+        let config_upper = Config {
+            listen_port: 65535,
+            max_peers: 256,
+            max_memory_mb: 16384,
+            ..Config::default()
+        };
+        assert!(config_upper.validate().is_ok());
+    }
+
+    #[test]
+    fn test_validation_performance() {
+        let config = Config::default();
+
+        let start = std::time::Instant::now();
+        for _ in 0..1000 {
+            let _ = config.validate();
+        }
+        let elapsed = start.elapsed();
+
+        // Validation should complete 1000 times in less than 100ms
+        assert!(elapsed.as_millis() < 100, "Validation took too long: {:?}", elapsed);
     }
 }
