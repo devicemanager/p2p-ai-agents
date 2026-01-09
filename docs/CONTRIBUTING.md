@@ -19,17 +19,17 @@ Thank you for your interest in contributing! This project is written in Rust. Pl
 
 ## 📖 Related Documentation
 
-- **[Documentation Index](index.md)** - Complete documentation overview
-- **[README](../readme.md)** - Project overview and getting started
-- **[Quick Reference](quick-reference.md)** - Commands and configuration
-- **[High Level Design](high-level-design.md)** - Technical architecture
-- **[Agent Protocol](agent-protocol.md)** - Communication protocol specification
+- **[Documentation Index](INDEX.md)** - Complete documentation overview
+- **[README](../README.md)** - Project overview and getting started
+- **[Quick Reference](QUICK-REFERENCE.md)** - Commands and configuration
+- **[High Level Design](HIGH-LEVEL-DESIGN.md)** - Technical architecture
+- **[Agent Protocol](AGENT-PROTOCOL.md)** - Communication protocol specification
 
 ---
 
 ## Code of Conduct
 
-This project adheres to our [Code of Conduct](code-of-conduct.md). By participating, you agree to uphold these standards and create a welcoming environment for all contributors.
+This project adheres to our [Code of Conduct](CODE-OF-CONDUCT.md). By participating, you agree to uphold these standards and create a welcoming environment for all contributors.
 
 ## Getting Started
 

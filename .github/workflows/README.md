@@ -304,9 +304,9 @@ chmod +x scripts/*.sh
 
 ## 📚 Related Documentation
 
-- [Documentation Scripts](../scripts/README.md) - Local tool documentation
-- [GLOSSARY.md](../docs/GLOSSARY.md) - Project terminology
-- [Development Guide](../docs/development/README.md) - Setup and contribution guidelines
+- [Documentation Scripts](../../scripts/README.md) - Local tool documentation
+- [GLOSSARY.md](../../docs/GLOSSARY.md) - Project terminology
+- [Development Guide](../../docs/development/README.md) - Setup and contribution guidelines
 
 ---
 *This documentation is maintained by the automated documentation system 🤖*

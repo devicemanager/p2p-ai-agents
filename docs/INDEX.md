@@ -17,16 +17,16 @@ Welcome to the **P2P AI Agents** documentation system. This dashboard provides s
 | For... | Go to... | Description |
 |--------|----------|-------------|
 | **New Users** | [Getting Started](user-guides/getting-started.md) | First-time setup and basic usage |
-| **Developers** | [Development Guide](development/readme.md) | Development environment setup |
+| **Developers** | [Development Guide](development/README.md) | Development environment setup |
 | **Product Team** | [PRD & Validation](PRD_VALIDATION_PROCESS.md) | Product requirements and validation process |
 | **Architects** | [Architecture Decisions](architecture/decisions/README.md) | ADRs and design decisions |
-| **Quick Lookup** | [GLOSSARY](glossary.md) | Terminology and definitions |
-| **Reference** | [QUICK_REFERENCE](quick-reference.md) | Fast navigation and links |
+| **Quick Lookup** | [GLOSSARY](GLOSSARY.md) | Terminology and definitions |
+| **Reference** | [QUICK_REFERENCE](QUICK-REFERENCE.md) | Fast navigation and links |
 
 ## 📚 **Core Documentation**
 
 ### 🏗 **Architecture & Design**
-- [**High-Level Design**](high-level-design.md) - Comprehensive system design document
+- [**High-Level Design**](HIGH-LEVEL-DESIGN.md) - Comprehensive system design document
 - [**System Overview**](architecture/system-overview.md) - High-level architecture and design
 - [**Architecture Decisions**](architecture/decisions/README.md) - ADRs and design rationale
 - [**Security Architecture**](architecture/security.md) - Security model and practices  
@@ -53,8 +53,8 @@ Welcome to the **P2P AI Agents** documentation system. This dashboard provides s
 
 ### 🔌 Implementation & API Reference
 
-- [Implementation Guides](implementation/readme.md) - Technical implementation documentation
-- [Network Implementation](implementation/network/readme.md) - P2P networking details
+- [Implementation Guides](implementation/README.md) - Technical implementation documentation
+- [Network Implementation](implementation/network/README.md) - P2P networking details
 - [Supabase Storage Integration](storage/supabase-integration.md) - Cloud storage setup and usage
 
 *Note: Full API reference documentation is planned for future releases.*
@@ -65,9 +65,9 @@ Welcome to the **P2P AI Agents** documentation system. This dashboard provides s
 
 ## 🎯 Quick Links
 
-- [Quick Reference](quick-reference.md) - Common commands and configurations
-- [Glossary](glossary.md) - Terminology and definitions
-- [Documentation Template](template.md) - Template for new documentation
+- [Quick Reference](QUICK-REFERENCE.md) - Common commands and configurations
+- [Glossary](GLOSSARY.md) - Terminology and definitions
+- [Documentation Template](TEMPLATE.md) - Template for new documentation
 
 *Note: Project-level documentation (roadmap.md, security.md, etc.) is located in the repository root.*
 

@@ -265,14 +265,41 @@ The project uses a task management system in `tasks/` directory:
 ./scripts/tasks.sh complete task-name.md
 ```
 
-## Documentation References
+## Documentation Structure
 
-- [README.md](../README.md) - Project overview
-- [CONTRIBUTING.md](../docs/CONTRIBUTING.md) - Contribution guidelines
-- [DEVELOPER_GUARDRAILS.md](../DEVELOPER_GUARDRAILS.md) - Technical guardrails
+**All documentation must be placed in the `docs/` directory.**
+
+### Documentation Organization
+
+- `docs/planning/` - Project planning, epics, stories, project context
+- `docs/progress/` - Implementation progress tracking and summaries
+- `docs/development/` - Developer guides, setup instructions
+  - `docs/development/sessions/` - Development session notes
+- `docs/architecture/` - Architecture decisions, patterns, guardrails
+- `docs/validation/` - Validation reports and checklists
+- `docs/user-guides/` - End-user documentation and quick starts
+- `docs/infrastructure/` - Infrastructure setup (Supabase, databases, etc.)
+- `docs/core/` - Core system documentation
+- `docs/implementation/` - Implementation-specific guides
+
+### Documentation References
+
+- [README.md](../README.md) - Project overview (root level only)
+- [docs/INDEX.md](../docs/INDEX.md) - Documentation dashboard
+- [docs/CONTRIBUTING.md](../docs/CONTRIBUTING.md) - Contribution guidelines
+- [docs/architecture/DEVELOPER_GUARDRAILS.md](../docs/architecture/DEVELOPER_GUARDRAILS.md) - Technical guardrails
 - [docs/code-formatting.md](../docs/code-formatting.md) - Code formatting details
 - [docs/development/testing-guide.md](../docs/development/testing-guide.md) - Testing guide
 - [docs/architecture/](../docs/architecture/) - Architecture documentation
+- [docs/user-guides/QUICK_START.md](../docs/user-guides/QUICK_START.md) - Quick start guide
+
+### Documentation Guidelines
+
+1. **No root-level documentation** - Only `README.md` and `LICENSE` stay at root
+2. **Use proper directories** - Place docs in appropriate subdirectories
+3. **Reference with full paths** - Always use `docs/category/file.md` format
+4. **Session notes** - Use format `docs/development/sessions/session-YYYY-MM-DD.md`
+5. **Consistent naming** - Use lowercase with hyphens: `my-document.md`
 
 ## Common Pitfalls to Avoid
 

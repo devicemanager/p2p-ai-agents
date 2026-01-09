@@ -230,4 +230,4 @@ After starting your daemon:
 5. Configure systemd/launchd for auto-start
 6. Set up monitoring/alerting
 
-For more information, see the [Implementation Summary](STORY_1-3_IMPLEMENTATION_SUMMARY.md).
+For more information, see the [Implementation Summary](progress/STORY_1-3_IMPLEMENTATION_SUMMARY.md).

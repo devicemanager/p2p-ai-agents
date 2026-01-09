@@ -28,9 +28,9 @@ This directory contains user guides for the P2P AI Agents system.
 
 ## Related Documentation
 
-- [Main Documentation](../../readme.md)
+- [Main Documentation](../README.md)
 - [Architecture Overview](../architecture/system-overview.md)
-- [Development Guide](../development/readme.md)
+- [Development Guide](../development/README.md)
 
 ---
 Last updated: 2025-01-27

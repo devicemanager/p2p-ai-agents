@@ -14,7 +14,7 @@ This directory contains detailed implementation guides for the P2P AI Agents sys
 
 - [Agent Implementation](agent.md) - Core agent types and behaviors
 - [Task Processing](task.md) - Task processing and execution
-- [Network Protocol](network/readme.md) - P2P networking and communication
+- [Network Protocol](network/README.md) - P2P networking and communication
 - [Storage Layer](storage.md) - Data storage and management
 
 ### Specialized Components
@@ -220,5 +220,5 @@ thiserror = "1.0"
 ## 📝 License
 
 Implementation documentation is licensed under the same terms as the software:
-- MIT License ([../../LICENSE](../../LICENSE))
-- Apache License, Version 2.0 ([../../LICENSE](../../LICENSE)) 
+- MIT License ([LICENSE](../../LICENSE))
+- Apache License, Version 2.0 ([LICENSE](../../LICENSE)) 

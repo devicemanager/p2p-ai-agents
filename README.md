@@ -109,7 +109,7 @@ This project transforms how expert knowledge is shared and applied by creating a
 
 5. [Documentation](docs/)
    - [Documentation Index](docs/INDEX.md)
-   - [Quick Reference](docs/QUICK_REFERENCE.md)
+   - [Quick Reference](docs/QUICK-REFERENCE.md)
    - [Glossary](docs/GLOSSARY.md)
    - [CLI Documentation](docs/cli.md)
 

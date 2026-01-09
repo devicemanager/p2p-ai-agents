@@ -19,8 +19,8 @@ The documentation has been validated and a comprehensive PRD validation process 
 ### If You're the Project Manager
 
 1. **Read This First:**
-   - 📄 [docs/VALIDATION_SUMMARY.md](docs/VALIDATION_SUMMARY.md) - Executive summary
-   - 📋 [docs/STEP2_CHECKLIST.md](docs/STEP2_CHECKLIST.md) - Action items
+   - 📄 [VALIDATION_SUMMARY.md](../VALIDATION_SUMMARY.md) - Executive summary
+   - 📋 [STEP2_CHECKLIST.md](../STEP2_CHECKLIST.md) - Action items
 
 2. **Then Do This:**
    - Distribute ADR assignments (arch-001 through arch-010)
@@ -30,8 +30,8 @@ The documentation has been validated and a comprehensive PRD validation process 
 ### If You're an Architect/Developer
 
 1. **Read This First:**
-   - 📐 [docs/architecture/decisions/README.md](docs/architecture/decisions/README.md) - ADR process
-   - 📝 [docs/architecture/decisions/template.md](docs/architecture/decisions/template.md) - ADR template
+   - 📐 [ADR Process](../architecture/decisions/README.md) - ADR process
+   - 📝 [ADR Template](../architecture/decisions/template.md) - ADR template
 
 2. **Then Do This:**
    - Wait for your ADR assignment
@@ -41,8 +41,8 @@ The documentation has been validated and a comprehensive PRD validation process 
 ### If You're a Stakeholder
 
 1. **Read This First:**
-   - 📊 [docs/VALIDATION_SUMMARY.md](docs/VALIDATION_SUMMARY.md) - Executive summary
-   - 📋 [docs/PRD_VALIDATION_PROCESS.md](docs/PRD_VALIDATION_PROCESS.md) - Full process
+   - 📊 [VALIDATION_SUMMARY.md](../VALIDATION_SUMMARY.md) - Executive summary
+   - 📋 [PRD_VALIDATION_PROCESS.md](../PRD_VALIDATION_PROCESS.md) - Full process
 
 2. **Your Role:**
    - Review and approve ADRs
@@ -115,11 +115,11 @@ The documentation has been validated and a comprehensive PRD validation process 
 
 | Document | Purpose | Audience |
 |----------|---------|----------|
-| [VALIDATION_SUMMARY.md](docs/VALIDATION_SUMMARY.md) | Executive summary | Everyone |
-| [STEP2_CHECKLIST.md](docs/STEP2_CHECKLIST.md) | Action checklist | PM, Architects |
-| [PRD_VALIDATION_PROCESS.md](docs/PRD_VALIDATION_PROCESS.md) | Full process | Stakeholders |
-| [DOC_VALIDATION_REPORT.md](docs/DOC_VALIDATION_REPORT.md) | Technical assessment | Technical leads |
-| [architecture/decisions/](docs/architecture/decisions/) | ADR workspace | Architects, Developers |
+| [VALIDATION_SUMMARY.md](../VALIDATION_SUMMARY.md) | Executive summary | Everyone |
+| [STEP2_CHECKLIST.md](../STEP2_CHECKLIST.md) | Action checklist | PM, Architects |
+| [PRD_VALIDATION_PROCESS.md](../PRD_VALIDATION_PROCESS.md) | Full process | Stakeholders |
+| [DOC_VALIDATION_REPORT.md](../DOC_VALIDATION_REPORT.md) | Technical assessment | Technical leads |
+| [architecture/decisions/](../architecture/decisions/) | ADR workspace | Architects, Developers |
 
 ---
 
@@ -138,8 +138,8 @@ The documentation has been validated and a comprehensive PRD validation process 
 
 ## Questions?
 
-- **ADR Process:** See [docs/architecture/decisions/README.md](docs/architecture/decisions/README.md)
-- **PRD Validation:** See [docs/PRD_VALIDATION_PROCESS.md](docs/PRD_VALIDATION_PROCESS.md)
+- **ADR Process:** See [architecture/decisions/README.md](../architecture/decisions/README.md)
+- **PRD Validation:** See [PRD_VALIDATION_PROCESS.md](../PRD_VALIDATION_PROCESS.md)
 - **Task Management:** Run `./scripts/tasks.sh help`
 
 ---

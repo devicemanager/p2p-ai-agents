@@ -261,7 +261,7 @@
 ## 🤝 CONTRIBUTION GUIDELINES
 
 ### Getting Started
-1. Read [CONTRIBUTING.md](docs/contributing.md)
+1. Read [CONTRIBUTING.md](../CONTRIBUTING.md)
 2. Check [Good First Issues](https://github.com/p2p-ai-agents/p2p-ai-agents/labels/good-first-issue)
 3. Join community discussions
 4. Review architecture documentation
@@ -286,19 +286,19 @@ make ci-check
 ## 📚 CRITICAL DOCUMENTATION
 
 ### For Understanding
-- [System Overview](docs/architecture/system-overview.md) - Architecture overview
-- [High-Level Design](docs/high-level-design.md) - Comprehensive design
-- [Roadmap](docs/roadmap.md) - Development phases
+- [System Overview](../architecture/system-overview.md) - Architecture overview
+- [High-Level Design](../HIGH-LEVEL-DESIGN.md) - Comprehensive design
+- [Roadmap](../ROADMAP.md) - Development phases
 
 ### For Development
-- [Development Guide](docs/development/readme.md) - Developer setup
-- [Testing Guide](docs/development/testing-guide.md) - Testing practices
-- [AGENTS.md](AGENTS.md) - AI agent guide
+- [Development Guide](../development/README.md) - Developer setup
+- [Testing Guide](../development/testing-guide.md) - Testing practices
+- [AGENTS.md](../user-guides/AGENTS.md) - AI agent guide
 
 ### For Operations
-- [Getting Started](docs/user-guides/getting-started.md) - Setup guide
-- [Agent Configuration](docs/user-guides/agent-configuration.md) - Configuration
-- [Security Best Practices](docs/user-guides/security-best-practices.md) - Security
+- [Getting Started](../user-guides/getting-started.md) - Setup guide
+- [Agent Configuration](../user-guides/agent-configuration.md) - Configuration
+- [Security Best Practices](../user-guides/security-best-practices.md) - Security
 
 ---
 
