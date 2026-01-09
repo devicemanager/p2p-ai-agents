@@ -19,8 +19,7 @@ steps:
 
   # 3. Install cargo-llvm-cov for coverage reports
   - name: Install cargo-llvm-cov
-    run: cargo install cargo-llvm-cov --locked
-    shell: bash
+    uses: taiki-e/install-action@cargo-llvm-cov
 
   # 4. Verify Rust installation
   - name: Verify Rust installation
@@ -53,7 +52,7 @@ steps:
 
   # 9. Run tests
   - name: Run tests
-    run: RUST_TEST_THREADS=1 cargo test --all-features --workspace
+    run: cargo test --all-features --workspace
     shell: bash
     env:
       RUST_TEST_THREADS: "1"
