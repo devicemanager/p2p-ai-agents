@@ -1,4 +1,4 @@
-# Distributed Peer-to-Peer AI Agents
+# Distributed Expert Intelligence Network
 
 [![License](https://img.shields.io/badge/License-MIT%20OR%20Apache--2.0-blue.svg)](LICENSE)
 [![Rust](https://img.shields.io/badge/Rust-1.70%2B-blue.svg)](https://www.rust-lang.org)
@@ -9,26 +9,81 @@
 [![Dependency Status](https://deps.rs/repo/github/p2p-ai-agents/p2p-ai-agents/status.svg)](https://deps.rs/repo/github/p2p-ai-agents/p2p-ai-agents)
 [![Code Coverage](https://codecov.io/gh/p2p-ai-agents/p2p-ai-agents/branch/main/graph/badge.svg)](https://codecov.io/gh/p2p-ai-agents/p2p-ai-agents)
 
-> **⚠️ WORK IN PROGRESS DISCLAIMER**
+> **⚠️ WORK IN PROGRESS - MAJOR VISION TRANSFORMATION**
 > 
-> This project is currently in early development and serves as a foundational boilerplate for building distributed peer-to-peer AI agents. The current implementation provides basic structure and components, but many features are still being developed. This is not yet ready for production use.
+> **January 2026 Update**: This project is undergoing a strategic transformation from a distributed ML compute network to a **Distributed Expert System** architecture.
+> 
+> **New Vision**: Building a peer-to-peer network where domain experts contribute knowledge and reasoning rules, enabling transparent, explainable decision support across multiple domains. Unlike black-box AI, our system shows WHY and HOW it reaches conclusions.
 > 
 > **Recent Major Updates:**
+> - ✅ **Vision Transformation**: Pivoting to expert system architecture (January 2026)
 > - ✅ **Core Architecture**: Complete dependency injection, event system, service registry, and access control
 > - ✅ **Security Framework**: RBAC authentication and authorization with pluggable providers
-> - ✅ **Load Testing**: Comprehensive performance testing framework with metrics collection
+> - ✅ **P2P Foundation**: libp2p networking with peer discovery and secure messaging
 > - ✅ **Structured Logging**: JSON logging with correlation IDs for distributed tracing
-> - ✅ **Documentation**: Extensive guides for implementation and best practices
+> - 🔲 **Inference Engine**: Rule-based reasoning system (in development)
+> - 🔲 **Knowledge Base**: Expert knowledge repository (in development)
 > 
-> We welcome contributions and feedback as we work toward a fully functional system!
+> We welcome contributions, especially from domain experts interested in democratizing knowledge!
 
 ## Vision
 
-This project aims to democratize AI by building a distributed, peer-to-peer (P2P) network of lightweight AI agents. Anyone can contribute their idle compute (PC, server, Raspberry Pi, etc.) to help process, chunk, and retrieve data—reducing the need for centralized, energy-intensive datacenters and making AI accessible to all.
+**"Distributed Expert Intelligence Network: Peer-to-Peer Knowledge, Reasoning & Transparent Decision-Making"**
 
-**🌟 Join the movement to build a sustainable, decentralized AI future!**
+### What We're Building
 
-## Quick Links
+This project transforms how expert knowledge is shared and applied by creating a decentralized network of expert nodes that collaboratively solve complex domain-specific problems through **transparent rule-based reasoning**.
+
+**Key Differentiators:**
+- 🧠 **Expert Knowledge, Not Just Compute**: Domain experts contribute specialized reasoning rules and knowledge
+- 🔍 **Transparent Reasoning**: Every conclusion shows its reasoning path - no black boxes
+- 🌐 **Decentralized Collaboration**: Multiple experts can consult on complex problems simultaneously
+- ✅ **Explainable by Design**: Built-in "why" and "how" explanations for all decisions
+- 🔐 **Trustworthy & Auditable**: Full reasoning traces for compliance and verification
+
+**Target Use Cases:**
+- 🏥 Medical diagnosis decision support
+- ⚖️ Legal document analysis and case research
+- 💰 Financial risk assessment and compliance
+- 🔧 Technical troubleshooting and support
+- 🎓 Intelligent tutoring and education
+
+**🌟 Join us in democratizing expert knowledge and making AI reasoning transparent!**
+
+## Architecture Overview
+
+### Core Components
+
+**Expert System Layer (New - In Development):**
+- **Inference Engine**: Forward/backward chaining reasoning
+- **Knowledge Base**: Domain-specific rules and facts
+- **Expert Registry**: Credential verification and expertise matching
+- **Query Router**: Intelligent routing to appropriate experts
+- **Explanation Generator**: Transparent reasoning traces
+
+**P2P Foundation (Complete):**
+- **Network Layer**: libp2p-based peer discovery and messaging
+- **Identity System**: Ed25519 cryptographic identity for nodes
+- **Security**: RBAC authentication and authorization
+- **Storage**: Pluggable storage backends (local, Redis, Supabase)
+
+**Infrastructure (Complete):**
+- **Event System**: Async event-driven architecture
+- **Service Registry**: Dependency injection container
+- **Observability**: Structured logging, metrics, tracing
+- **CLI Tools**: Node management and monitoring
+
+### How It Works
+
+```
+1. Expert Query → "Patient has fever, cough, shortness of breath"
+2. Query Router → Identifies medical diagnosis domain
+3. Expert Selection → Finds qualified medical expert nodes
+4. Inference Engine → Applies diagnostic reasoning rules
+5. Multi-Expert Consultation → Synthesizes opinions if needed
+6. Result + Explanation → "Likely pneumonia because..."
+   └─ Reasoning Trace: Shows which rules were applied and why
+```
 
 1. [Getting Started](docs/user-guides/getting-started.md)
    - [Agent Configuration](docs/user-guides/agent-configuration.md)
@@ -143,4 +198,13 @@ See [LICENSE](LICENSE) for details.
 
 ---
 
-*Let's build a greener, open, and decentralized AI future—together!*
+*Let's democratize expert knowledge and make AI reasoning transparent—together!*
+
+---
+
+## 📄 Transformation Documentation
+
+For details on the vision transformation from distributed ML compute to expert systems:
+- [Vision Transformation Executive Summary](_bmad-output/vision-transformation-2026-01-09/EXECUTIVE_SUMMARY.md)
+- [Impact Analysis & Roadmap](_bmad-output/vision-transformation-2026-01-09/)
+
