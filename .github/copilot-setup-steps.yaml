@@ -1,0 +1,58 @@
+# GitHub Copilot Setup Steps
+# This file configures the development environment for the Copilot coding agent.
+# It ensures Copilot can build, test, and lint the project in an isolated environment.
+
+steps:
+  # 1. Set up Rust toolchain
+  - name: Setup Rust
+    uses: dtolnay/rust-toolchain@stable
+    with:
+      components: rustfmt, clippy, llvm-tools-preview
+  
+  # 2. Install system dependencies (required for tests)
+  - name: Install system dependencies
+    run: |
+      sudo apt-get update
+      sudo apt-get install -y build-essential lld dbus-x11 gnome-keyring
+    shell: bash
+    continue-on-error: true
+
+  # 3. Install cargo-llvm-cov for coverage reports
+  - name: Install cargo-llvm-cov
+    uses: taiki-e/install-action@cargo-llvm-cov
+
+  # 4. Verify Rust installation
+  - name: Verify Rust installation
+    run: |
+      rustc --version
+      cargo --version
+      rustfmt --version
+      cargo clippy --version
+    shell: bash
+
+  # 5. Check compilation
+  - name: Check compilation
+    run: cargo check --all-targets --all-features
+    shell: bash
+
+  # 6. Run code formatter check
+  - name: Check code formatting
+    run: cargo fmt --all -- --check
+    shell: bash
+
+  # 7. Run clippy linter
+  - name: Run clippy
+    run: cargo clippy --all-targets --all-features -- -D warnings
+    shell: bash
+
+  # 8. Build the project
+  - name: Build project
+    run: cargo build --all-targets --all-features
+    shell: bash
+
+  # 9. Run tests
+  - name: Run tests
+    run: cargo test --all-features --workspace
+    shell: bash
+    env:
+      RUST_TEST_THREADS: "1"
