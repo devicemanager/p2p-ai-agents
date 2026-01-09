@@ -29,6 +29,19 @@ This directory contains scripts for running documentation checks, maintaining do
 ./scripts/tasks.sh search "term"    # Search for tasks
 ```
 
+### BMAD-METHOD Management
+```bash
+# Update BMAD-METHOD framework
+./scripts/update-bmad.sh            # Interactive update with options
+```
+
+Features:
+- Update to latest alpha version (includes OpenCode support)
+- Update to latest stable version
+- Fast update preserving customizations
+- Shows current and new configuration
+- Provides next steps and documentation links
+
 ### Individual Python Scripts
 ```bash
 # Comprehensive validation (same as CI)
@@ -54,6 +67,7 @@ bash scripts/test_doc_format.sh
 |--------|------|-------------|-------|
 | `local_docs.sh` | Documentation | Main documentation management script | `./scripts/local_docs.sh [command]` |
 | `tasks.sh` | Task Management | Convenient task management wrapper | `./scripts/tasks.sh [command]` |
+| `update-bmad.sh` | BMAD Framework | Interactive BMAD-METHOD update script | `./scripts/update-bmad.sh` |
 | `manage_tasks.py` | Task Management | Core task management backend | `python3 scripts/manage_tasks.py [action]` |
 | `validate_docs.py` | Documentation | Comprehensive validation script | `python3 scripts/validate_docs.py` |
 | `generate_docs.py` | Documentation | Generate docs from templates | `python3 scripts/generate_docs.py` |
