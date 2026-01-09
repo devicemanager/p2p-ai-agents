@@ -50,6 +50,8 @@ Welcome to the **P2P AI Agents** documentation system. This dashboard provides s
 - [Security Best Practices](user-guides/security-best-practices.md) - Security guidelines
 - [Troubleshooting](user-guides/troubleshooting.md) - Common issues and solutions
 - [Code Formatting](code-formatting.md) - Code style and formatting guidelines
+- [BMAD-METHOD Update Guide](development/bmad-method-update-guide.md) - Update BMAD framework and enable OpenCode support
+- [BMAD Quick Reference](development/bmad-quick-reference.md) - Quick commands and IDE comparison
 
 ### 🔌 Implementation & API Reference
 

@@ -277,6 +277,8 @@ cargo flamegraph --bin p2p-ai-agents
 ## Related Documentation
 
 - [Testing Guide](testing-guide.md) - Comprehensive testing documentation
+- [BMAD-METHOD Update Guide](bmad-method-update-guide.md) - Update BMAD framework and enable OpenCode support
+- [BMAD Quick Reference](bmad-quick-reference.md) - Quick commands and IDE comparison
 - [Architecture Overview](../architecture/system-overview.md) - System architecture
 - [Contributing Guide](../CONTRIBUTING.md) - Contribution guidelines
 - [Security Best Practices](../user-guides/security-best-practices.md) - Security guidelines
