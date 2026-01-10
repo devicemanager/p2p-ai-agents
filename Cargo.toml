@@ -108,7 +108,7 @@ opt-level = 0
 debug = true
 
 [features]
-default = []
+default = ["network"]  # MVP requires network layer
 full = ["network", "storage", "cli", "metrics-prometheus"]
 network = ["libp2p", "bytes"]
 storage = []

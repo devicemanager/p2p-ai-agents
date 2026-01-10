@@ -16,8 +16,7 @@ pub struct IdentityManager {
 impl IdentityManager {
     /// Creates a new instance of the IdentityManager with a fresh Ed25519 keypair.
     pub async fn new() -> Result<Self> {
-        let ed25519_keypair = libp2p_identity::ed25519::Keypair::generate();
-        let keypair = Keypair::from(ed25519_keypair);
+        let keypair = Keypair::generate_ed25519();
         Ok(Self {
             keypair: Mutex::new(keypair),
         })
