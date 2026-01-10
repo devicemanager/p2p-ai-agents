@@ -15,6 +15,8 @@ pub mod application;
 pub mod core;
 /// Daemon process management (Unix only)
 pub mod daemon;
+/// Agent cryptographic identity (Ed25519)
+pub mod identity;
 /// Metrics collection and monitoring
 pub mod metrics;
 /// Network layer for peer-to-peer communication
@@ -36,6 +38,7 @@ pub mod prelude {
         logging::{init_default_logging, init_logging, LogFormat, LoggingConfig, LoggingError},
         services::{Service, ServiceError, ServiceRegistry},
     };
+    pub use crate::identity::AgentIdentity;
     #[cfg(feature = "network")]
     pub use crate::network::{
         discovery::{DiscoveryManager, PeerInfo},

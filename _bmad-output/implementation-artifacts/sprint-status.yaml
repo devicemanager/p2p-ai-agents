@@ -229,7 +229,7 @@ references:
 development_status:
   # Week 3: MVP Implementation Stories
   3-1-fix-build-infrastructure: "review"              # ✅ COMPLETE
-  3-2-implement-identity-module: "ready-for-dev"      # Ed25519 identity
+  3-2-implement-identity-module: "review"      # Ed25519 identity
   3-3-implement-network-layer: "not-started"          # libp2p networking
   3-4-implement-task-management: "not-started"        # Task manager + executor
   3-5-create-mvp-demo-example: "not-started"          # examples/mvp_demo.rs
