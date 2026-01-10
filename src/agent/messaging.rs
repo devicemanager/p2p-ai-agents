@@ -36,6 +36,10 @@ pub struct Message {
     pub content: MessageType,
     /// Timestamp of creation.
     pub timestamp: chrono::DateTime<chrono::Utc>,
+    /// Digital signature of the message content and metadata.
+    pub signature: Option<Vec<u8>>,
+    /// Public key of the sender (protobuf encoded) to verify the signature.
+    pub public_key: Option<Vec<u8>>,
 }
 
 impl Message {
@@ -47,6 +51,8 @@ impl Message {
             recipient: recipient.into(),
             content: MessageType::Text(text.into()),
             timestamp: chrono::Utc::now(),
+            signature: None,
+            public_key: None,
         }
     }
     
@@ -58,6 +64,8 @@ impl Message {
             recipient: recipient.into(),
             content: MessageType::TaskRequest(task),
             timestamp: chrono::Utc::now(),
+            signature: None,
+            public_key: None,
         }
     }
 
@@ -69,7 +77,23 @@ impl Message {
             recipient: recipient.into(),
             content: MessageType::TaskResponse { task_id, status },
             timestamp: chrono::Utc::now(),
+            signature: None,
+            public_key: None,
         }
+    }
+
+    /// Serializes the core message data for signing.
+    /// Excludes the signature field itself.
+    pub fn to_signable_bytes(&self) -> Vec<u8> {
+        // We structure the data to ensure consistent serialization for signing
+        // Format: sender + recipient + content_bytes + timestamp_millis
+        let content_bytes = serde_json::to_vec(&self.content).unwrap_or_default();
+        let mut bytes = Vec::new();
+        bytes.extend_from_slice(self.sender.as_bytes());
+        bytes.extend_from_slice(self.recipient.as_bytes());
+        bytes.extend_from_slice(&content_bytes);
+        bytes.extend_from_slice(&self.timestamp.timestamp_millis().to_be_bytes());
+        bytes
     }
 }
 

@@ -63,8 +63,22 @@ impl AgentIdentity {
         self.trust_registry.generate_proof(leaf_index)
     }
 
-    /// Creates a new DID for the Agent.
-    pub async fn create_my_did(&self) -> Result<String> {
-        self.manager.create_did().await
+    /// Signs data using the Agent's IdentityManager.
+    pub fn sign_data(&self, data: &[u8]) -> Result<Vec<u8>> {
+        self.manager.sign_data(data)
+    }
+
+    /// Gets the Agent's public key as bytes.
+    pub fn public_key_bytes(&self) -> Vec<u8> {
+        self.manager.public_key_bytes()
+    }
+    
+    /// Verifies a signature.
+    /// Requires the public key of the signer.
+    pub fn verify_signature(&self, public_key_bytes: &[u8], data: &[u8], signature: &[u8]) -> Result<bool> {
+        let public_key = libp2p::identity::PublicKey::try_decode_protobuf(public_key_bytes)
+            .map_err(|e| anyhow::anyhow!("Invalid public key: {:?}", e))?;
+        
+        Ok(public_key.verify(data, signature))
     }
 }

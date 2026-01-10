@@ -81,7 +81,7 @@ criterion = "0.5"
 mockall = "0.12"
 
 # Network
-libp2p = { version = "0.53", features = ["tokio", "tcp", "dns", "websocket", "noise", "yamux", "ping", "identify", "kad", "mdns", "gossipsub", "macros"], optional = true }
+libp2p = { version = "0.53", features = ["tokio", "tcp", "dns", "websocket", "noise", "yamux", "ping", "identify", "kad", "mdns", "gossipsub", "macros", "request-response"], optional = true }
 bytes = { version = "1.5", optional = true }
 age = { version = "0.11", features = ["armor", "ssh", "cli-common"] }
 lru = "0.16"
@@ -117,6 +117,7 @@ storage-redis = ["redis"]
 metrics-prometheus = ["prometheus", "hyper", "lazy_static"]
 cli = []
 reqwest = ["dep:reqwest"]
+libp2p = ["dep:libp2p"]
 
 [[example]]
 name = "hello_agent"

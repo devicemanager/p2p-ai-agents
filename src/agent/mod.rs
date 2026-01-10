@@ -77,7 +77,13 @@ impl Agent {
     }
     
     /// Broadcast a message to the network.
-    pub async fn broadcast_message(&self, message: Message) -> anyhow::Result<()> {
+    pub async fn broadcast_message(&self, mut message: Message) -> anyhow::Result<()> {
+        // Sign the message
+        let signable_bytes = message.to_signable_bytes();
+        let signature = self.identity.sign_data(&signable_bytes)?;
+        message.signature = Some(signature);
+        message.public_key = Some(self.identity.public_key_bytes());
+
         let bytes = serde_json::to_vec(&message)?;
         let msg = NetworkMessage {
             from: self.id(),
@@ -194,8 +200,27 @@ impl Agent {
         }
     }
 
-    /// Handles an incoming network message.
+    /// Handles an incoming incoming network message.
     pub async fn handle_message(&self, message: Message) -> anyhow::Result<()> {
+        // Verify Signature
+        if let (Some(sig), Some(pk_bytes)) = (&message.signature, &message.public_key) {
+             let signable_bytes = message.to_signable_bytes();
+             if let Ok(valid) = self.identity.verify_signature(pk_bytes, &signable_bytes, sig) {
+                 if !valid {
+                     eprintln!("⚠️ Warning: Invalid signature for message from {}", message.sender);
+                     // Reject message
+                     return Err(anyhow::anyhow!("Invalid message signature"));
+                 }
+                 // Signature valid, proceed
+             } else {
+                 eprintln!("⚠️ Warning: Error verifying signature for message from {}", message.sender);
+                 return Err(anyhow::anyhow!("Signature verification error"));
+             }
+        } else {
+             eprintln!("⚠️ Warning: Unsigned message from {}. Rejecting in secure mode.", message.sender);
+             return Err(anyhow::anyhow!("Missing signature or public key"));
+        }
+
         match message.content {
             MessageType::TaskRequest(task) => {
                 println!("Agent received TaskRequest: {}", task.id);
