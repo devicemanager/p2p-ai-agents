@@ -27,7 +27,8 @@ pub type Result<T> = std::result::Result<T, BackupError>;
 /// Encrypts a private key using a passphrase (Age format)
 pub fn backup_key(key: &[u8], passphrase: &str) -> Result<Vec<u8>> {
     // Use standard passphrase encryption
-    let encryptor = age::Encryptor::with_user_passphrase(SecretString::new(passphrase.to_string().into()));
+    let encryptor =
+        age::Encryptor::with_user_passphrase(SecretString::new(passphrase.to_string().into()));
 
     let mut encrypted = vec![];
     let mut writer = encryptor.wrap_output(&mut encrypted)?;

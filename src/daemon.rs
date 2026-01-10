@@ -111,7 +111,7 @@ impl PidFileManager {
 }
 
 /// Daemonize the current process (Unix only)
-/// 
+///
 /// This implementation uses native Unix fork/setsid to create a daemon process
 /// without relying on external unmaintained crates.
 #[cfg(unix)]
@@ -170,15 +170,12 @@ pub fn daemonize(log_path: PathBuf) -> Result<()> {
 
     // Redirect stdout and stderr to log file
     use nix::unistd::dup2;
-    dup2(stdout.as_raw_fd(), std::io::stdout().as_raw_fd())
-        .context("Failed to redirect stdout")?;
-    dup2(stderr.as_raw_fd(), std::io::stderr().as_raw_fd())
-        .context("Failed to redirect stderr")?;
+    dup2(stdout.as_raw_fd(), std::io::stdout().as_raw_fd()).context("Failed to redirect stdout")?;
+    dup2(stderr.as_raw_fd(), std::io::stderr().as_raw_fd()).context("Failed to redirect stderr")?;
 
     // Close stdin
     let devnull = File::open("/dev/null").context("Failed to open /dev/null")?;
-    dup2(devnull.as_raw_fd(), std::io::stdin().as_raw_fd())
-        .context("Failed to redirect stdin")?;
+    dup2(devnull.as_raw_fd(), std::io::stdin().as_raw_fd()).context("Failed to redirect stdin")?;
 
     info!("Daemon process running");
 

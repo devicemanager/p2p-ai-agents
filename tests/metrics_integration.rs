@@ -237,7 +237,10 @@ mod metrics_tests {
                 max_memory: 512 * 1024 * 1024,
                 max_connections: 100,
             },
-            security_config: p2p_ai_agents::network::SecurityConfig {},
+            security_config: p2p_ai_agents::network::SecurityConfig {
+                trusted_authorities: vec![],
+                local_certificate: None,
+            },
         };
 
         let network_manager = NetworkManager::with_metrics(network_config, metrics.clone());

@@ -302,7 +302,10 @@ mod tests {
         let uptime = tracker.uptime_seconds();
         assert!(uptime.is_some());
         // Should be at least 0 seconds (might be 0 due to rounding)
-        assert!(uptime.unwrap() >= 0);
+        // Note: uptime is a u64, so it's always >= 0, but we keep this test for semantic clarity
+        // and to ensure no negative values leak if implementation changes
+        // Just checking is_some() is sufficient for u64, but we'll access it to ensure it's readable
+        let _val = uptime.unwrap();
     }
 
     #[test]

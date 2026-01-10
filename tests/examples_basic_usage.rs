@@ -17,7 +17,10 @@ async fn test_network_initialization_and_message() {
             max_memory: 512 * 1024 * 1024,
             max_connections: 100,
         },
-        security_config: SecurityConfig {},
+        security_config: SecurityConfig {
+            trusted_authorities: vec![],
+            local_certificate: None,
+        },
     };
     let manager = NetworkManager::new(config);
     // manager.initialize().await.unwrap(); // Uncomment if implemented

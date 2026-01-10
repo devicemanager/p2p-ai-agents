@@ -210,7 +210,6 @@ async fn handle_request(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use prometheus::proto_ext::MessageFieldExt;
 
     #[test]
     fn test_metrics_config_default() {
@@ -237,9 +236,9 @@ mod tests {
             .iter()
             .find(|m| m.name() == "storage_operations_total")
             .map(|m| {
-                m.metric
+                m.get_metric()
                     .iter()
-                    .map(|m| m.counter.get_value())
+                    .map(|m| m.get_counter().value.unwrap_or(0.0))
                     .sum::<f64>()
             })
             .unwrap_or(0.0);
@@ -253,9 +252,9 @@ mod tests {
             .iter()
             .find(|m| m.name() == "storage_operations_total")
             .map(|m| {
-                m.metric
+                m.get_metric()
                     .iter()
-                    .map(|m| m.counter.get_value())
+                    .map(|m| m.get_counter().value.unwrap_or(0.0))
                     .sum::<f64>()
             })
             .unwrap_or(0.0);
@@ -288,9 +287,9 @@ mod tests {
             .iter()
             .find(|m| m.name() == "messages_received_total")
             .map(|m| {
-                m.metric
+                m.get_metric()
                     .first()
-                    .map(|m| m.counter.get_value())
+                    .map(|m| m.get_counter().value.unwrap_or(0.0))
                     .unwrap_or(0.0)
             })
             .unwrap_or(0.0);
@@ -304,9 +303,9 @@ mod tests {
             .iter()
             .find(|m| m.name() == "messages_received_total")
             .map(|m| {
-                m.metric
+                m.get_metric()
                     .first()
-                    .map(|m| m.counter.get_value())
+                    .map(|m| m.get_counter().value.unwrap_or(0.0))
                     .unwrap_or(0.0)
             })
             .unwrap_or(0.0);
@@ -342,22 +341,22 @@ mod tests {
         let peers_gauge = metrics
             .iter()
             .find(|m| m.name() == "agent_peers_connected")
-            .and_then(|m| m.metric.first())
-            .map(|m| m.gauge.get_value());
+            .and_then(|m| m.get_metric().first())
+            .and_then(|m| m.get_gauge().value);
         assert_eq!(peers_gauge, Some(5.0), "peers gauge should be set to 5");
 
         let cpu_gauge = metrics
             .iter()
             .find(|m| m.name() == "process_cpu_usage")
-            .and_then(|m| m.metric.first())
-            .map(|m| m.gauge.get_value());
+            .and_then(|m| m.get_metric().first())
+            .and_then(|m| m.get_gauge().value);
         assert_eq!(cpu_gauge, Some(25.5), "CPU gauge should be set to 25.5");
 
         let memory_gauge = metrics
             .iter()
             .find(|m| m.name() == "process_memory_bytes")
-            .and_then(|m| m.metric.first())
-            .map(|m| m.gauge.get_value());
+            .and_then(|m| m.get_metric().first())
+            .and_then(|m| m.get_gauge().value);
         assert_eq!(
             memory_gauge,
             Some(104857600.0),

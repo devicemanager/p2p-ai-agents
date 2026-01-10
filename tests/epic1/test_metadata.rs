@@ -59,7 +59,8 @@ async fn test_metadata_in_active_state() {
     );
 
     let uptime = metadata.uptime_seconds.unwrap();
-    assert!(uptime >= 0, "Uptime should be non-negative");
+    // Uptime is u64 so always >= 0
+    let _ = uptime; // Ensure we can access the value
 }
 
 #[tokio::test]

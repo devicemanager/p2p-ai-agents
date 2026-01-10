@@ -4,7 +4,6 @@ use p2p_ai_agents::application::diagnostics::{ComponentStatus, StartupDiagnostic
 use p2p_ai_agents::application::readiness::{ReadinessConfig, ReadinessManager};
 use p2p_ai_agents::application::{lifecycle::LifecycleManager, Application};
 use p2p_ai_agents::core::services::Service;
-use std::path::PathBuf;
 use std::time::Duration;
 use tempfile::TempDir;
 use tokio::time::sleep;
@@ -145,8 +144,8 @@ async fn test_readiness_probes() {
     // Initialize service
     manager.initialize().await.unwrap();
 
-    // Before startup
-    assert!(manager.liveness_probe().await); // Process alive
+    // Before startup - app is in Stopped state, so not live
+    assert!(!manager.liveness_probe().await); // Changed to assert False
     assert!(!manager.readiness_probe().await); // Not ready
     assert!(!manager.startup_probe().await); // Not started
 

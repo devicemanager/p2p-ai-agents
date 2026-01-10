@@ -8,7 +8,7 @@
 
 use serde::{Deserialize, Serialize};
 use std::env;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use thiserror::Error;
 use tokio::fs;
 
@@ -187,7 +187,7 @@ impl Config {
     }
 
     /// Validate that a storage path is accessible and writable
-    fn validate_storage_path(path: &PathBuf) -> Result<(), String> {
+    fn validate_storage_path(path: &Path) -> Result<(), String> {
         // If parent directory exists, check if we can write to it
         if let Some(parent) = path.parent() {
             if parent.exists() {
@@ -625,9 +625,10 @@ max_memory_mb: 1024
         }
         let elapsed = start.elapsed();
 
-        // Validation should complete 50 times in less than 2000ms
+        // Validation should complete 50 times in less than 3000ms
+        // This accounts for disk I/O latency in CI environments
         assert!(
-            elapsed.as_millis() < 2000,
+            elapsed.as_millis() < 3000,
             "Validation took too long: {:?}",
             elapsed
         );

@@ -4,11 +4,12 @@
 //! AI agents, including identity management, task handling, and resource
 //! monitoring.
 
-mod identity;
+pub mod identity;
 mod resource;
 mod task;
 
 use async_trait::async_trait;
+
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use thiserror::Error;
@@ -328,7 +329,10 @@ impl Agent for DefaultAgent {
                     max_memory: self.config.resource_limits.max_memory,
                     max_connections: self.config.resource_limits.max_connections,
                 },
-                security_config: crate::network::SecurityConfig {},
+                security_config: crate::network::SecurityConfig {
+                    trusted_authorities: vec![],
+                    local_certificate: None,
+                },
             },
             name: format!("network-{}-{}", self.id().as_str(), Uuid::new_v4()),
             version: "0.1.0".to_string(),

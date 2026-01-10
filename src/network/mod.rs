@@ -29,8 +29,6 @@ pub mod peers;
 
 /// Connection diversity enforcement
 pub mod diversity;
-/// Proof-of-Work for Sybil resistance
-pub mod pow;
 /// Reputation system
 pub mod reputation;
 
@@ -112,11 +110,14 @@ pub struct ResourceLimits {
     pub max_connections: usize,
 }
 
-/// Security configuration (stub)
+/// Security configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
 /// Security-related configuration for the network.
 pub struct SecurityConfig {
-    // Add security-related fields here
+    /// List of trusted authorities (hex-encoded public keys)
+    pub trusted_authorities: Vec<String>,
+    /// The local node's Federation Certificate (optional at startup, required for full validation)
+    pub local_certificate: Option<security::FederationCertificate>,
 }
 
 /// Network configuration for the P2P system
@@ -215,6 +216,9 @@ pub struct NetworkManager {
     connected_peers: Arc<Mutex<Vec<SocketAddr>>>,
     /// Command sender for the swarm event loop
     command_sender: Option<mpsc::Sender<NetworkCommand>>,
+    /// Certificate manager for identity verification
+    #[allow(dead_code)]
+    certificate_manager: CertificateManager,
     /// Prometheus metrics collector for recording message metrics
     #[cfg(feature = "metrics-prometheus")]
     prometheus_metrics: Option<crate::metrics::prometheus_exporter::MetricsCollector>,
@@ -223,6 +227,17 @@ pub struct NetworkManager {
 impl NetworkManager {
     /// Create a new NetworkManager.
     pub fn new(config: NetworkConfig) -> Self {
+        let mut certificate_manager = CertificateManager::new();
+
+        // Load trusted authorities from config
+        for auth_hex in &config.security_config.trusted_authorities {
+            if let Ok(bytes) = hex::decode(auth_hex) {
+                if let Ok(array) = bytes.try_into() {
+                    let _ = certificate_manager.add_authority(array);
+                }
+            }
+        }
+
         Self {
             config,
             is_initialized: false,
@@ -231,6 +246,7 @@ impl NetworkManager {
             messages: Arc::new(Mutex::new(Vec::new())),
             connected_peers: Arc::new(Mutex::new(Vec::new())),
             command_sender: None,
+            certificate_manager,
             #[cfg(feature = "metrics-prometheus")]
             prometheus_metrics: None,
         }
@@ -242,6 +258,17 @@ impl NetworkManager {
         config: NetworkConfig,
         metrics: crate::metrics::prometheus_exporter::MetricsCollector,
     ) -> Self {
+        let mut certificate_manager = CertificateManager::new();
+
+        // Load trusted authorities from config
+        for auth_hex in &config.security_config.trusted_authorities {
+            if let Ok(bytes) = hex::decode(auth_hex) {
+                if let Ok(array) = bytes.try_into() {
+                    let _ = certificate_manager.add_authority(array);
+                }
+            }
+        }
+
         Self {
             config,
             is_initialized: false,
@@ -250,6 +277,7 @@ impl NetworkManager {
             messages: Arc::new(Mutex::new(Vec::new())),
             connected_peers: Arc::new(Mutex::new(Vec::new())),
             command_sender: None,
+            certificate_manager,
             prometheus_metrics: Some(metrics),
         }
     }
@@ -619,19 +647,8 @@ impl Default for HealthMonitor {
 }
 
 /// Handles network security.
-pub struct SecurityManager;
-impl SecurityManager {
-    /// Create a new security manager.
-    pub fn new() -> Self {
-        SecurityManager
-    }
-}
-
-impl Default for SecurityManager {
-    fn default() -> Self {
-        Self::new()
-    }
-}
+pub mod security;
+pub use security::CertificateManager;
 
 #[cfg(test)]
 mod tests {
@@ -654,7 +671,10 @@ mod tests {
                 max_memory: 2048,
                 max_connections: 100,
             },
-            security_config: SecurityConfig {},
+            security_config: SecurityConfig {
+                trusted_authorities: vec![],
+                local_certificate: None,
+            },
         };
         let _ = NetworkManagerBuilder::new().with_config(config);
     }

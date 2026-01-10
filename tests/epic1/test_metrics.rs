@@ -32,7 +32,7 @@ async fn test_metrics_endpoint() {
     // Note: Metrics might be registered lazily or cleared between tests, so we check if they exist OR if we can find them after recording
     let storage_metrics = metric_families
         .iter()
-        .find(|m: &&prometheus::proto::MetricFamily| m.get_name() == "storage_operations_total");
+        .find(|m: &&prometheus::proto::MetricFamily| m.name() == "storage_operations_total");
 
     // If metrics are not present, it might be because of test isolation or initialization order.
     // However, since we just recorded them, they SHOULD be there.
@@ -40,7 +40,7 @@ async fn test_metrics_endpoint() {
     if storage_metrics.is_none() {
         println!("Available metrics:");
         for m in &metric_families {
-            println!(" - {}", m.get_name());
+            println!(" - {}", m.name());
         }
     }
 
@@ -60,15 +60,15 @@ async fn test_metrics_endpoint() {
     // Check peer metrics
     let peer_metrics = metric_families
         .iter()
-        .find(|m: &&prometheus::proto::MetricFamily| m.get_name() == "agent_peers_connected");
+        .find(|m: &&prometheus::proto::MetricFamily| m.name() == "agent_peers_connected");
 
     assert!(peer_metrics.is_some(), "Peer metrics should be present");
 
     if let Some(metric) = peer_metrics {
         // Get the first metric from the family
         if let Some(m) = metric.get_metric().first() {
-            let value = m.get_gauge().get_value();
-            assert_eq!(value, 5.0);
+            let value = m.get_gauge().value;
+            assert_eq!(value, Some(5.0));
         } else {
             panic!("Peer metrics family exists but has no metrics");
         }

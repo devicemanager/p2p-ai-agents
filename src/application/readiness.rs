@@ -262,12 +262,7 @@ pub fn is_port_available(port: u16) -> bool {
 
 /// Find an available port starting from the given port
 pub fn find_available_port(start_port: u16) -> Option<u16> {
-    for port in start_port..start_port + 100 {
-        if is_port_available(port) {
-            return Some(port);
-        }
-    }
-    None
+    (start_port..start_port + 100).find(|&port| is_port_available(port))
 }
 
 #[async_trait::async_trait]
@@ -294,12 +289,10 @@ impl Service for ReadinessManager {
         }
 
         // Check port availability if enabled
-        if self.config.port_enabled {
-            if !is_port_available(self.config.port) {
-                warn!("Readiness port {} is not available", self.config.port);
-                if let Some(alt_port) = find_available_port(self.config.port) {
-                    warn!("Alternative port {} is available", alt_port);
-                }
+        if self.config.port_enabled && !is_port_available(self.config.port) {
+            warn!("Readiness port {} is not available", self.config.port);
+            if let Some(alt_port) = find_available_port(self.config.port) {
+                warn!("Alternative port {} is available", alt_port);
             }
         }
 

@@ -9,12 +9,13 @@
 
 use p2p_ai_agents::core::config::Config;
 use std::env;
-use std::sync::Mutex;
 use tempfile::TempDir;
 use tokio::fs;
+use tokio::sync::Mutex;
 
 // Mutex to serialize tests that modify environment variables
-static ENV_MUTEX: Mutex<()> = Mutex::new(());
+// We use tokio::sync::Mutex to allow holding the lock across await points
+static ENV_MUTEX: Mutex<()> = Mutex::const_new(());
 
 #[tokio::test]
 async fn test_config_defaults() {
@@ -166,7 +167,7 @@ async fn test_config_file_persistence() {
 #[tokio::test]
 async fn test_environment_variable_overrides() {
     // Acquire lock to serialize env var access
-    let _lock = ENV_MUTEX.lock().unwrap();
+    let _lock = ENV_MUTEX.lock().await;
 
     // Save current env vars to restore later
     let original_port = env::var("P2P_LISTEN_PORT").ok();
@@ -187,10 +188,8 @@ async fn test_environment_variable_overrides() {
         "/ip4/1.2.3.4/tcp/9000,/ip4/5.6.7.8/tcp/9001",
     );
 
-    // Drop the lock before awaiting
-    drop(_lock);
-
     // Load config (this will pick up env vars)
+    // IMPORTANT: Lock is still held here!
     let config = Config::load().await.unwrap();
 
     // Verify overrides
@@ -226,12 +225,13 @@ async fn test_environment_variable_overrides() {
         Some(v) => env::set_var("P2P_BOOTSTRAP_NODES", v),
         None => env::remove_var("P2P_BOOTSTRAP_NODES"),
     }
+    // Lock is dropped here automatically at end of scope
 }
 
 #[tokio::test]
 async fn test_config_cascade_priority() {
     // Acquire lock to serialize env var access
-    let _lock = ENV_MUTEX.lock().unwrap();
+    let _lock = ENV_MUTEX.lock().await;
 
     // This test verifies that environment variables override defaults
     // Note: File loading uses a fixed path, so we test env var priority
@@ -246,10 +246,8 @@ async fn test_config_cascade_priority() {
     env::set_var("P2P_MAX_PEERS", "64");
     env::set_var("P2P_LOG_LEVEL", "debug");
 
-    // Drop the lock before awaiting
-    drop(_lock);
-
     // 2. Load config
+    // IMPORTANT: Lock is still held here!
     let config = Config::load().await.unwrap();
 
     // 3. Verify cascade:
@@ -276,6 +274,7 @@ async fn test_config_cascade_priority() {
         Some(v) => env::set_var("P2P_LOG_LEVEL", v),
         None => env::remove_var("P2P_LOG_LEVEL"),
     }
+    // Lock is dropped here automatically
 }
 
 #[tokio::test]
@@ -311,7 +310,7 @@ async fn test_validation_error_messages() {
 #[tokio::test]
 async fn test_full_lifecycle_with_validation() {
     // Acquire lock to serialize env var access (in case there are any set)
-    let _lock = ENV_MUTEX.lock().unwrap();
+    let _lock = ENV_MUTEX.lock().await;
 
     // This test simulates the full lifecycle as it would happen in main.rs
 
@@ -322,12 +321,10 @@ async fn test_full_lifecycle_with_validation() {
     let default_config = Config::default();
     let yaml = serde_yaml::to_string(&default_config).unwrap();
 
-    // Drop the lock before awaiting
-    drop(_lock);
-
     fs::write(&config_file, yaml).await.unwrap();
 
     // 2. Load config
+    // IMPORTANT: Lock is still held here!
     let mut config = Config::load().await.unwrap();
 
     // 3. Apply CLI overrides
@@ -342,20 +339,20 @@ async fn test_full_lifecycle_with_validation() {
     assert_eq!(config.max_peers, 64);
     assert_eq!(config.health_check_interval_secs, 30);
     assert_eq!(config.max_memory_mb, 512);
+
+    // Lock is dropped here automatically
 }
 
 #[tokio::test]
 async fn test_invalid_config_caught_after_overrides() {
     // Acquire lock to serialize env var access
-    let _lock = ENV_MUTEX.lock().unwrap();
+    let _lock = ENV_MUTEX.lock().await;
 
     // This test verifies that validation catches invalid configurations
     // even after CLI overrides
 
-    // Drop the lock before awaiting
-    drop(_lock);
-
     // 1. Load config
+    // IMPORTANT: Lock is still held here!
     let mut config = Config::load().await.unwrap();
 
     // 2. Apply invalid CLI override
@@ -363,6 +360,8 @@ async fn test_invalid_config_caught_after_overrides() {
 
     // 3. Validation should fail
     assert!(config.validate().is_err());
+
+    // Lock is dropped here automatically
 }
 
 #[tokio::test]

@@ -304,7 +304,7 @@ mod tests {
     #[tokio::test]
     async fn test_startup_diagnostics_creation() {
         let diagnostics = StartupDiagnostics::new(false);
-        assert_eq!(diagnostics.verbose, false);
+        assert!(!diagnostics.verbose);
 
         let components = diagnostics.get_all_components().await;
         assert!(components.is_empty());

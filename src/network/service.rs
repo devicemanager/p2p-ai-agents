@@ -46,7 +46,10 @@ impl Default for NetworkServiceConfig {
                     max_memory: 512 * 1024 * 1024,   // 512 MB
                     max_connections: 100,
                 },
-                security_config: crate::network::SecurityConfig {},
+                security_config: crate::network::SecurityConfig {
+                    trusted_authorities: vec![],
+                    local_certificate: None,
+                },
             },
             name: "network".to_string(),
             version: "0.1.0".to_string(),
@@ -605,7 +608,10 @@ mod tests {
                 max_memory: 512 * 1024 * 1024,
                 max_connections: 10,
             },
-            security_config: SecurityConfig {},
+            security_config: SecurityConfig {
+                trusted_authorities: vec![],
+                local_certificate: None,
+            },
         };
 
         NetworkServiceConfig {

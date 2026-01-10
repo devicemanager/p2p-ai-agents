@@ -6,7 +6,6 @@
 //! - Confidence scoring
 //! - Detailed explanations
 
-use p2p_ai_agents::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
@@ -94,7 +93,7 @@ async fn main() {
     println!("Focus: {:?}\n", query.focus_areas);
 
     // Simulate expert network review
-    let result = simulate_expert_review(query).await?;
+    let result = simulate_expert_review().await?;
 
     // Display results
     println!("📊 Review Results");
@@ -131,7 +130,7 @@ async fn main() {
 
 /// Simulate a multi-expert review process
 /// In production, this would query actual expert nodes
-async fn simulate_expert_review(query: CodeReviewQuery) -> Result<CodeReviewResult, Box<dyn std::error::Error>> {
+async fn simulate_expert_review() -> Result<CodeReviewResult, Box<dyn std::error::Error>> {
     // Simulate expert analysis
     let issues = vec![
         ReviewIssue {

@@ -17,6 +17,7 @@ use tracing::info;
 #[command(author, version, about, long_about = None)]
 #[command(name = "p2p-ai-agents")]
 #[command(about = "A distributed peer-to-peer network of AI agents")]
+#[command(disable_version_flag = true)]
 struct Cli {
     /// Display version information and exit
     #[arg(short = 'V', long)]

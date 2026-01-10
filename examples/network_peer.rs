@@ -48,7 +48,10 @@ async fn main() -> Result<(), Box<dyn Error>> {
             max_memory: 384 * 1024 * 1024,
             max_connections: 50,
         },
-        security_config: SecurityConfig {},
+        security_config: SecurityConfig {
+            trusted_authorities: vec![],
+            local_certificate: None,
+        },
     };
 
     let agent_id = AgentId::from_string("peer-node".to_string());
@@ -216,7 +219,10 @@ mod tests {
                 max_memory: 256 * 1024 * 1024,
                 max_connections: 30,
             },
-            security_config: SecurityConfig {},
+            security_config: SecurityConfig {
+                trusted_authorities: vec![],
+                local_certificate: None,
+            },
         };
 
         let agent_id = AgentId::from_string("test-peer".to_string());

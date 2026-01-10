@@ -23,6 +23,7 @@ pub enum ReplayError {
     ReplayDetected,
 }
 
+/// Result type for replay detection operations
 pub type Result<T> = std::result::Result<T, ReplayError>;
 
 /// Detects replay attacks using timestamp validation and nonce caching

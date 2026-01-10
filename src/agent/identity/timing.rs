@@ -31,15 +31,21 @@ const MAX_JITTER_US: u64 = 500;
 /// # Examples
 ///
 /// ```
+/// # #[cfg(feature = "network")]
 /// use ed25519_dalek::{Signature, SigningKey, Signer, VerifyingKey};
+/// # #[cfg(feature = "network")]
 /// use p2p_ai_agents::agent::identity::timing::verify_with_jitter;
 ///
+/// # #[cfg(feature = "network")]
+/// # {
 /// let signing_key = SigningKey::from_bytes(&[1u8; 32]);
+///
 /// let verifying_key = signing_key.verifying_key();
 /// let message = b"test message";
 /// let signature = signing_key.sign(message);
 ///
 /// assert!(verify_with_jitter(&verifying_key, message, &signature).is_ok());
+/// # }
 /// ```
 #[allow(dead_code)]
 pub fn verify_with_jitter(
@@ -112,9 +118,13 @@ pub async fn verify_with_jitter_async(
 /// # Examples
 ///
 /// ```
+/// # #[cfg(feature = "network")]
 /// use ed25519_dalek::{Signature, SigningKey, Signer, VerifyingKey};
+/// # #[cfg(feature = "network")]
 /// use p2p_ai_agents::agent::identity::timing::batch_verify_with_jitter;
 ///
+/// # #[cfg(feature = "network")]
+/// # {
 /// let signing_key = SigningKey::from_bytes(&[1u8; 32]);
 /// let verifying_key = signing_key.verifying_key();
 /// let message = b"test message";
@@ -123,6 +133,7 @@ pub async fn verify_with_jitter_async(
 /// let verifications = vec![(&verifying_key, &message[..], &signature)];
 /// let results = batch_verify_with_jitter(&verifications);
 /// assert!(results[0].is_ok());
+/// # }
 /// ```
 #[allow(dead_code)]
 pub fn batch_verify_with_jitter(

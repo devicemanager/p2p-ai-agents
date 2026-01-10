@@ -19,8 +19,14 @@ pub struct KeyMetadata {
     pub rotation_required: bool,
 }
 
+impl Default for KeyMetadata {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl KeyMetadata {
-    /// Create new key metadata with current timestamp
+    /// Create new key metadata
     pub fn new() -> Self {
         Self {
             created_at: Utc::now(),

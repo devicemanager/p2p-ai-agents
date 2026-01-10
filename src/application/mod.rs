@@ -363,8 +363,19 @@ impl Application {
 
     /// Get all agents
     pub async fn agents(&self) -> Vec<Arc<dyn Agent>> {
-        let agents = self.agents.read().await;
-        agents.clone()
+        // Use timeout to prevent deadlock if lock is held
+        match tokio::time::timeout(std::time::Duration::from_millis(100), async {
+            let agents = self.agents.read().await;
+            agents.clone()
+        })
+        .await
+        {
+            Ok(agents) => agents,
+            Err(_) => {
+                tracing::warn!("Timeout waiting for agents lock");
+                Vec::new()
+            }
+        }
     }
 
     /// Load configuration
@@ -483,7 +494,10 @@ impl Application {
                 max_memory: 1024 * 1024 * 1024, // 1GB
                 max_connections: 100,
             },
-            security_config: crate::network::SecurityConfig {},
+            security_config: crate::network::SecurityConfig {
+                trusted_authorities: vec![],
+                local_certificate: None,
+            },
         })
     }
 }
