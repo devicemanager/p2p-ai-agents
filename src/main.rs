@@ -11,7 +11,10 @@ use p2p_ai_agents::core::{
     logging::{init_logging, LogFormat, LoggingConfig},
     metadata::version_display,
 };
+use p2p_ai_agents::agent::identity::AgentIdentity;
+use semaphore::Field;
 use tracing::info;
+use std::path::PathBuf;
 
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
@@ -417,8 +420,6 @@ async fn cmd_start(cli: &Cli) -> Result<()> {
     run_node(cli).await
 }
 
-use std::path::PathBuf;
-
 /// Run the node (common logic for daemon and foreground modes)
 async fn run_node(cli: &Cli) -> Result<()> {
     // Ensure default config file exists
@@ -475,6 +476,17 @@ async fn run_node(cli: &Cli) -> Result<()> {
         &identity.public_key_hex[..8],
         &identity.public_key_hex[identity.public_key_hex.len() - 8..]
     );
+
+    // Initialize the AgentIdentity (Trust Registry + Manager)
+    info!("🛡️  Initializing Agent Identity & Trust Registry...");
+    // 20 is the standard Semaphore depth we confirmed in testing
+    let agent_identity = AgentIdentity::new(20, Field::from(0))
+        .await
+        .context("Failed to initialize AgentIdentity")?;
+    
+    // Create local DID if needed (mock for now)
+    let my_did = agent_identity.create_my_did().await?;
+    info!("🆔 Agent DID: {}", my_did);
 
     // Run event loop
     info!("🌐 Node ready - starting event loop");

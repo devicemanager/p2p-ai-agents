@@ -1,3 +1,7 @@
+//! Identity Manager Module
+//!
+//! This module provides the `IdentityManager` struct for managing Decentralized Identifiers (DIDs).
+
 use anyhow::Result;
 
 /// Mock implementation of IdentityManager for testing and simulation purposes.

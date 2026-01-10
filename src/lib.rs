@@ -36,6 +36,7 @@ pub mod prelude {
         logging::{init_default_logging, init_logging, LogFormat, LoggingConfig, LoggingError},
         services::{Service, ServiceError, ServiceRegistry},
     };
+    #[cfg(feature = "network")]
     pub use crate::network::{
         discovery::{DiscoveryManager, PeerInfo},
         transport::{TransportError, TransportType},
@@ -56,6 +57,7 @@ pub enum Error {
     Agent(#[from] agent::Error),
 
     /// Network-related errors
+    #[cfg(feature = "network")]
     #[error("Network error: {0}")]
     Network(#[from] network::NetworkError),
 

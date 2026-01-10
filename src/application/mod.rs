@@ -16,6 +16,7 @@ use crate::core::{
     metadata::{NodeMetadata, UptimeTracker},
     services::{Service, ServiceError, ServiceRegistry},
 };
+#[cfg(feature = "network")]
 use crate::network::{NetworkConfig, NetworkManager};
 use crate::storage::{StorageManager, StoragePolicy};
 use std::sync::Arc;
@@ -38,6 +39,7 @@ pub enum ApplicationError {
     Agent(#[from] crate::agent::Error),
 
     /// Network error
+    #[cfg(feature = "network")]
     #[error("Network error: {0}")]
     Network(#[from] crate::network::NetworkError),
 
@@ -48,6 +50,10 @@ pub enum ApplicationError {
     /// Event error
     #[error("Event error: {0}")]
     Event(#[from] crate::core::events::EventError),
+
+    /// Anyhow error wrapper
+    #[error("Internal error: {0}")]
+    Internal(#[from] anyhow::Error),
 
     /// Application initialization failed
     #[error("Application initialization failed: {0}")]
@@ -113,7 +119,8 @@ pub struct Application {
     service_registry: Arc<ServiceRegistry>,
     config: Arc<RwLock<Config>>,
     state: Arc<RwLock<ApplicationState>>,
-    agents: Arc<RwLock<Vec<Arc<dyn Agent>>>>,
+    agents: Arc<RwLock<Vec<Arc<Agent>>>>,
+    #[cfg(feature = "network")]
     pub(crate) network_manager: Arc<RwLock<Option<NetworkManager>>>,
     storage_manager: Arc<RwLock<Option<StorageManager>>>,
     uptime_tracker: Arc<RwLock<UptimeTracker>>,
@@ -129,6 +136,7 @@ impl Application {
             config: Arc::new(RwLock::new(Config::default())),
             state: Arc::new(RwLock::new(ApplicationState::Stopped)),
             agents: Arc::new(RwLock::new(Vec::new())),
+            #[cfg(feature = "network")]
             network_manager: Arc::new(RwLock::new(None)),
             storage_manager: Arc::new(RwLock::new(None)),
             uptime_tracker: Arc::new(RwLock::new(UptimeTracker::new())),
@@ -153,6 +161,7 @@ impl Application {
         self.initialize_storage().await?;
 
         // Initialize network
+        #[cfg(feature = "network")]
         self.initialize_network().await?;
 
         self.transition_state(ApplicationState::Registering).await?;
@@ -174,6 +183,7 @@ impl Application {
         tracing::info!("Registering with network...");
 
         // Start network manager if available
+        #[cfg(feature = "network")]
         if let Some(_network_manager) = self.network_manager.read().await.as_ref() {
             // Network registration would happen here
             tracing::info!("Network manager ready");
@@ -206,6 +216,7 @@ impl Application {
         self.service_registry.start_all().await?;
 
         // Start network manager
+        #[cfg(feature = "network")]
         if let Some(_network_manager) = self.network_manager.read().await.as_ref() {
             // Note: NetworkManager doesn't have a start method in the current implementation
             // This would need to be added
@@ -256,11 +267,14 @@ impl Application {
     /// Shutdown all application components
     pub async fn shutdown_components(&self) -> Result<(), ApplicationError> {
         // Shutdown network manager
-        let mut network_manager = self.network_manager.write().await;
-        if let Some(manager) = network_manager.as_mut() {
-            tracing::info!("Shutting down network manager...");
-            if let Err(e) = manager.graceful_shutdown().await {
-                tracing::warn!("Failed to gracefully shutdown network manager: {}", e);
+        #[cfg(feature = "network")]
+        {
+            let mut network_manager = self.network_manager.write().await;
+            if let Some(manager) = network_manager.as_mut() {
+                tracing::info!("Shutting down network manager...");
+                if let Err(e) = manager.graceful_shutdown().await {
+                    tracing::warn!("Failed to gracefully shutdown network manager: {}", e);
+                }
             }
         }
 
@@ -355,14 +369,14 @@ impl Application {
     }
 
     /// Add an agent to the application
-    pub async fn add_agent(&self, agent: Arc<dyn Agent>) -> Result<(), ApplicationError> {
+    pub async fn add_agent(&self, agent: Arc<Agent>) -> Result<(), ApplicationError> {
         let mut agents = self.agents.write().await;
         agents.push(agent);
         Ok(())
     }
 
     /// Get all agents
-    pub async fn agents(&self) -> Vec<Arc<dyn Agent>> {
+    pub async fn agents(&self) -> Vec<Arc<Agent>> {
         // Use timeout to prevent deadlock if lock is held
         match tokio::time::timeout(std::time::Duration::from_millis(100), async {
             let agents = self.agents.read().await;
@@ -465,6 +479,7 @@ impl Application {
     }
 
     /// Initialize network
+    #[cfg(feature = "network")]
     async fn initialize_network(&self) -> Result<(), ApplicationError> {
         let network_config = self.get_network_config().await?;
         let network_manager = NetworkManager::new(network_config);
@@ -482,6 +497,7 @@ impl Application {
     }
 
     /// Get network configuration
+    #[cfg(feature = "network")]
     async fn get_network_config(&self) -> Result<NetworkConfig, ApplicationError> {
         // Create default network configuration
         Ok(NetworkConfig {
@@ -511,6 +527,7 @@ impl Clone for Application {
             config: self.config.clone(),
             state: self.state.clone(),
             agents: self.agents.clone(),
+            #[cfg(feature = "network")]
             network_manager: self.network_manager.clone(),
             storage_manager: self.storage_manager.clone(),
             uptime_tracker: self.uptime_tracker.clone(),

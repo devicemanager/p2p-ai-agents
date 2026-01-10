@@ -4,7 +4,7 @@
 //! This example demonstrates basic agent initialization, lifecycle management,
 //! and identity information retrieval.
 
-use p2p_ai_agents::agent::{Agent, AgentConfig, AgentId, DefaultAgent, ResourceLimits};
+use p2p_ai_agents::agent::{AgentConfig, DefaultAgent};
 use p2p_ai_agents::core::services::ServiceRegistry;
 use std::error::Error;
 use std::sync::Arc;
@@ -15,22 +15,18 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     // Step 1: Create agent configuration
     let config = AgentConfig {
-        id: AgentId::from_string("hello-agent".to_string()),
-        network_port: 8080,
-        resource_limits: ResourceLimits {
-            max_cpu: 0.5,                        // 50% CPU
-            max_memory: 512 * 1024 * 1024,       // 512MB
-            max_storage: 5 * 1024 * 1024 * 1024, // 5GB
-            max_bandwidth: 512 * 1024,           // 512KB/s
-            max_connections: 50,
-        },
+        name: "hello-agent".to_string(),
+        // Note: AgentConfig structure has changed, removing unused fields for now
+        // id, network_port, and resource_limits are not currently part of AgentConfig
     };
 
     println!("✅ Configuration created");
 
     // Step 2: Initialize the agent
+    // Using with_services to include the registry, or just new(config) if not needed.
+    // The example showed passing both, so we use with_services which matches the intention.
     let service_registry = Arc::new(ServiceRegistry::new());
-    let agent = DefaultAgent::new(config, service_registry).await?;
+    let agent = DefaultAgent::with_services(config, service_registry).await?;
     println!("✅ Agent initialized");
 
     // Step 3: Start the agent
@@ -65,14 +61,7 @@ mod tests {
     #[tokio::test]
     async fn test_agent_initialization() -> Result<(), Box<dyn Error>> {
         let config = AgentConfig {
-            id: AgentId::from_string("test-agent".to_string()),
-            network_port: 8080,
-            resource_limits: ResourceLimits {
-                max_cpu: 0.5,
-                max_memory: 256 * 1024 * 1024,
-                max_storage: 1024 * 1024 * 1024,
-                max_bandwidth: 256 * 1024,
-            },
+            name: "test-agent".to_string(),
         };
 
         let agent = DefaultAgent::new(config).await?;
@@ -93,14 +82,7 @@ mod tests {
     #[tokio::test]
     async fn test_agent_lifecycle() -> Result<(), Box<dyn Error>> {
         let config = AgentConfig {
-            id: AgentId::new(),
-            network_port: 8080,
-            resource_limits: ResourceLimits {
-                max_cpu: 0.8,
-                max_memory: 1024 * 1024 * 1024,
-                max_storage: 10 * 1024 * 1024 * 1024,
-                max_bandwidth: 1024 * 1024,
-            },
+            name: "lifecycle-agent".to_string(),
         };
 
         let agent = DefaultAgent::new(config).await?;

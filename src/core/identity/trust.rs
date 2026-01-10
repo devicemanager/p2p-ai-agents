@@ -1,3 +1,8 @@
+//! Trust Registry Module
+//!
+//! This module provides the `TrustRegistry` struct, which implements a Zero-Knowledge whitelist
+//! using a Merkle Tree (via `semaphore-rs`).
+
 use anyhow::{Result, anyhow};
 use semaphore::poseidon_tree::{PoseidonTree, Proof};
 use semaphore::Field;
