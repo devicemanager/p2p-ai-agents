@@ -111,9 +111,13 @@ impl PidFileManager {
 }
 
 /// Daemonize the current process (Unix only)
+/// 
+/// This implementation uses native Unix fork/setsid to create a daemon process
+/// without relying on external unmaintained crates.
 #[cfg(unix)]
 pub fn daemonize(log_path: PathBuf) -> Result<()> {
-    use daemonize::Daemonize;
+    use nix::unistd::{fork, setsid, ForkResult};
+    use std::os::unix::io::AsRawFd;
 
     info!("Daemonizing process...");
 
@@ -132,20 +136,50 @@ pub fn daemonize(log_path: PathBuf) -> Result<()> {
 
     info!("Log output will be redirected to: {}", log_path.display());
 
-    // Configure daemon
-    let daemon = Daemonize::new()
-        .stdout(stdout)
-        .stderr(stderr)
-        .umask(0o027)
-        .privileged_action(|| {
-            info!("Daemon process starting...");
-        });
+    // First fork to ensure we're not a process group leader
+    match unsafe { fork() }.context("Failed to fork process")? {
+        ForkResult::Parent { .. } => {
+            // Parent exits immediately
+            std::process::exit(0);
+        }
+        ForkResult::Child => {
+            // Child continues
+        }
+    }
 
-    // Fork and detach
-    daemon.start().context("Failed to daemonize process")?;
+    // Create new session and become session leader
+    setsid().context("Failed to create new session")?;
 
-    // Re-initialize logging after daemonization
-    // The parent process will have already logged, but the child needs to reinit
+    // Second fork to ensure we can't acquire a controlling terminal
+    match unsafe { fork() }.context("Failed to fork process (second time)")? {
+        ForkResult::Parent { .. } => {
+            // First child exits
+            std::process::exit(0);
+        }
+        ForkResult::Child => {
+            // Second child (daemon) continues
+        }
+    }
+
+    // Set umask for security
+    use nix::sys::stat::{umask, Mode};
+    umask(Mode::from_bits_truncate(0o027));
+
+    // Change to root directory to avoid keeping any directory in use
+    std::env::set_current_dir("/").context("Failed to change to root directory")?;
+
+    // Redirect stdout and stderr to log file
+    use nix::unistd::dup2;
+    dup2(stdout.as_raw_fd(), std::io::stdout().as_raw_fd())
+        .context("Failed to redirect stdout")?;
+    dup2(stderr.as_raw_fd(), std::io::stderr().as_raw_fd())
+        .context("Failed to redirect stderr")?;
+
+    // Close stdin
+    let devnull = File::open("/dev/null").context("Failed to open /dev/null")?;
+    dup2(devnull.as_raw_fd(), std::io::stdin().as_raw_fd())
+        .context("Failed to redirect stdin")?;
+
     info!("Daemon process running");
 
     Ok(())

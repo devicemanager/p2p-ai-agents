@@ -33,8 +33,8 @@ base64 = { version = "0.21", optional = false }
 dirs = "5.0"
 
 # Daemon mode (Unix only)
-daemonize = "0.5"
-nix = { version = "0.27", features = ["signal", "process"] }
+# daemonize = "0.5"  # Removed: unmaintained (RUSTSEC-2025-0069)
+nix = { version = "0.27", features = ["signal", "process", "fs"] }
 
 # Serialization
 serde = { version = "1.0", features = ["derive"] }
@@ -60,7 +60,7 @@ chrono = { version = "0.4", features = ["serde"] }
 # Metrics
 metrics = "0.21"
 metrics-util = "0.15"
-prometheus = { version = "0.13", optional = true }
+prometheus = { version = "0.14", optional = true }
 hyper = { version = "0.14", features = ["server", "http1", "tcp"], optional = true }
 lazy_static = { version = "1.4", optional = true }
 
@@ -77,11 +77,11 @@ criterion = "0.5"
 mockall = "0.12"
 
 # Network
-libp2p = { version = "0.53", features = ["tokio", "tcp", "dns", "websocket", "noise", "yamux", "ping", "identify", "kad", "mdns", "macros"], optional = true }
+libp2p = { version = "0.56", features = ["tokio", "tcp", "dns", "websocket", "noise", "yamux", "ping", "identify", "kad", "mdns", "macros"], optional = true }
 futures = { version = "0.3", optional = true }
 bytes = { version = "1.5", optional = true }
-age = { version = "0.9.0", features = ["armor", "ssh", "cli-common"] }
-lru = "0.10.0"
+age = { version = "0.11", features = ["armor", "ssh", "cli-common"] }
+lru = "0.16"
 libc = "0.2.179"
 
 [dev-dependencies]

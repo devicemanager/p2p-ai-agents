@@ -3,7 +3,7 @@
 //! This module provides passphrase-protected encryption for private keys
 //! using the age encryption format for secure backup and restore.
 
-use age::secrecy::Secret;
+use age::secrecy::SecretString;
 use std::io::{Read, Write};
 use thiserror::Error;
 
@@ -27,7 +27,7 @@ pub type Result<T> = std::result::Result<T, BackupError>;
 /// Encrypts a private key using a passphrase (Age format)
 pub fn backup_key(key: &[u8], passphrase: &str) -> Result<Vec<u8>> {
     // Use standard passphrase encryption
-    let encryptor = age::Encryptor::with_user_passphrase(Secret::new(passphrase.to_string()));
+    let encryptor = age::Encryptor::with_user_passphrase(SecretString::new(passphrase.to_string().into()));
 
     let mut encrypted = vec![];
     let mut writer = encryptor.wrap_output(&mut encrypted)?;
@@ -39,13 +39,12 @@ pub fn backup_key(key: &[u8], passphrase: &str) -> Result<Vec<u8>> {
 
 /// Decrypts a private key using a passphrase (Age format)
 pub fn restore_key(backup: &[u8], passphrase: &str) -> Result<Vec<u8>> {
-    let decryptor = match age::Decryptor::new(backup)? {
-        age::Decryptor::Passphrase(d) => d,
-        _ => return Err(age::DecryptError::InvalidHeader.into()),
-    };
+    let decryptor = age::Decryptor::new(backup)?;
 
     let mut decrypted = vec![];
-    let mut reader = decryptor.decrypt(&Secret::new(passphrase.to_string()), None)?;
+    // Try with the passphrase identity
+    let identity = age::scrypt::Identity::new(SecretString::new(passphrase.to_string().into()));
+    let mut reader = decryptor.decrypt(std::iter::once(&identity as &dyn age::Identity))?;
     reader.read_to_end(&mut decrypted)?;
 
     Ok(decrypted)
