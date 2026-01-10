@@ -4,8 +4,8 @@
 //! This example simulates network message passing to verify the
 //! Agent Protocol logic without actual network IO.
 
-use p2p_ai_agents::agent::messaging::{Message, MessageType};
-use p2p_ai_agents::agent::task::{Task, TaskPayload, TaskPriority, TaskType, TaskStatus};
+use p2p_ai_agents::agent::messaging::Message;
+use p2p_ai_agents::agent::task::{Task, TaskPayload, TaskPriority, TaskStatus, TaskType};
 use p2p_ai_agents::agent::{AgentConfig, DefaultAgent};
 use serde_json::json;
 use std::collections::HashMap;
@@ -19,11 +19,12 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     // 1. Setup Receiver Agent
     let config = AgentConfig {
+        capabilities: vec![],
         name: "receiver-agent".to_string(),
     };
     let agent = DefaultAgent::new(config).await?;
     agent.start().await?;
-    
+
     println!("✅ Receiver Agent started");
 
     // 2. Create a Task Request (simulating a remote peer)
@@ -44,14 +45,14 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let message = Message::new_task_request(
         "sender-peer-123", // Sender ID
         "receiver-agent",  // Recipient ID
-        task
+        task,
     );
 
     // 3. Serialize/Deserialize to prove wire compatibility
     println!("  🔄 Serializing message...");
     let serialized = serde_json::to_string(&message)?;
     println!("     Size: {} bytes", serialized.len());
-    
+
     println!("  🔄 Deserializing message...");
     let deserialized_msg: Message = serde_json::from_str(&serialized)?;
 
@@ -76,7 +77,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
                 // Task might not be in the map instantly after handle_message returns
             }
         }
-        
+
         if attempts > 20 {
             println!("❌ Timeout waiting for task execution");
             break;

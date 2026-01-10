@@ -5,16 +5,16 @@
 
 use anyhow::{Context, Result};
 use clap::{Parser, Subcommand};
+use p2p_ai_agents::agent::identity::AgentIdentity;
 use p2p_ai_agents::core::{
     config::Config,
     identity::{load_or_create_identity, NodeIdentityData},
     logging::{init_logging, LogFormat, LoggingConfig},
     metadata::version_display,
 };
-use p2p_ai_agents::agent::identity::AgentIdentity;
 use semaphore::Field;
-use tracing::info;
 use std::path::PathBuf;
+use tracing::info;
 
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
@@ -483,7 +483,7 @@ async fn run_node(cli: &Cli) -> Result<()> {
     let agent_identity = AgentIdentity::new(20, Field::from(0))
         .await
         .context("Failed to initialize AgentIdentity")?;
-    
+
     // Create local DID if needed (mock for now)
     let my_did = agent_identity.create_my_did().await?;
     info!("🆔 Agent DID: {}", my_did);

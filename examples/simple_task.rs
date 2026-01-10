@@ -4,12 +4,8 @@
 //! This example demonstrates the task submission and status tracking API.
 //! Note: Full task processing is not yet implemented in this version.
 
-use p2p_ai_agents::agent::task::{
-    Task, TaskPayload, TaskPriority, TaskType, TaskStatus
-};
-use p2p_ai_agents::agent::{
-    AgentConfig, DefaultAgent, ResourceLimits
-};
+use p2p_ai_agents::agent::task::{Task, TaskPayload, TaskPriority, TaskStatus, TaskType};
+use p2p_ai_agents::agent::{AgentConfig, DefaultAgent, ResourceLimits};
 use serde_json::json;
 use std::collections::HashMap;
 use std::error::Error;
@@ -23,6 +19,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     // Initialize agent with task processing capabilities
     let config = AgentConfig {
+        capabilities: vec![],
         name: "task-processor".to_string(),
         // id, network_port, resource_limits moved or removed
     };
@@ -110,7 +107,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let all_task_ids = vec![task1_id, task2_id];
     let mut all_ids = all_task_ids;
     all_ids.extend(batch_ids.iter().cloned());
-    
+
     // Wait for tasks to complete
     for task_id in all_ids.iter() {
         let mut attempts = 0;
@@ -124,13 +121,14 @@ async fn main() -> Result<(), Box<dyn Error>> {
             }
             // Check for failures
             if let TaskStatus::Failed(err) = &status {
-                 println!("  ❌ Task {} Failed: {}", task_id, err);
-                 break;
+                println!("  ❌ Task {} Failed: {}", task_id, err);
+                break;
             }
-            
-            if attempts > 20 { // 2 seconds timeout
-                 println!("  ⚠️ Task {} timed out (Status: {:?})", task_id, status);
-                 break;
+
+            if attempts > 20 {
+                // 2 seconds timeout
+                println!("  ⚠️ Task {} timed out (Status: {:?})", task_id, status);
+                break;
             }
             sleep(Duration::from_millis(100)).await;
             attempts += 1;
@@ -234,11 +232,12 @@ mod tests {
     #[tokio::test]
     async fn test_task_submission() -> Result<(), Box<dyn Error>> {
         let config = AgentConfig {
+            capabilities: vec![],
             name: "test-task-agent".to_string(),
         };
 
         // Limits omitted
-        
+
         let agent = DefaultAgent::new(config).await?;
         agent.start().await?;
 
@@ -259,9 +258,9 @@ mod tests {
         assert!(matches!(status, TaskStatus::Pending));
 
         // Wait for completion to verify processing
-        // Note: In test environment, the loop might be faster than this check, 
+        // Note: In test environment, the loop might be faster than this check,
         // so we just ensure it eventually completes or is pending.
-        
+
         agent.stop().await?;
         Ok(())
     }
@@ -269,6 +268,7 @@ mod tests {
     #[tokio::test]
     async fn test_task_priorities() -> Result<(), Box<dyn Error>> {
         let config = AgentConfig {
+            capabilities: vec![],
             name: "test-task-agent-priority".to_string(),
         };
 

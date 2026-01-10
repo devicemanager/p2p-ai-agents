@@ -5,9 +5,7 @@
 //! and participates in the P2P network.
 
 use chrono::Utc;
-use p2p_ai_agents::agent::{
-    AgentConfig, DefaultAgent
-};
+use p2p_ai_agents::agent::{AgentConfig, DefaultAgent};
 // use p2p_ai_agents::core::services::ServiceRegistry;
 #[cfg(feature = "network")]
 use p2p_ai_agents::network::{
@@ -24,7 +22,7 @@ use tokio::time::{sleep, Duration};
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
     println!("🚀 Starting Network Peer Agent\n");
-    
+
     #[cfg(not(feature = "network"))]
     {
         println!("⚠️  Network feature is disabled. Please run with --features network");
@@ -67,6 +65,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         // let resource_limits = ... // Removed from AgentConfig
 
         let config = AgentConfig {
+            capabilities: vec![],
             name: "peer-node".to_string(),
         };
 
@@ -230,6 +229,7 @@ mod tests {
             };
 
             let config = AgentConfig {
+                capabilities: vec![],
                 name: "test-peer".to_string(),
             };
 

@@ -15,6 +15,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     // Step 1: Create agent configuration
     let config = AgentConfig {
+        capabilities: vec![],
         name: "hello-agent".to_string(),
         // Note: AgentConfig structure has changed, removing unused fields for now
         // id, network_port, and resource_limits are not currently part of AgentConfig
@@ -61,6 +62,7 @@ mod tests {
     #[tokio::test]
     async fn test_agent_initialization() -> Result<(), Box<dyn Error>> {
         let config = AgentConfig {
+            capabilities: vec![],
             name: "test-agent".to_string(),
         };
 
@@ -82,6 +84,7 @@ mod tests {
     #[tokio::test]
     async fn test_agent_lifecycle() -> Result<(), Box<dyn Error>> {
         let config = AgentConfig {
+            capabilities: vec![],
             name: "lifecycle-agent".to_string(),
         };
 

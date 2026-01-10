@@ -3,7 +3,7 @@
 //! This module provides the `IdentityManager` struct for managing Decentralized Identifiers (DIDs).
 
 use anyhow::Result;
-use libp2p::identity::Keypair;
+use libp2p_identity::{Keypair, PeerId};
 use std::sync::Mutex;
 
 /// IdentityManager for managing keys and signing.
@@ -16,7 +16,8 @@ pub struct IdentityManager {
 impl IdentityManager {
     /// Creates a new instance of the IdentityManager with a fresh Ed25519 keypair.
     pub async fn new() -> Result<Self> {
-        let keypair = Keypair::generate_ed25519();
+        let ed25519_keypair = libp2p_identity::ed25519::Keypair::generate();
+        let keypair = Keypair::from(ed25519_keypair);
         Ok(Self {
             keypair: Mutex::new(keypair),
         })
@@ -26,10 +27,10 @@ impl IdentityManager {
     /// For now, we return the PeerID string derived from the public key as the DID.
     pub async fn create_did(&self) -> Result<String> {
         let keypair = self.keypair.lock().unwrap();
-        let peer_id = libp2p::PeerId::from_public_key(&keypair.public());
+        let peer_id = PeerId::from_public_key(&keypair.public());
         Ok(peer_id.to_string())
     }
-    
+
     /// Signs data using the private key.
     pub fn sign_data(&self, data: &[u8]) -> Result<Vec<u8>> {
         let keypair = self.keypair.lock().unwrap();

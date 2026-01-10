@@ -3,12 +3,8 @@
 //! These tests verify that the examples compile, run correctly,
 //! and produce the expected behavior.
 
-use p2p_ai_agents::agent::{
-    Agent, AgentConfig, AgentId, DefaultAgent, ResourceLimits,
-};
-use p2p_ai_agents::agent::task::{
-    Task, TaskPayload, TaskPriority, TaskStatus, TaskType,
-};
+use p2p_ai_agents::agent::task::{Task, TaskPayload, TaskPriority, TaskStatus, TaskType};
+use p2p_ai_agents::agent::{AgentConfig, DefaultAgent};
 // use p2p_ai_agents::core::services::ServiceRegistry;
 use serde_json::json;
 use std::collections::HashMap;
@@ -80,6 +76,7 @@ async fn test_network_examples_compiles() -> Result<(), Box<dyn Error>> {
 async fn test_hello_agent_runs() -> Result<(), Box<dyn Error>> {
     // Test that hello_agent runs successfully
     let config = AgentConfig {
+        capabilities: vec![],
         name: "test-hello-agent".to_string(),
     };
 
@@ -101,6 +98,7 @@ async fn test_hello_agent_runs() -> Result<(), Box<dyn Error>> {
 async fn test_task_processing_workflow() -> Result<(), Box<dyn Error>> {
     // Integration test for simple_task example workflow
     let config = AgentConfig {
+        capabilities: vec![],
         name: "test-task-agent".to_string(),
     };
 
@@ -147,6 +145,7 @@ async fn test_task_processing_workflow() -> Result<(), Box<dyn Error>> {
 async fn test_batch_task_processing() -> Result<(), Box<dyn Error>> {
     // Test batch processing from simple_task example
     let config = AgentConfig {
+        capabilities: vec![],
         name: "test-batch-agent".to_string(),
     };
 
@@ -191,6 +190,7 @@ async fn test_task_cancellation() -> Result<(), Box<dyn Error>> {
     // This is a placeholder test for when the functionality is added
 
     let config = AgentConfig {
+        capabilities: vec![],
         name: "test-cancel-agent".to_string(),
     };
 
@@ -222,10 +222,12 @@ async fn test_network_peer_communication() -> Result<(), Box<dyn Error>> {
     // This test demonstrates basic agent initialization
 
     let config1 = AgentConfig {
+        capabilities: vec![],
         name: "net-test-1".to_string(),
     };
 
     let config2 = AgentConfig {
+        capabilities: vec![],
         name: "net-test-2".to_string(),
     };
 
@@ -250,6 +252,7 @@ async fn test_network_peer_communication() -> Result<(), Box<dyn Error>> {
 async fn test_complete_workflow_integration() -> Result<(), Box<dyn Error>> {
     // Complete workflow test combining multiple examples
     let config = AgentConfig {
+        capabilities: vec![],
         name: "integration-test-agent".to_string(),
     };
 

@@ -44,7 +44,11 @@ pub struct Message {
 
 impl Message {
     /// Creates a new generic text message.
-    pub fn new_text(sender: impl Into<String>, recipient: impl Into<String>, text: impl Into<String>) -> Self {
+    pub fn new_text(
+        sender: impl Into<String>,
+        recipient: impl Into<String>,
+        text: impl Into<String>,
+    ) -> Self {
         Self {
             id: Uuid::new_v4(),
             sender: sender.into(),
@@ -55,9 +59,13 @@ impl Message {
             public_key: None,
         }
     }
-    
+
     /// Creates a task request message.
-    pub fn new_task_request(sender: impl Into<String>, recipient: impl Into<String>, task: Task) -> Self {
+    pub fn new_task_request(
+        sender: impl Into<String>,
+        recipient: impl Into<String>,
+        task: Task,
+    ) -> Self {
         Self {
             id: Uuid::new_v4(),
             sender: sender.into(),
@@ -70,7 +78,12 @@ impl Message {
     }
 
     /// Creates a task response message.
-    pub fn new_task_response(sender: impl Into<String>, recipient: impl Into<String>, task_id: TaskId, status: TaskStatus) -> Self {
+    pub fn new_task_response(
+        sender: impl Into<String>,
+        recipient: impl Into<String>,
+        task_id: TaskId,
+        status: TaskStatus,
+    ) -> Self {
         Self {
             id: Uuid::new_v4(),
             sender: sender.into(),
@@ -100,6 +113,12 @@ impl Message {
 /// Manages messaging operations for an agent.
 pub struct Messenger;
 
+impl Default for Messenger {
+    fn default() -> Self {
+        Self
+    }
+}
+
 impl Messenger {
     /// Creates a new Messenger.
     pub fn new() -> Self {
@@ -107,7 +126,7 @@ impl Messenger {
     }
 
     /// Sends a message.
-    /// 
+    ///
     /// In a real implementation, this would hand off to the NetworkManager.
     pub async fn send(&self, message: &Message) -> anyhow::Result<()> {
         // Placeholder: Log the message sending

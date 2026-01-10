@@ -113,13 +113,31 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Create a demo agent
     let agent_config = AgentConfig {
-        name: "architecture-demo-agent".to_string(),
+        capabilities: vec![],
+        name: "demo-agent".to_string(),
+    };
+
+    // Create minimal network config
+    let network_config = p2p_ai_agents::network::NetworkConfig {
+        listen_addr: "0.0.0.0:0".parse().unwrap(),
+        bootstrap_peers: vec![],
+        max_peers: 50,
+        protocol_config: p2p_ai_agents::network::ProtocolConfig {},
+        resource_limits: p2p_ai_agents::network::ResourceLimits {
+            max_bandwidth: 1024 * 1024,
+            max_memory: 512 * 1024 * 1024,
+            max_connections: 50,
+        },
+        security_config: p2p_ai_agents::network::SecurityConfig {
+            trusted_authorities: vec![],
+            local_certificate: None,
+        },
     };
 
     // Initialize identity for the agent
     let identity = AgentIdentity::new(20, semaphore::Field::from(0)).await?;
-    let agent = Arc::new(Agent::new(identity, agent_config));
-    
+    let agent = Arc::new(Agent::new(identity, agent_config, network_config));
+
     app.add_agent(agent.clone()).await?;
 
     println!("Added agent: {}", agent.id());

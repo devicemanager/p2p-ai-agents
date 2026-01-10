@@ -2,9 +2,8 @@
 //! Provides types and helpers for network management, metrics, resources, health, and security.
 
 use libp2p::{
-    futures::StreamExt, identity, multiaddr::Protocol, noise, swarm::SwarmEvent, tcp, yamux,
-    Multiaddr as Libp2pMultiaddr, PeerId as Libp2pPeerId,
-    gossipsub,
+    futures::StreamExt, gossipsub, identify, identity, mdns, multiaddr::Protocol, noise,
+    swarm::SwarmEvent, tcp, yamux, Multiaddr as Libp2pMultiaddr, PeerId as Libp2pPeerId,
 };
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -20,6 +19,17 @@ use tracing::{debug, error, info};
 pub mod behavior;
 /// Discovery submodule for peer discovery and management.
 pub mod discovery;
+
+// Add identify to the behavior if not already there
+// It seems behavior.rs handles it.
+
+// We need to update NetworkManager to handle discovery events or expose discovery info.
+// The previous plan mentioned "Update NetworkManager to store peer metadata (capabilities) alongside PeerIDs."
+// NetworkManager currently has `connected_peers: Arc<Mutex<Vec<SocketAddr>>>`.
+// We should probably upgrade this to `PeerInfo` or use `PeerCache`.
+// `src/network/peers.rs` already defines `PeerCache` and `PeerInfo`.
+// Let's use `PeerCache` in `NetworkManager`.
+
 /// Service submodule for the NetworkService implementation.
 pub mod service;
 /// Transport submodule for network transport protocols.
@@ -213,10 +223,16 @@ pub struct NetworkManager {
     transport_type: String,
     /// Message queue
     messages: Arc<Mutex<Vec<NetworkMessage>>>,
-    /// Connected peers
+    /// Connected peers (deprecated in favor of peer_cache)
     connected_peers: Arc<Mutex<Vec<SocketAddr>>>,
+    /// Peer cache for advanced peer management
+    pub peer_cache: Arc<PeerCache>,
     /// Listen addresses
     listen_addresses: Arc<Mutex<Vec<Libp2pMultiaddr>>>,
+
+    /// Agent version string for Identify protocol
+    agent_version: String,
+
     /// Command sender for the swarm event loop
     command_sender: Option<mpsc::Sender<NetworkCommand>>,
     /// Channel for sending received messages to the Agent
@@ -250,7 +266,9 @@ impl NetworkManager {
             transport_type: "tcp".to_string(),
             messages: Arc::new(Mutex::new(Vec::new())),
             connected_peers: Arc::new(Mutex::new(Vec::new())),
+            peer_cache: Arc::new(PeerCache::new()),
             listen_addresses: Arc::new(Mutex::new(Vec::new())),
+            agent_version: "p2p-ai-agent/1.0.0".to_string(),
             command_sender: None,
             message_callback: None,
             certificate_manager,
@@ -283,7 +301,9 @@ impl NetworkManager {
             transport_type: "tcp".to_string(),
             messages: Arc::new(Mutex::new(Vec::new())),
             connected_peers: Arc::new(Mutex::new(Vec::new())),
+            peer_cache: Arc::new(PeerCache::new()),
             listen_addresses: Arc::new(Mutex::new(Vec::new())),
+            agent_version: "p2p-ai-agent/1.0.0".to_string(),
             command_sender: None,
             message_callback: None,
             certificate_manager,
@@ -306,6 +326,11 @@ impl NetworkManager {
         self.message_callback = Some(callback);
     }
 
+    /// Set the agent version string
+    pub fn set_agent_version(&mut self, version: String) {
+        self.agent_version = version;
+    }
+
     /// Start the network manager.
     pub async fn start(&mut self) -> NetworkResult<()> {
         if !self.is_initialized {
@@ -320,6 +345,8 @@ impl NetworkManager {
         let local_peer_id = Libp2pPeerId::from(local_key.public());
         info!("Local peer id: {:?}", local_peer_id);
 
+        let agent_version = self.agent_version.clone();
+
         let mut swarm = libp2p::SwarmBuilder::with_existing_identity(local_key)
             .with_tokio()
             .with_tcp(
@@ -328,8 +355,8 @@ impl NetworkManager {
                 yamux::Config::default,
             )
             .map_err(|e| NetworkError::Libp2p(e.to_string()))?
-            .with_behaviour(|key| {
-                AgentBehavior::new(key.clone())
+            .with_behaviour(move |key| {
+                AgentBehavior::new(key.clone(), agent_version.clone())
                     .map_err(|e| NetworkError::Libp2p(e.to_string()))
                     .expect("Failed to create behavior")
             })
@@ -365,18 +392,22 @@ impl NetworkManager {
         // Create command channel
         let (tx, mut rx) = mpsc::channel::<NetworkCommand>(32);
         self.command_sender = Some(tx.clone());
-        
+
         // Clone message callback for the event loop
         let message_callback = self.message_callback.clone();
 
         let _messages_clone = self.messages.clone();
         let connected_peers_clone = self.connected_peers.clone();
         let listen_addresses_clone = self.listen_addresses.clone();
+        let peer_cache_clone = self.peer_cache.clone();
 
         // Subscribe to gossipsub topic
         let topic = gossipsub::IdentTopic::new("p2p-ai-agents-global");
         if let Some(agent_behavior) = swarm.behaviour_mut().gossipsub.subscribe(&topic).err() {
-            error!("Failed to subscribe to gossipsub topic: {:?}", agent_behavior);
+            error!(
+                "Failed to subscribe to gossipsub topic: {:?}",
+                agent_behavior
+            );
         }
 
         // Dial bootstrap peers
@@ -410,6 +441,68 @@ impl NetworkManager {
                              if let Some(callback) = &message_callback {
                                  let _ = callback.send(message.data).await;
                              }
+                        }
+                        SwarmEvent::Behaviour(AgentBehaviorEvent::Mdns(mdns::Event::Discovered(list))) => {
+                            for (peer_id, _multiaddr) in list {
+                                info!("mDNS discovered a new peer: {peer_id}");
+                                swarm.behaviour_mut().gossipsub.add_explicit_peer(&peer_id);
+                            }
+                        }
+                        SwarmEvent::Behaviour(AgentBehaviorEvent::Mdns(mdns::Event::Expired(list))) => {
+                            for (peer_id, _multiaddr) in list {
+                                info!("mDNS discover peer has expired: {peer_id}");
+                                swarm.behaviour_mut().gossipsub.remove_explicit_peer(&peer_id);
+                            }
+                        }
+                        SwarmEvent::Behaviour(AgentBehaviorEvent::Identify(identify::Event::Received { peer_id, info })) => {
+                            info!("Received Identify from {peer_id}: {:?}", info);
+                            for addr in info.listen_addrs {
+                                swarm.add_external_address(addr);
+                            }
+                            // Assuming protocol version or agent version implies capabilities for now
+                            // Or in a real scenario, we parse extra fields or use a custom protocol.
+                            // For this MVP, if protocol is "/p2p-ai-agents/1.0.0", we assume basic capabilities.
+                            // If we want to support specific capability discovery, we need to extend Identify
+                            // or use the Kademlia DHT to store provider records.
+
+                            // Let's just register them in the cache so `find_peers_with_capability` sees them.
+                            // We need to know what capabilities they have.
+                            // Hack: For now, assume all discovered peers support "TextProcessing" for the demo.
+                            // Real impl: Use Kademlia to advertise capabilities or custom handshake.
+
+                            let mut supported_tasks = vec![];
+                            // If the agent version string contains "TextProcessing", add it.
+                            // (We need to update AgentBehavior to send this in agent_version)
+
+                            // CHECKING protocol_version INSTEAD of agent_version as that's what we modified?
+                            // No, we modified agent_version in AgentBehavior::new.
+                            // BUT Identify info has both.
+                            // The output shows: protocol_version: "/p2p-ai-agents/1.0.0/TextProcessing", agent_version: "rust-libp2p/0.44.2"
+                            // AHA! libp2p's Identify struct fields:
+                            // protocol_version: String, agent_version: String.
+                            // We passed our version string as the first arg to Identify::Config::new.
+                            // The first arg is `protocol_version`!
+                            // So we should check `info.protocol_version`.
+
+                            if info.protocol_version.contains("TextProcessing") {
+                                supported_tasks.push(crate::agent::task::TaskType::TextProcessing);
+                            }
+                             if info.protocol_version.contains("VectorComputation") {
+                                supported_tasks.push(crate::agent::task::TaskType::VectorComputation);
+                            }
+
+                            use crate::network::peers::{PeerInfo, ConnectionStatus, PeerCapabilities};
+                            let peer_info = PeerInfo {
+                                peer_id: PeerId(peer_id.to_string()),
+                                addresses: vec![], // We might want to store observed addr
+                                last_seen: chrono::Utc::now(),
+                                reputation: 50,
+                                capabilities: PeerCapabilities {
+                                    supported_tasks,
+                                },
+                                status: ConnectionStatus::Connected,
+                            };
+                            peer_cache_clone.upsert_peer(peer_info).await;
                         }
                         SwarmEvent::Behaviour(behavior_event) => {
                              // Handle other behavior events
@@ -545,7 +638,7 @@ impl NetworkManager {
     pub async fn send_message(&self, msg: NetworkMessage) {
         // 1. Push to internal queue for testing/debug visibility
         self.messages.lock().await.push(msg.clone());
-        
+
         // 2. Send command to swarm to publish
         if let Some(tx) = &self.command_sender {
             // Note: Gossipsub ignores the specific peer_id in SendMessage when we blindly publish to topic,
@@ -553,16 +646,18 @@ impl NetworkManager {
             // For now, our SendMessage handler in the loop just publishes to the global topic.
             // We need to convert our internal peer ID string to libp2p PeerId if we wanted direct messaging,
             // but for broadcast we just trigger the command.
-            
+
             // We'll create a dummy PeerId since the handler ignores it for now
-            let dummy_peer = Libp2pPeerId::random(); 
-            
-            let _ = tx.send(NetworkCommand::SendMessage {
-                peer_id: dummy_peer,
-                message: msg.content,
-            }).await;
+            let dummy_peer = Libp2pPeerId::random();
+
+            let _ = tx
+                .send(NetworkCommand::SendMessage {
+                    peer_id: dummy_peer,
+                    message: msg.content,
+                })
+                .await;
         } else {
-             error!("Cannot send message: Network not running (command_sender missing)");
+            error!("Cannot send message: Network not running (command_sender missing)");
         }
     }
 

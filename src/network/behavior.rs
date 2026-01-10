@@ -21,8 +21,11 @@ pub struct AgentBehavior {
 }
 
 impl AgentBehavior {
-    /// Create a new AgentBehavior with the given keypair
-    pub fn new(local_key: libp2p::identity::Keypair) -> Result<Self, Box<dyn std::error::Error>> {
+    /// Create a new AgentBehavior with the given keypair and agent version
+    pub fn new(
+        local_key: libp2p::identity::Keypair,
+        agent_version: String,
+    ) -> Result<Self, Box<dyn std::error::Error>> {
         let local_public_key = local_key.public();
         let peer_id = local_public_key.to_peer_id();
         let store = kad::store::MemoryStore::new(peer_id);
@@ -40,17 +43,22 @@ impl AgentBehavior {
             .validation_mode(gossipsub::ValidationMode::Strict)
             .message_id_fn(message_id_fn) // content-address messages
             .build()
-            .map_err(|msg| std::io::Error::new(std::io::ErrorKind::Other, msg))?;
+            .map_err(std::io::Error::other)?;
 
         let gossipsub = gossipsub::Behaviour::new(
             gossipsub::MessageAuthenticity::Signed(local_key),
             gossipsub_config,
         )
-        .map_err(|msg| std::io::Error::new(std::io::ErrorKind::Other, msg))?;
+        .map_err(std::io::Error::other)?;
+
+        // We will customize the agent version to include capabilities string if possible,
+        // but Identify config is static here.
+        // We need to pass the capabilities string to `new`.
+        // Let's change the signature of `new`.
 
         Ok(Self {
             identify: identify::Behaviour::new(identify::Config::new(
-                "/p2p-ai-agents/1.0.0".to_string(),
+                agent_version,
                 local_public_key,
             )),
             mdns: mdns::tokio::Behaviour::new(mdns::Config::default(), peer_id)?,

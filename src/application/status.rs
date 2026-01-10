@@ -133,8 +133,8 @@ impl StatusManager {
             let connected_peers_count = {
                 let network_manager = application.network_manager.read().await;
                 if let Some(nm) = network_manager.as_ref() {
-                     let peers = nm.get_connected_peers().await;
-                     peers.len()
+                    let peers = nm.get_connected_peers().await;
+                    peers.len()
                 } else {
                     0
                 }
@@ -144,17 +144,17 @@ impl StatusManager {
             let connected_peers_count = 0;
 
             // Peers list (separate to handle cfg block easier)
-             #[cfg(feature = "network")]
+            #[cfg(feature = "network")]
             let peers_list = {
-                 let network_manager = application.network_manager.read().await;
+                let network_manager = application.network_manager.read().await;
                 if let Some(nm) = network_manager.as_ref() {
-                     let peers = nm.get_connected_peers().await;
-                     peers.iter().map(|a| a.to_string()).collect()
+                    let peers = nm.get_connected_peers().await;
+                    peers.iter().map(|a| a.to_string()).collect()
                 } else {
                     Vec::new()
                 }
             };
-            
+
             #[cfg(not(feature = "network"))]
             let peers_list = Vec::new();
 

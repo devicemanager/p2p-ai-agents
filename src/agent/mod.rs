@@ -8,13 +8,16 @@ pub mod messaging;
 pub mod task;
 
 use crate::agent::identity::AgentIdentity;
-use crate::agent::task::{Task, TaskId, TaskManager, TaskStatus, TaskType, TextProcessingExecutor, VectorComputationExecutor, TaskExecutor};
 use crate::agent::messaging::{Message, MessageType};
+use crate::agent::task::{
+    Task, TaskExecutor, TaskId, TaskManager, TaskStatus, TaskType, TextProcessingExecutor,
+    VectorComputationExecutor,
+};
 use crate::core::identity::IdentityError;
-use crate::network::{NetworkConfig, NetworkManager, NetworkMessage};
-use tokio::sync::{broadcast, mpsc, Mutex};
-use serde_json::json;
+use crate::network::{NetworkConfig, NetworkManager, NetworkMessage, PeerId as NetworkPeerId};
 use futures::future::{AbortHandle, Abortable};
+use serde_json::json;
+use tokio::sync::{broadcast, mpsc, Mutex};
 
 /// Unique identifier for an Agent.
 pub type AgentId = String;
@@ -24,6 +27,8 @@ pub type AgentId = String;
 pub struct AgentConfig {
     /// The unique name or identifier for the agent.
     pub name: String,
+    /// List of capabilities this agent supports.
+    pub capabilities: Vec<TaskType>,
     // Add other config fields if necessary, currently minimal for compilation
 }
 
@@ -43,10 +48,14 @@ pub struct Agent {
 
 impl Agent {
     /// Creates a new Agent instance.
-    pub fn new(identity: AgentIdentity, config: AgentConfig, network_config: NetworkConfig) -> Self {
+    pub fn new(
+        identity: AgentIdentity,
+        config: AgentConfig,
+        network_config: NetworkConfig,
+    ) -> Self {
         let (shutdown_tx, _) = broadcast::channel(1);
         let network_manager = NetworkManager::new(network_config);
-        
+
         Self {
             identity,
             config,
@@ -55,27 +64,39 @@ impl Agent {
             shutdown_tx,
         }
     }
-    
+
     /// Returns the Agent's ID.
     pub fn id(&self) -> AgentId {
-         // Fallback to name for now, should be DID
-         self.config.name.clone()
+        // Fallback to name for now, should be DID
+        self.config.name.clone()
     }
-    
+
+    /// Finds peers that support a specific task capability.
+    pub async fn find_peers_with_capability(&self, task_type: TaskType) -> Vec<NetworkPeerId> {
+        let network = self.network_manager.lock().await;
+        let connected_peers = network.peer_cache.get_connected_peers().await;
+
+        connected_peers
+            .into_iter()
+            .filter(|p| p.capabilities.supported_tasks.contains(&task_type))
+            .map(|p| p.peer_id)
+            .collect()
+    }
+
     /// Starts the Agent.
     pub async fn start(&self) -> anyhow::Result<()> {
         let _shutdown_rx = self.shutdown_tx.subscribe();
         // Network manager start is handled by the wrapper (DefaultAgent) which wires up the callbacks
         Ok(())
     }
-    
+
     /// Stops the Agent.
     pub async fn stop(&self) -> anyhow::Result<()> {
         let _ = self.shutdown_tx.send(());
         self.network_manager.lock().await.shutdown().await.ok();
         Ok(())
     }
-    
+
     /// Broadcast a message to the network.
     pub async fn broadcast_message(&self, mut message: Message) -> anyhow::Result<()> {
         // Sign the message
@@ -90,13 +111,13 @@ impl Agent {
             to: "broadcast".to_string(),
             content: bytes,
         };
-        // Use send_message which queues it. 
+        // Use send_message which queues it.
         // We need to implement actual sending in NetworkManager.
         // Wait, I updated `NetworkManager` to handle `SendMessage` command via Gossipsub!
         // So we need to push a command.
         // But `NetworkManager::send_message` currently just pushes to a queue for testing.
         // I need to update `NetworkManager::send_message` to send the command.
-        
+
         // Actually, let's look at `NetworkManager`. I didn't update `send_message` method, only the command loop.
         // So `NetworkManager::send_message` still just pushes to internal vector.
         // This is fine for now, but for real broadcast we need to trigger the command.
@@ -113,7 +134,7 @@ impl Agent {
         // Add the task to the manager
         self.task_manager.add_task(task).await
     }
-    
+
     /// Cancels a task.
     pub async fn cancel_task(&self, id: TaskId) -> anyhow::Result<()> {
         self.task_manager.cancel_task(id).await
@@ -122,26 +143,28 @@ impl Agent {
     /// Processes a single pending task if available (for manual execution or testing).
     pub async fn process_next_task(&self) -> anyhow::Result<Option<TaskId>> {
         let next_task = self.task_manager.get_next_pending_task().await;
-        
+
         if let Some(task) = next_task {
             // Update status to Running
-            self.task_manager.update_status(task.id, TaskStatus::Running).await?;
-            
+            self.task_manager
+                .update_status(task.id, TaskStatus::Running)
+                .await?;
+
             let task_manager = self.task_manager.clone(); // Need to clone to move into spawned task
-            // We need to implement clone for TaskManager which uses Arc, so it's cheap.
-            // But TaskManager doesn't derive Clone yet.
-            // Oh, TaskManager fields are Arc, so we can derive Clone in task.rs or impl it.
-            // Let's check task.rs: "tasks: Arc<RwLock<...>>"
-            // Wait, I can't modify task.rs here. I should have checked if TaskManager derives Clone.
-            // It does not derive Clone in the previous read. I need to update task.rs first or manually clone the Arcs if exposed.
-            // Actually, `self.task_manager` is `TaskManager`.
-            // Let's assume I will add `#[derive(Clone)]` to TaskManager in `src/agent/task.rs`.
-            
+                                                          // We need to implement clone for TaskManager which uses Arc, so it's cheap.
+                                                          // But TaskManager doesn't derive Clone yet.
+                                                          // Oh, TaskManager fields are Arc, so we can derive Clone in task.rs or impl it.
+                                                          // Let's check task.rs: "tasks: Arc<RwLock<...>>"
+                                                          // Wait, I can't modify task.rs here. I should have checked if TaskManager derives Clone.
+                                                          // It does not derive Clone in the previous read. I need to update task.rs first or manually clone the Arcs if exposed.
+                                                          // Actually, `self.task_manager` is `TaskManager`.
+                                                          // Let's assume I will add `#[derive(Clone)]` to TaskManager in `src/agent/task.rs`.
+
             let task_id = task.id;
-            
+
             // Create an abort handle for cancellation
             let (abort_handle, abort_registration) = AbortHandle::new_pair();
-            
+
             // Register the handle
             // We need to access register_running_task which I added to TaskManager
             // BUT, `self.task_manager` is not Arc wrapped inside Agent, Agent holds it by value?
@@ -149,42 +172,51 @@ impl Agent {
             // So `self.task_manager` is a struct field.
             // To move it into a closure, we need to clone it.
             // I will update TaskManager to derive Clone.
-            
-            self.task_manager.register_running_task(task_id, abort_handle).await;
+
+            self.task_manager
+                .register_running_task(task_id, abort_handle)
+                .await;
 
             // Spawn the execution
-            let _handle = tokio::spawn(Abortable::new(async move {
-                let result = if let Some(payload) = &task.payload {
-                     match payload.task_type {
-                         TaskType::TextProcessing => {
-                             TextProcessingExecutor.execute(payload).await
-                         }
-                         TaskType::VectorComputation => {
-                             VectorComputationExecutor.execute(payload).await
-                         }
-                         TaskType::Custom(_) => {
-                             // Fallback for custom tasks
-                             tokio::time::sleep(std::time::Duration::from_millis(100)).await;
-                             Ok(json!({"status": "simulated_custom_execution"}))
-                         }
-                     }
-                } else {
-                     // No payload, just simulate work
-                     tokio::time::sleep(std::time::Duration::from_millis(100)).await;
-                     Ok(json!({"status": "no_payload"}))
-                };
-                
-                match result {
-                    Ok(output) => {
-                         // Complete the task with result
-                        let _ = task_manager.update_status(task_id, TaskStatus::Completed(output)).await;
+            let _handle = tokio::spawn(Abortable::new(
+                async move {
+                    let result = if let Some(payload) = &task.payload {
+                        match payload.task_type {
+                            TaskType::TextProcessing => {
+                                TextProcessingExecutor.execute(payload).await
+                            }
+                            TaskType::VectorComputation => {
+                                VectorComputationExecutor.execute(payload).await
+                            }
+                            TaskType::Custom(_) => {
+                                // Fallback for custom tasks
+                                tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+                                Ok(json!({"status": "simulated_custom_execution"}))
+                            }
+                        }
+                    } else {
+                        // No payload, just simulate work
+                        tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+                        Ok(json!({"status": "no_payload"}))
+                    };
+
+                    match result {
+                        Ok(output) => {
+                            // Complete the task with result
+                            let _ = task_manager
+                                .update_status(task_id, TaskStatus::Completed(output))
+                                .await;
+                        }
+                        Err(e) => {
+                            let _ = task_manager
+                                .update_status(task_id, TaskStatus::Failed(e.to_string()))
+                                .await;
+                        }
                     }
-                    Err(e) => {
-                        let _ = task_manager.update_status(task_id, TaskStatus::Failed(e.to_string())).await;
-                    }
-                }
-            }, abort_registration));
-            
+                },
+                abort_registration,
+            ));
+
             Ok(Some(task_id))
         } else {
             Ok(None)
@@ -204,21 +236,42 @@ impl Agent {
     pub async fn handle_message(&self, message: Message) -> anyhow::Result<()> {
         // Verify Signature
         if let (Some(sig), Some(pk_bytes)) = (&message.signature, &message.public_key) {
-             let signable_bytes = message.to_signable_bytes();
-             if let Ok(valid) = self.identity.verify_signature(pk_bytes, &signable_bytes, sig) {
-                 if !valid {
-                     eprintln!("⚠️ Warning: Invalid signature for message from {}", message.sender);
-                     // Reject message
-                     return Err(anyhow::anyhow!("Invalid message signature"));
-                 }
-                 // Signature valid, proceed
-             } else {
-                 eprintln!("⚠️ Warning: Error verifying signature for message from {}", message.sender);
-                 return Err(anyhow::anyhow!("Signature verification error"));
-             }
+            let signable_bytes = message.to_signable_bytes();
+            if let Ok(valid) = self
+                .identity
+                .verify_signature(pk_bytes, &signable_bytes, sig)
+            {
+                if !valid {
+                    eprintln!(
+                        "⚠️ Warning: Invalid signature for message from {}",
+                        message.sender
+                    );
+                    // Reject message
+                    return Err(anyhow::anyhow!("Invalid message signature"));
+                }
+                // Signature valid.
+
+                // Authorization Check: Is the sender trusted?
+                if !self.identity.is_peer_trusted(pk_bytes) {
+                    eprintln!(
+                        "⚠️ Warning: Trusted peer check failed for message from {}",
+                        message.sender
+                    );
+                    return Err(anyhow::anyhow!("Peer not in trust registry"));
+                }
+            } else {
+                eprintln!(
+                    "⚠️ Warning: Error verifying signature for message from {}",
+                    message.sender
+                );
+                return Err(anyhow::anyhow!("Signature verification error"));
+            }
         } else {
-             eprintln!("⚠️ Warning: Unsigned message from {}. Rejecting in secure mode.", message.sender);
-             return Err(anyhow::anyhow!("Missing signature or public key"));
+            eprintln!(
+                "⚠️ Warning: Unsigned message from {}. Rejecting in secure mode.",
+                message.sender
+            );
+            return Err(anyhow::anyhow!("Missing signature or public key"));
         }
 
         match message.content {
@@ -229,12 +282,15 @@ impl Agent {
                 self.submit_task(task).await;
             }
             MessageType::TaskResponse { task_id, status } => {
-                 println!("Agent received TaskResponse for {}: {:?}", task_id, status);
-                 // Update local state if we are tracking this remote task
-                 // (Not yet implemented: tracking remote tasks)
+                println!("Agent received TaskResponse for {}: {:?}", task_id, status);
+                // Update local state if we are tracking this remote task
+                // (Not yet implemented: tracking remote tasks)
             }
             MessageType::Text(text) => {
-                println!("Agent received Text message from {}: {}", message.sender, text);
+                println!(
+                    "Agent received Text message from {}: {}",
+                    message.sender, text
+                );
             }
         }
         Ok(())
@@ -250,8 +306,8 @@ pub enum Error {
     // Add other agent errors here
 }
 
-use std::sync::Arc;
 use crate::core::services::ServiceRegistry;
+use std::sync::Arc;
 
 /// A default implementation of an Agent for testing and examples.
 pub struct DefaultAgent {
@@ -265,7 +321,7 @@ impl DefaultAgent {
     pub async fn new(config: AgentConfig) -> anyhow::Result<Self> {
         // Initialize identity with default depth 20 and initial root 0
         let identity = AgentIdentity::new(20, semaphore::Field::from(0)).await?;
-        
+
         // Create default network config
         let network_config = NetworkConfig {
             listen_addr: "0.0.0.0:0".parse().unwrap(), // Bind to random port
@@ -273,9 +329,9 @@ impl DefaultAgent {
             max_peers: 50,
             protocol_config: crate::network::ProtocolConfig {},
             resource_limits: crate::network::ResourceLimits {
-                 max_bandwidth: 1024 * 1024,
-                 max_memory: 512 * 1024 * 1024,
-                 max_connections: 50,
+                max_bandwidth: 1024 * 1024,
+                max_memory: 512 * 1024 * 1024,
+                max_connections: 50,
             },
             security_config: crate::network::SecurityConfig {
                 trusted_authorities: vec![],
@@ -284,7 +340,7 @@ impl DefaultAgent {
         };
 
         let agent = Arc::new(Agent::new(identity, config, network_config));
-        
+
         Ok(Self {
             agent,
             _service_registry: None,
@@ -292,19 +348,22 @@ impl DefaultAgent {
     }
 
     /// Creates a new DefaultAgent with a provided ServiceRegistry.
-    pub async fn with_services(config: AgentConfig, registry: Arc<ServiceRegistry>) -> anyhow::Result<Self> {
-         let identity = AgentIdentity::new(20, semaphore::Field::from(0)).await?;
-         
-         // Default network config (same as above)
-         let network_config = NetworkConfig {
+    pub async fn with_services(
+        config: AgentConfig,
+        registry: Arc<ServiceRegistry>,
+    ) -> anyhow::Result<Self> {
+        let identity = AgentIdentity::new(20, semaphore::Field::from(0)).await?;
+
+        // Default network config (same as above)
+        let network_config = NetworkConfig {
             listen_addr: "0.0.0.0:0".parse().unwrap(),
             bootstrap_peers: vec![],
             max_peers: 50,
             protocol_config: crate::network::ProtocolConfig {},
             resource_limits: crate::network::ResourceLimits {
-                 max_bandwidth: 1024 * 1024,
-                 max_memory: 512 * 1024 * 1024,
-                 max_connections: 50,
+                max_bandwidth: 1024 * 1024,
+                max_memory: 512 * 1024 * 1024,
+                max_connections: 50,
             },
             security_config: crate::network::SecurityConfig {
                 trusted_authorities: vec![],
@@ -312,38 +371,54 @@ impl DefaultAgent {
             },
         };
 
-         let agent = Arc::new(Agent::new(identity, config, network_config));
+        let agent = Arc::new(Agent::new(identity, config, network_config));
 
-         Ok(Self {
-             agent,
-             _service_registry: Some(registry),
-         })
+        Ok(Self {
+            agent,
+            _service_registry: Some(registry),
+        })
     }
 
     /// Delegate start to the inner Agent and spawn the task loop
     pub async fn start(&self) -> anyhow::Result<()> {
         self.agent.start().await?;
-        
+
         let agent_clone = self.agent.clone();
         let mut shutdown_rx = self.agent.shutdown_tx.subscribe();
-        
+
         // Setup Network Manager & Message Loop
         {
             let mut nm = self.agent.network_manager.lock().await;
-            
+
+            // Construct agent version string with capabilities
+            // e.g. "/p2p-ai-agents/1.0.0/TextProcessor,VectorComputer"
+            let mut version = "/p2p-ai-agents/1.0.0".to_string();
+            if !self.agent.config.capabilities.is_empty() {
+                version.push('/');
+                let caps: Vec<String> = self
+                    .agent
+                    .config
+                    .capabilities
+                    .iter()
+                    .map(|c| c.to_string())
+                    .collect();
+                version.push_str(&caps.join(","));
+            }
+            nm.set_agent_version(version);
+
             // Channel for network messages -> agent
             let (tx, mut rx) = mpsc::channel::<Vec<u8>>(100);
             nm.set_message_callback(tx);
-            
+
             // Start the network manager
             if let Err(e) = nm.start().await {
-                 eprintln!("Failed to start network manager: {:?}", e);
+                eprintln!("Failed to start network manager: {:?}", e);
             }
-            
+
             // Spawn message handler loop
             let agent_msg_clone = agent_clone.clone();
             let mut msg_shutdown_rx = self.agent.shutdown_tx.subscribe();
-            
+
             tokio::spawn(async move {
                 loop {
                     tokio::select! {
@@ -366,7 +441,7 @@ impl DefaultAgent {
                 }
             });
         }
-        
+
         // Spawn background task processing loop
         tokio::spawn(async move {
             loop {
@@ -384,7 +459,7 @@ impl DefaultAgent {
                 }
             }
         });
-        
+
         Ok(())
     }
 
@@ -397,7 +472,7 @@ impl DefaultAgent {
     pub fn id(&self) -> AgentId {
         self.agent.id()
     }
-    
+
     /// Get status (Mock implementation for example)
     pub async fn status(&self) -> anyhow::Result<AgentStatus> {
         Ok(AgentStatus { is_running: true })
@@ -430,20 +505,42 @@ impl DefaultAgent {
 
     /// Get the number of connected peers
     pub async fn connected_peers_count(&self) -> usize {
-        self.agent.network_manager.lock().await.get_connected_peers().await.len()
+        self.agent
+            .network_manager
+            .lock()
+            .await
+            .get_connected_peers()
+            .await
+            .len()
     }
-    
+
     /// Get the listening address(es) of the agent
     pub async fn listen_addresses(&self) -> Vec<String> {
-        let addrs = self.agent.network_manager.lock().await.get_listen_addresses().await;
+        let addrs = self
+            .agent
+            .network_manager
+            .lock()
+            .await
+            .get_listen_addresses()
+            .await;
         addrs.iter().map(|a| a.to_string()).collect()
     }
-    
+
     /// Dial another peer manually
     pub async fn dial(&self, addr: &str) -> anyhow::Result<()> {
         let multiaddr = crate::network::Multiaddr(addr.to_string());
-        self.agent.network_manager.lock().await.dial(multiaddr).await?;
+        self.agent
+            .network_manager
+            .lock()
+            .await
+            .dial(multiaddr)
+            .await?;
         Ok(())
+    }
+
+    /// Expose internal agent for advanced testing (e.g. Identity management)
+    pub fn internal_agent(&self) -> &Arc<Agent> {
+        &self.agent
     }
 }
 

@@ -7,11 +7,13 @@ use std::sync::Arc;
 use tokio::sync::RwLock;
 
 use super::{Multiaddr, PeerId};
+use crate::agent::task::TaskType;
 
 /// Capabilities supported by a peer
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct PeerCapabilities {
-    // Add specific capabilities as needed
+    /// List of tasks this peer can perform
+    pub supported_tasks: Vec<TaskType>,
 }
 
 /// Connection status of a peer

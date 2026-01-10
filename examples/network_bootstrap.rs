@@ -5,9 +5,7 @@
 //! It listens for incoming connections and helps peers discover each other.
 
 use chrono::Utc;
-use p2p_ai_agents::agent::{
-    AgentConfig, DefaultAgent
-};
+use p2p_ai_agents::agent::{AgentConfig, DefaultAgent};
 // use p2p_ai_agents::core::services::ServiceRegistry;
 #[cfg(feature = "network")]
 use p2p_ai_agents::network::{
@@ -58,6 +56,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         // let resource_limits = ...
 
         let config = AgentConfig {
+            capabilities: vec![],
             name: "bootstrap-node".to_string(),
         };
 
@@ -151,6 +150,7 @@ mod tests {
             };
 
             let config = AgentConfig {
+                capabilities: vec![],
                 name: "test-bootstrap".to_string(),
             };
 
