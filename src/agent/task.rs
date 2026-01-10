@@ -22,11 +22,43 @@ pub enum TaskStatus {
     Failed(String),
 }
 
+/// Priority level of a task.
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+pub enum TaskPriority {
+    Low,
+    Normal,
+    High,
+    Critical,
+}
+
+/// Type of task to perform.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub enum TaskType {
+    /// Basic text processing
+    TextProcessing,
+    /// Vector computation
+    VectorComputation,
+    /// Custom task type
+    Custom(String),
+}
+
+/// Payload containing task data.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TaskPayload {
+    pub task_type: TaskType,
+    pub data: serde_json::Value,
+    pub parameters: HashMap<String, serde_json::Value>,
+}
+
 /// A unit of work to be performed by an agent.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Task {
     /// Unique ID of the task.
     pub id: TaskId,
+    /// Priority of the task.
+    pub priority: TaskPriority,
+    /// Task payload.
+    pub payload: Option<TaskPayload>,
     /// Description of the work.
     pub description: String,
     /// Current status.
@@ -35,11 +67,24 @@ pub struct Task {
 }
 
 impl Task {
-    /// Creates a new task.
+    /// Creates a new task with a description (legacy helper).
     pub fn new(description: impl Into<String>) -> Self {
         Self {
             id: Uuid::new_v4(),
+            priority: TaskPriority::Normal,
+            payload: None,
             description: description.into(),
+            status: TaskStatus::Pending,
+        }
+    }
+
+    /// Creates a new task with priority and payload.
+    pub fn with_payload(priority: TaskPriority, payload: TaskPayload) -> Self {
+        Self {
+            id: Uuid::new_v4(),
+            priority,
+            payload: Some(payload),
+            description: String::new(), // Description optional when payload used
             status: TaskStatus::Pending,
         }
     }
@@ -61,6 +106,13 @@ impl TaskManager {
     /// Submits a new task.
     pub async fn submit_task(&self, description: impl Into<String>) -> TaskId {
         let task = Task::new(description);
+        let id = task.id;
+        self.tasks.write().await.insert(id, task);
+        id
+    }
+
+    /// Adds a fully formed task.
+    pub async fn add_task(&self, task: Task) -> TaskId {
         let id = task.id;
         self.tasks.write().await.insert(id, task);
         id

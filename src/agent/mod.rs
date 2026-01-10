@@ -8,6 +8,7 @@ pub mod messaging;
 pub mod task;
 
 use crate::agent::identity::AgentIdentity;
+use crate::agent::task::{Task, TaskId, TaskManager, TaskStatus};
 use crate::core::identity::IdentityError;
 
 /// Unique identifier for an Agent.
@@ -27,12 +28,18 @@ pub struct Agent {
     pub identity: AgentIdentity,
     /// The agent's configuration.
     pub config: AgentConfig,
+    /// The agent's task manager.
+    pub task_manager: TaskManager,
 }
 
 impl Agent {
     /// Creates a new Agent instance.
     pub fn new(identity: AgentIdentity, config: AgentConfig) -> Self {
-        Self { identity, config }
+        Self {
+            identity,
+            config,
+            task_manager: TaskManager::new(),
+        }
     }
     
     /// Returns the Agent's ID.
@@ -51,6 +58,22 @@ impl Agent {
     pub async fn stop(&self) -> anyhow::Result<()> {
         // Implement stop logic
         Ok(())
+    }
+
+    /// Submits a task to the agent.
+    pub async fn submit_task(&self, task: Task) -> TaskId {
+        // For now, we just add it to the manager. 
+        // In the future, this would trigger processing.
+        self.task_manager.add_task(task).await
+    }
+
+    /// Gets the status of a task.
+    pub async fn task_status(&self, id: &TaskId) -> anyhow::Result<TaskStatus> {
+        let task = self.task_manager.get_task(*id).await;
+        match task {
+            Some(t) => Ok(t.status),
+            None => Err(anyhow::anyhow!("Task not found")),
+        }
     }
 }
 
@@ -115,6 +138,16 @@ impl DefaultAgent {
     /// Get status (Mock implementation for example)
     pub async fn status(&self) -> anyhow::Result<AgentStatus> {
         Ok(AgentStatus { is_running: true })
+    }
+
+    /// Submit a task to the agent
+    pub async fn submit_task(&self, task: Task) -> anyhow::Result<TaskId> {
+        Ok(self.agent.submit_task(task).await)
+    }
+
+    /// Get the status of a submitted task
+    pub async fn task_status(&self, id: &TaskId) -> anyhow::Result<TaskStatus> {
+        self.agent.task_status(id).await
     }
 }
 

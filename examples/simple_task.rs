@@ -4,15 +4,16 @@
 //! This example demonstrates the task submission and status tracking API.
 //! Note: Full task processing is not yet implemented in this version.
 
-use p2p_ai_agents::agent::{
-    Agent, AgentConfig, AgentId, DefaultAgent, ResourceLimits, Task, TaskPayload, TaskPriority,
-    TaskType,
+use p2p_ai_agents::agent::task::{
+    Task, TaskPayload, TaskPriority, TaskType, TaskStatus
 };
-use p2p_ai_agents::core::services::ServiceRegistry;
+use p2p_ai_agents::agent::{
+    AgentConfig, DefaultAgent, ResourceLimits
+};
 use serde_json::json;
 use std::collections::HashMap;
 use std::error::Error;
-use std::sync::Arc;
+// use std::sync::Arc; // ServiceRegistry not needed anymore
 use std::time::Duration;
 use tokio::time::sleep;
 
@@ -22,18 +23,20 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     // Initialize agent with task processing capabilities
     let config = AgentConfig {
-        id: AgentId::from_string("task-processor".to_string()),
-        network_port: 8080,
-        resource_limits: ResourceLimits {
-            max_cpu: 0.7,
-            max_memory: 1024 * 1024 * 1024,
-            max_storage: 10 * 1024 * 1024 * 1024,
-            max_bandwidth: 1024 * 1024,
-            max_connections: 50,
-        },
+        name: "task-processor".to_string(),
+        // id, network_port, resource_limits moved or removed
     };
 
-    let agent = DefaultAgent::new(config, Arc::new(ServiceRegistry::new())).await?;
+    // Define resource limits for the example context (not used by agent core yet)
+    let _resource_limits = ResourceLimits {
+        max_cpu: 0.7,
+        max_memory: 1024 * 1024 * 1024,
+        max_storage: 10 * 1024 * 1024 * 1024,
+        max_bandwidth: 1024 * 1024,
+        max_connections: 50,
+    };
+
+    let agent = DefaultAgent::new(config).await?;
     agent.start().await?;
     println!("✅ Agent ready for task processing\n");
 
@@ -48,7 +51,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         parameters: HashMap::new(),
     };
 
-    let text_task = Task::new(TaskPriority::Normal, text_payload);
+    let text_task = Task::with_payload(TaskPriority::Normal, text_payload);
     let task1_id = agent.submit_task(text_task).await?;
     println!("  📤 Submitted task: {}", task1_id);
 
@@ -64,7 +67,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         parameters: HashMap::new(),
     };
 
-    let vector_task = Task::new(TaskPriority::High, vector_payload);
+    let vector_task = Task::with_payload(TaskPriority::High, vector_payload);
     let task2_id = agent.submit_task(vector_task).await?;
     println!("  📤 Submitted task: {}", task2_id);
 
@@ -81,7 +84,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
             parameters: HashMap::new(),
         };
 
-        let task = Task::new(TaskPriority::Normal, payload);
+        let task = Task::with_payload(TaskPriority::Normal, payload);
         let task_id = agent.submit_task(task).await?;
         println!("  ✅ Submitted task: {}", task_id);
         batch_ids.push(task_id);
@@ -114,7 +117,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     // Demonstrate task priority concept
     println!("\n🎯 Example 4: Task Priority");
-    let low_priority = Task::new(
+    let low_priority = Task::with_payload(
         TaskPriority::Low,
         TaskPayload {
             task_type: TaskType::TextProcessing,
@@ -123,7 +126,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         },
     );
 
-    let high_priority = Task::new(
+    let high_priority = Task::with_payload(
         TaskPriority::High,
         TaskPayload {
             task_type: TaskType::TextProcessing,
@@ -140,7 +143,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     // Demonstrate task cancellation
     println!("\n⏱️  Example 5: Task Cancellation");
-    let long_task = Task::new(
+    let long_task = Task::with_payload(
         TaskPriority::Normal,
         TaskPayload {
             task_type: TaskType::Custom("long_running".to_string()),
@@ -159,7 +162,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     // Demonstrate task payload access
     println!("\n📋 Example 6: Task Payload Access");
-    let custom_task = Task::new(
+    let custom_task = Task::with_payload(
         TaskPriority::Normal,
         TaskPayload {
             task_type: TaskType::Custom("demo".to_string()),
@@ -205,18 +208,12 @@ mod tests {
     #[tokio::test]
     async fn test_task_submission() -> Result<(), Box<dyn Error>> {
         let config = AgentConfig {
-            id: AgentId::from_string("test-task-agent".to_string()),
-            network_port: 8080,
-            resource_limits: ResourceLimits {
-                max_cpu: 0.5,
-                max_memory: 512 * 1024 * 1024,
-                max_storage: 1024 * 1024 * 1024,
-                max_bandwidth: 256 * 1024,
-                max_connections: 50,
-            },
+            name: "test-task-agent".to_string(),
         };
 
-        let agent = DefaultAgent::new(config, Arc::new(ServiceRegistry::new())).await?;
+        // Limits omitted
+        
+        let agent = DefaultAgent::new(config).await?;
         agent.start().await?;
 
         // Test basic task submission
@@ -226,7 +223,7 @@ mod tests {
             parameters: HashMap::new(),
         };
 
-        let task = Task::new(TaskPriority::Normal, payload);
+        let task = Task::with_payload(TaskPriority::Normal, payload);
         let task_id = agent.submit_task(task).await?;
 
         assert!(!task_id.to_string().is_empty());
@@ -242,18 +239,10 @@ mod tests {
     #[tokio::test]
     async fn test_task_priorities() -> Result<(), Box<dyn Error>> {
         let config = AgentConfig {
-            id: AgentId::new(),
-            network_port: 8080,
-            resource_limits: ResourceLimits {
-                max_cpu: 0.8,
-                max_memory: 1024 * 1024 * 1024,
-                max_storage: 10 * 1024 * 1024 * 1024,
-                max_bandwidth: 1024 * 1024,
-                max_connections: 50,
-            },
+            name: "test-task-agent-priority".to_string(),
         };
 
-        let agent = DefaultAgent::new(config, Arc::new(ServiceRegistry::new())).await?;
+        let agent = DefaultAgent::new(config).await?;
         agent.start().await?;
 
         // Test all priority levels
@@ -272,7 +261,7 @@ mod tests {
                 parameters: HashMap::new(),
             };
 
-            let task = Task::new(priority, payload);
+            let task = Task::with_payload(priority, payload);
             let task_id = agent.submit_task(task).await?;
             task_ids.push(task_id);
         }

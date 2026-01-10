@@ -3,9 +3,8 @@
 //! This example demonstrates the improved architectural patterns including
 //! dependency injection, event-driven architecture, and service management.
 
-use p2p_ai_agents::agent::{DefaultAgent, ResourceLimits};
+use p2p_ai_agents::agent::identity::AgentIdentity;
 use p2p_ai_agents::core::events::{AgentStarted, TaskCompleted};
-use p2p_ai_agents::core::services::ServiceRegistry;
 use p2p_ai_agents::prelude::*;
 use p2p_ai_agents::service_factory;
 use std::any::Any;
@@ -21,7 +20,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("==================================");
 
     // Create the application
-    let app = Application::new();
+    let app = Arc::new(Application::new());
 
     // Initialize the application
     println!("📋 Initializing application...");
@@ -114,22 +113,18 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Create a demo agent
     let agent_config = AgentConfig {
-        id: AgentId::new(),
-        network_port: 8080,
-        resource_limits: ResourceLimits {
-            max_cpu: 0.5,
-            max_memory: 512 * 1024 * 1024,       // 512MB
-            max_storage: 5 * 1024 * 1024 * 1024, // 5GB
-            max_bandwidth: 512 * 1024,           // 512KB/s
-            max_connections: 50,
-        },
+        name: "architecture-demo-agent".to_string(),
     };
 
-    let agent = Arc::new(DefaultAgent::new(agent_config, Arc::new(ServiceRegistry::new())).await?);
+    // Initialize identity for the agent
+    let identity = AgentIdentity::new(20, semaphore::Field::from(0)).await?;
+    let agent = Arc::new(Agent::new(identity, agent_config));
+    
     app.add_agent(agent.clone()).await?;
 
     println!("Added agent: {}", agent.id());
-    println!("Agent status: {:?}", agent.status().await?);
+    // Note: status() is part of DefaultAgent, not the base Agent struct currently
+    // println!("Agent status: {:?}", agent.status().await?);
 
     // Register the application with the network
     println!("\n📡 Registering Application");

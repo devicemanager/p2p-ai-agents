@@ -49,7 +49,10 @@ fn test_network_config_creation() {
             max_memory: 512 * 1024 * 1024,
             max_connections: 100,
         },
-        security_config: SecurityConfig {},
+        security_config: SecurityConfig {
+            trusted_authorities: vec![],
+            local_certificate: None,
+        },
     };
 
     // Test passes if NetworkConfig can be created without panicking

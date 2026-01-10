@@ -4,15 +4,17 @@
 //! and produce the expected behavior.
 
 use p2p_ai_agents::agent::{
-    Agent, AgentConfig, AgentId, DefaultAgent, ResourceLimits, Task, TaskPayload, TaskPriority,
-    TaskStatus, TaskType,
+    Agent, AgentConfig, AgentId, DefaultAgent, ResourceLimits,
 };
-use p2p_ai_agents::core::services::ServiceRegistry;
+use p2p_ai_agents::agent::task::{
+    Task, TaskPayload, TaskPriority, TaskStatus, TaskType,
+};
+// use p2p_ai_agents::core::services::ServiceRegistry;
 use serde_json::json;
 use std::collections::HashMap;
 use std::error::Error;
 use std::process::Command;
-use std::sync::Arc;
+// use std::sync::Arc;
 use std::time::Duration;
 use tokio::time::sleep;
 
@@ -77,20 +79,11 @@ async fn test_network_examples_compiles() -> Result<(), Box<dyn Error>> {
 #[tokio::test]
 async fn test_hello_agent_runs() -> Result<(), Box<dyn Error>> {
     // Test that hello_agent runs successfully
-    let agent_id = AgentId::from_string("test-hello-agent".to_string());
     let config = AgentConfig {
-        id: agent_id.clone(),
-        network_port: 8080,
-        resource_limits: ResourceLimits {
-            max_cpu: 0.3,
-            max_memory: 256 * 1024 * 1024,
-            max_storage: 512 * 1024 * 1024,
-            max_bandwidth: 512 * 1024,
-            max_connections: 50,
-        },
+        name: "test-hello-agent".to_string(),
     };
 
-    let agent = DefaultAgent::new(config, Arc::new(ServiceRegistry::new())).await?;
+    let agent = DefaultAgent::new(config).await?;
     agent.start().await?;
 
     // Verify agent identity
@@ -107,20 +100,11 @@ async fn test_hello_agent_runs() -> Result<(), Box<dyn Error>> {
 #[tokio::test]
 async fn test_task_processing_workflow() -> Result<(), Box<dyn Error>> {
     // Integration test for simple_task example workflow
-    let agent_id = AgentId::from_string("test-task-agent".to_string());
     let config = AgentConfig {
-        id: agent_id,
-        network_port: 8080,
-        resource_limits: ResourceLimits {
-            max_cpu: 0.4,
-            max_memory: 512 * 1024 * 1024,
-            max_storage: 1024 * 1024 * 1024,
-            max_bandwidth: 1024 * 1024,
-            max_connections: 50,
-        },
+        name: "test-task-agent".to_string(),
     };
 
-    let agent = DefaultAgent::new(config, Arc::new(ServiceRegistry::new())).await?;
+    let agent = DefaultAgent::new(config).await?;
     agent.start().await?;
 
     // Test text processing task
@@ -133,7 +117,7 @@ async fn test_task_processing_workflow() -> Result<(), Box<dyn Error>> {
         parameters: HashMap::new(),
     };
 
-    let task = Task::new(TaskPriority::Normal, payload);
+    let task = Task::with_payload(TaskPriority::Normal, payload);
     let task_id = agent.submit_task(task).await?;
 
     // Since task execution is not fully implemented, just verify the task was submitted
@@ -162,20 +146,11 @@ async fn test_task_processing_workflow() -> Result<(), Box<dyn Error>> {
 #[tokio::test]
 async fn test_batch_task_processing() -> Result<(), Box<dyn Error>> {
     // Test batch processing from simple_task example
-    let agent_id = AgentId::from_string("test-batch-agent".to_string());
     let config = AgentConfig {
-        id: agent_id,
-        network_port: 8080,
-        resource_limits: ResourceLimits {
-            max_cpu: 0.5,
-            max_memory: 512 * 1024 * 1024,
-            max_storage: 1024 * 1024 * 1024,
-            max_bandwidth: 1024 * 1024,
-            max_connections: 50,
-        },
+        name: "test-batch-agent".to_string(),
     };
 
-    let agent = DefaultAgent::new(config, Arc::new(ServiceRegistry::new())).await?;
+    let agent = DefaultAgent::new(config).await?;
     agent.start().await?;
 
     // Submit multiple tasks
@@ -192,7 +167,7 @@ async fn test_batch_task_processing() -> Result<(), Box<dyn Error>> {
             parameters: HashMap::new(),
         };
 
-        let task = Task::new(TaskPriority::Normal, payload);
+        let task = Task::with_payload(TaskPriority::Normal, payload);
         let task_id = agent.submit_task(task).await?;
         task_ids.push(task_id);
     }
@@ -215,20 +190,11 @@ async fn test_task_cancellation() -> Result<(), Box<dyn Error>> {
     // Note: Task cancellation is not yet implemented in the current API
     // This is a placeholder test for when the functionality is added
 
-    let agent_id = AgentId::from_string("test-cancel-agent".to_string());
     let config = AgentConfig {
-        id: agent_id,
-        network_port: 8080,
-        resource_limits: ResourceLimits {
-            max_cpu: 0.3,
-            max_memory: 256 * 1024 * 1024,
-            max_storage: 512 * 1024 * 1024,
-            max_bandwidth: 512 * 1024,
-            max_connections: 50,
-        },
+        name: "test-cancel-agent".to_string(),
     };
 
-    let agent = DefaultAgent::new(config, Arc::new(ServiceRegistry::new())).await?;
+    let agent = DefaultAgent::new(config).await?;
     agent.start().await?;
 
     // Create a task
@@ -238,7 +204,7 @@ async fn test_task_cancellation() -> Result<(), Box<dyn Error>> {
         parameters: HashMap::new(),
     };
 
-    let task = Task::new(TaskPriority::Normal, payload);
+    let task = Task::with_payload(TaskPriority::Normal, payload);
     let task_id = agent.submit_task(task).await?;
 
     // Note: Task cancellation is not yet implemented
@@ -255,34 +221,16 @@ async fn test_network_peer_communication() -> Result<(), Box<dyn Error>> {
     // Note: The current network API has changed significantly
     // This test demonstrates basic agent initialization
 
-    let agent_id1 = AgentId::from_string("net-test-1".to_string());
     let config1 = AgentConfig {
-        id: agent_id1,
-        network_port: 8080,
-        resource_limits: ResourceLimits {
-            max_cpu: 0.3,
-            max_memory: 256 * 1024 * 1024,
-            max_storage: 512 * 1024 * 1024,
-            max_bandwidth: 512 * 1024,
-            max_connections: 50,
-        },
+        name: "net-test-1".to_string(),
     };
 
-    let agent_id2 = AgentId::from_string("net-test-2".to_string());
     let config2 = AgentConfig {
-        id: agent_id2,
-        network_port: 8080,
-        resource_limits: ResourceLimits {
-            max_cpu: 0.3,
-            max_memory: 256 * 1024 * 1024,
-            max_storage: 512 * 1024 * 1024,
-            max_bandwidth: 512 * 1024,
-            max_connections: 50,
-        },
+        name: "net-test-2".to_string(),
     };
 
-    let agent1 = DefaultAgent::new(config1, Arc::new(ServiceRegistry::new())).await?;
-    let agent2 = DefaultAgent::new(config2, Arc::new(ServiceRegistry::new())).await?;
+    let agent1 = DefaultAgent::new(config1).await?;
+    let agent2 = DefaultAgent::new(config2).await?;
 
     agent1.start().await?;
     agent2.start().await?;
@@ -301,25 +249,16 @@ async fn test_network_peer_communication() -> Result<(), Box<dyn Error>> {
 #[tokio::test]
 async fn test_complete_workflow_integration() -> Result<(), Box<dyn Error>> {
     // Complete workflow test combining multiple examples
-    let agent_id = AgentId::from_string("integration-test-agent".to_string());
     let config = AgentConfig {
-        id: agent_id,
-        network_port: 8080,
-        resource_limits: ResourceLimits {
-            max_cpu: 0.6,
-            max_memory: 1024 * 1024 * 1024,
-            max_storage: 2048 * 1024 * 1024,
-            max_bandwidth: 2048 * 1024,
-            max_connections: 50,
-        },
+        name: "integration-test-agent".to_string(),
     };
 
-    let agent = DefaultAgent::new(config, Arc::new(ServiceRegistry::new())).await?;
+    let agent = DefaultAgent::new(config).await?;
     agent.start().await?;
 
     // Create and process multiple task types
     let tasks = vec![
-        Task::new(
+        Task::with_payload(
             TaskPriority::Normal,
             TaskPayload {
                 task_type: TaskType::TextProcessing,
@@ -327,7 +266,7 @@ async fn test_complete_workflow_integration() -> Result<(), Box<dyn Error>> {
                 parameters: HashMap::new(),
             },
         ),
-        Task::new(
+        Task::with_payload(
             TaskPriority::High,
             TaskPayload {
                 task_type: TaskType::VectorComputation,
@@ -335,7 +274,7 @@ async fn test_complete_workflow_integration() -> Result<(), Box<dyn Error>> {
                 parameters: HashMap::new(),
             },
         ),
-        Task::new(
+        Task::with_payload(
             TaskPriority::Low,
             TaskPayload {
                 task_type: TaskType::Custom("test".to_string()),
