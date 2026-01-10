@@ -107,7 +107,7 @@ impl MetricsCollector {
 
     /// Record a received message
     pub fn record_message_received(&self) {
-        MESSAGES_RECEIVED_TOTAL.with_label_values(&[]).inc();
+        MESSAGES_RECEIVED_TOTAL.with_label_values(&[""; 0]).inc();
         debug!("Recorded message received");
     }
 
@@ -115,7 +115,7 @@ impl MetricsCollector {
     pub fn record_message_duration(&self, duration_ms: u64) {
         let duration_seconds = duration_ms as f64 / 1000.0;
         MESSAGE_PROCESSING_DURATION
-            .with_label_values(&[])
+            .with_label_values(&[""; 0])
             .observe(duration_seconds);
         debug!("Recorded message processing duration: {}ms", duration_ms);
     }
@@ -210,6 +210,7 @@ async fn handle_request(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use prometheus::proto_ext::MessageFieldExt;
 
     #[test]
     fn test_metrics_config_default() {
@@ -234,11 +235,11 @@ mod tests {
         let metrics_before = prometheus::gather();
         let storage_before = metrics_before
             .iter()
-            .find(|m| m.get_name() == "storage_operations_total")
+            .find(|m| m.name() == "storage_operations_total")
             .map(|m| {
-                m.get_metric()
+                m.metric
                     .iter()
-                    .map(|m| m.get_counter().get_value())
+                    .map(|m| m.counter.get_value())
                     .sum::<f64>()
             })
             .unwrap_or(0.0);
@@ -250,11 +251,11 @@ mod tests {
         let metrics_after = prometheus::gather();
         let storage_after = metrics_after
             .iter()
-            .find(|m| m.get_name() == "storage_operations_total")
+            .find(|m| m.name() == "storage_operations_total")
             .map(|m| {
-                m.get_metric()
+                m.metric
                     .iter()
-                    .map(|m| m.get_counter().get_value())
+                    .map(|m| m.counter.get_value())
                     .sum::<f64>()
             })
             .unwrap_or(0.0);
@@ -269,7 +270,7 @@ mod tests {
         // Verify histogram buckets populated
         let duration_metric = metrics_after
             .iter()
-            .find(|m| m.get_name() == "storage_operation_duration_seconds");
+            .find(|m| m.name() == "storage_operation_duration_seconds");
         assert!(
             duration_metric.is_some(),
             "storage duration histogram should exist"
@@ -285,11 +286,11 @@ mod tests {
         let metrics_before = prometheus::gather();
         let messages_before = metrics_before
             .iter()
-            .find(|m| m.get_name() == "messages_received_total")
+            .find(|m| m.name() == "messages_received_total")
             .map(|m| {
-                m.get_metric()
+                m.metric
                     .first()
-                    .map(|m| m.get_counter().get_value())
+                    .map(|m| m.counter.get_value())
                     .unwrap_or(0.0)
             })
             .unwrap_or(0.0);
@@ -301,11 +302,11 @@ mod tests {
         let metrics_after = prometheus::gather();
         let messages_after = metrics_after
             .iter()
-            .find(|m| m.get_name() == "messages_received_total")
+            .find(|m| m.name() == "messages_received_total")
             .map(|m| {
-                m.get_metric()
+                m.metric
                     .first()
-                    .map(|m| m.get_counter().get_value())
+                    .map(|m| m.counter.get_value())
                     .unwrap_or(0.0)
             })
             .unwrap_or(0.0);
@@ -319,7 +320,7 @@ mod tests {
         // Verify histogram exists and has observations
         let duration_metric = metrics_after
             .iter()
-            .find(|m| m.get_name() == "message_processing_duration_seconds");
+            .find(|m| m.name() == "message_processing_duration_seconds");
         assert!(
             duration_metric.is_some(),
             "message duration histogram should exist"
@@ -340,23 +341,23 @@ mod tests {
 
         let peers_gauge = metrics
             .iter()
-            .find(|m| m.get_name() == "agent_peers_connected")
-            .and_then(|m| m.get_metric().first())
-            .map(|m| m.get_gauge().get_value());
+            .find(|m| m.name() == "agent_peers_connected")
+            .and_then(|m| m.metric.first())
+            .map(|m| m.gauge.get_value());
         assert_eq!(peers_gauge, Some(5.0), "peers gauge should be set to 5");
 
         let cpu_gauge = metrics
             .iter()
-            .find(|m| m.get_name() == "process_cpu_usage")
-            .and_then(|m| m.get_metric().first())
-            .map(|m| m.get_gauge().get_value());
+            .find(|m| m.name() == "process_cpu_usage")
+            .and_then(|m| m.metric.first())
+            .map(|m| m.gauge.get_value());
         assert_eq!(cpu_gauge, Some(25.5), "CPU gauge should be set to 25.5");
 
         let memory_gauge = metrics
             .iter()
-            .find(|m| m.get_name() == "process_memory_bytes")
-            .and_then(|m| m.get_metric().first())
-            .map(|m| m.get_gauge().get_value());
+            .find(|m| m.name() == "process_memory_bytes")
+            .and_then(|m| m.metric.first())
+            .map(|m| m.gauge.get_value());
         assert_eq!(
             memory_gauge,
             Some(104857600.0),
