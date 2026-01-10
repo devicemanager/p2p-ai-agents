@@ -1,10 +1,27 @@
 //! Messaging module for Agent communication.
 
+use crate::agent::task::{Task, TaskId, TaskStatus};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 /// Unique identifier for a message.
 pub type MessageId = Uuid;
+
+/// Types of messages in the Agent Protocol.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum MessageType {
+    /// Request to execute a task.
+    TaskRequest(Task),
+    /// Response with task status/result.
+    TaskResponse {
+        /// ID of the task.
+        task_id: TaskId,
+        /// Current status/result of the task.
+        status: TaskStatus,
+    },
+    /// Generic text message (legacy/chat).
+    Text(String),
+}
 
 /// A message exchanged between agents.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -15,23 +32,42 @@ pub struct Message {
     pub sender: String,
     /// ID of the recipient agent (or "broadcast").
     pub recipient: String,
-    /// The content type or subject of the message.
-    pub subject: String,
-    /// The actual payload of the message (JSON string for now).
-    pub payload: String,
+    /// The content of the message.
+    pub content: MessageType,
     /// Timestamp of creation.
     pub timestamp: chrono::DateTime<chrono::Utc>,
 }
 
 impl Message {
-    /// Creates a new message.
-    pub fn new(sender: impl Into<String>, recipient: impl Into<String>, subject: impl Into<String>, payload: impl Into<String>) -> Self {
+    /// Creates a new generic text message.
+    pub fn new_text(sender: impl Into<String>, recipient: impl Into<String>, text: impl Into<String>) -> Self {
         Self {
             id: Uuid::new_v4(),
             sender: sender.into(),
             recipient: recipient.into(),
-            subject: subject.into(),
-            payload: payload.into(),
+            content: MessageType::Text(text.into()),
+            timestamp: chrono::Utc::now(),
+        }
+    }
+    
+    /// Creates a task request message.
+    pub fn new_task_request(sender: impl Into<String>, recipient: impl Into<String>, task: Task) -> Self {
+        Self {
+            id: Uuid::new_v4(),
+            sender: sender.into(),
+            recipient: recipient.into(),
+            content: MessageType::TaskRequest(task),
+            timestamp: chrono::Utc::now(),
+        }
+    }
+
+    /// Creates a task response message.
+    pub fn new_task_response(sender: impl Into<String>, recipient: impl Into<String>, task_id: TaskId, status: TaskStatus) -> Self {
+        Self {
+            id: Uuid::new_v4(),
+            sender: sender.into(),
+            recipient: recipient.into(),
+            content: MessageType::TaskResponse { task_id, status },
             timestamp: chrono::Utc::now(),
         }
     }
@@ -52,11 +88,11 @@ impl Messenger {
     pub async fn send(&self, message: &Message) -> anyhow::Result<()> {
         // Placeholder: Log the message sending
         tracing::info!(
-            "Messenger: Sending message {} from {} to {} [{}]",
+            "Messenger: Sending message {} from {} to {} [Type: {:?}]",
             message.id,
             message.sender,
             message.recipient,
-            message.subject
+            message.content
         );
         Ok(())
     }

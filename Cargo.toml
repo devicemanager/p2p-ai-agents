@@ -16,6 +16,7 @@ thiserror = "1.0"
 anyhow = "1.0"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
+futures = { version = "0.3", optional = false } # Moved to core as it is used in agent/mod.rs
 
 # Cryptography
 identity_iota = { version = "1.0.0-rc.7", features = ["memstore", "client"] }
@@ -80,8 +81,7 @@ criterion = "0.5"
 mockall = "0.12"
 
 # Network
-libp2p = { version = "0.56", features = ["tokio", "tcp", "dns", "websocket", "noise", "yamux", "ping", "identify", "kad", "mdns", "macros"], optional = true }
-futures = { version = "0.3", optional = true }
+libp2p = { version = "0.53", features = ["tokio", "tcp", "dns", "websocket", "noise", "yamux", "ping", "identify", "kad", "mdns", "gossipsub", "macros"], optional = true }
 bytes = { version = "1.5", optional = true }
 age = { version = "0.11", features = ["armor", "ssh", "cli-common"] }
 lru = "0.16"
@@ -110,7 +110,7 @@ debug = true
 [features]
 default = []
 full = ["network", "storage", "cli", "metrics-prometheus"]
-network = ["libp2p", "futures", "bytes"]
+network = ["libp2p", "bytes"]
 storage = []
 storage-supabase = ["postgrest", "reqwest", "url"]
 storage-redis = ["redis"]
@@ -133,6 +133,11 @@ path = "examples/network_bootstrap.rs"
 [[example]]
 name = "network_peer"
 path = "examples/network_peer.rs"
+
+[[example]]
+name = "network_task"
+path = "examples/network_task.rs"
+required-features = ["network"]
 
 [[example]]
 name = "architecture_demo"

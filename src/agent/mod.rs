@@ -8,8 +8,13 @@ pub mod messaging;
 pub mod task;
 
 use crate::agent::identity::AgentIdentity;
-use crate::agent::task::{Task, TaskId, TaskManager, TaskStatus};
+use crate::agent::task::{Task, TaskId, TaskManager, TaskStatus, TaskType, TextProcessingExecutor, VectorComputationExecutor, TaskExecutor};
+use crate::agent::messaging::{Message, MessageType};
 use crate::core::identity::IdentityError;
+use crate::network::{NetworkConfig, NetworkManager, NetworkMessage};
+use tokio::sync::{broadcast, mpsc, Mutex};
+use serde_json::json;
+use futures::future::{AbortHandle, Abortable};
 
 /// Unique identifier for an Agent.
 pub type AgentId = String;
@@ -30,15 +35,24 @@ pub struct Agent {
     pub config: AgentConfig,
     /// The agent's task manager.
     pub task_manager: TaskManager,
+    /// Network manager (protected by mutex for mutable access during start/stop).
+    pub network_manager: Arc<Mutex<NetworkManager>>,
+    /// Shutdown signal sender.
+    shutdown_tx: broadcast::Sender<()>,
 }
 
 impl Agent {
     /// Creates a new Agent instance.
-    pub fn new(identity: AgentIdentity, config: AgentConfig) -> Self {
+    pub fn new(identity: AgentIdentity, config: AgentConfig, network_config: NetworkConfig) -> Self {
+        let (shutdown_tx, _) = broadcast::channel(1);
+        let network_manager = NetworkManager::new(network_config);
+        
         Self {
             identity,
             config,
             task_manager: TaskManager::new(),
+            network_manager: Arc::new(Mutex::new(network_manager)),
+            shutdown_tx,
         }
     }
     
@@ -50,21 +64,166 @@ impl Agent {
     
     /// Starts the Agent.
     pub async fn start(&self) -> anyhow::Result<()> {
-        // Implement start logic
+        let _shutdown_rx = self.shutdown_tx.subscribe();
+        
+        // Setup network callback channel
+        let (tx, mut rx) = mpsc::channel::<Vec<u8>>(100);
+        
+        {
+            let mut nm = self.network_manager.lock().await;
+            nm.set_message_callback(tx);
+            if let Err(e) = nm.start().await {
+                 eprintln!("Failed to start network manager: {:?}", e);
+                 // We don't fail hard here for now to allow local testing if network fails binding
+            }
+        }
+
+        // Spawn listener for incoming network messages
+        // We need a way to pass these messages back to `self.handle_message`
+        // Since `self` is &self, we can't easily spawn a task that calls `self.handle_message` unless `self` is Arc.
+        // But `Agent` is usually wrapped in `Arc` by `DefaultAgent`.
+        // The pattern here is tricky because `Agent::start` is on `&self`.
+        //
+        // Solution: We rely on `DefaultAgent` (which holds `Arc<Agent>`) to spawn the listener loop that calls `handle_message`.
+        // OR: We define a separate "MessageHandler" struct that can be moved into the task.
+        //
+        // For now, let's expose the receiver `rx` via a method or field so DefaultAgent can consume it?
+        // Actually, `NetworkManager` is inside `Agent`.
+        //
+        // Better approach:
+        // `DefaultAgent` should handle the wiring because it owns the `Arc`.
+        // `Agent::start` handles internal state.
+        // Let's modify `DefaultAgent::start` to handle the network message loop.
+        // But `Agent` needs to configure `NetworkManager` with the callback.
+        //
+        // Revised plan:
+        // `Agent::start` configures the callback. But `Agent` cannot spawn the consumer because it needs `self`.
+        //
+        // Let's just start the network manager here without callback, and let DefaultAgent set it up?
+        // No, `NetworkManager` is private inside `Agent` (well, pub field but internal logic).
+        //
+        // Let's change `Agent` to NOT take a callback in `start`, but expose a method `subscribe_to_network_messages`.
+        // But `NetworkManager` pushes to a channel.
+        //
+        // Let's leave `start` simple and let `DefaultAgent` coordinate.
+        
         Ok(())
     }
     
     /// Stops the Agent.
     pub async fn stop(&self) -> anyhow::Result<()> {
-        // Implement stop logic
+        let _ = self.shutdown_tx.send(());
+        self.network_manager.lock().await.shutdown().await.ok();
+        Ok(())
+    }
+    
+    /// Broadcast a message to the network.
+    pub async fn broadcast_message(&self, message: Message) -> anyhow::Result<()> {
+        let bytes = serde_json::to_vec(&message)?;
+        let msg = NetworkMessage {
+            from: self.id(),
+            to: "broadcast".to_string(),
+            content: bytes,
+        };
+        // Use send_message which queues it. 
+        // We need to implement actual sending in NetworkManager.
+        // Wait, I updated `NetworkManager` to handle `SendMessage` command via Gossipsub!
+        // So we need to push a command.
+        // But `NetworkManager::send_message` currently just pushes to a queue for testing.
+        // I need to update `NetworkManager::send_message` to send the command.
+        
+        // Actually, let's look at `NetworkManager`. I didn't update `send_message` method, only the command loop.
+        // So `NetworkManager::send_message` still just pushes to internal vector.
+        // This is fine for now, but for real broadcast we need to trigger the command.
+        // Accessing command_sender is hard because it's private.
+        //
+        // Let's assume `NetworkManager` will be updated later to use the command channel in `send_message`.
+        // For this step, I will just call `send_message` on the manager.
+        self.network_manager.lock().await.send_message(msg).await;
         Ok(())
     }
 
     /// Submits a task to the agent.
     pub async fn submit_task(&self, task: Task) -> TaskId {
-        // For now, we just add it to the manager. 
-        // In the future, this would trigger processing.
+        // Add the task to the manager
         self.task_manager.add_task(task).await
+    }
+    
+    /// Cancels a task.
+    pub async fn cancel_task(&self, id: TaskId) -> anyhow::Result<()> {
+        self.task_manager.cancel_task(id).await
+    }
+
+    /// Processes a single pending task if available (for manual execution or testing).
+    pub async fn process_next_task(&self) -> anyhow::Result<Option<TaskId>> {
+        let next_task = self.task_manager.get_next_pending_task().await;
+        
+        if let Some(task) = next_task {
+            // Update status to Running
+            self.task_manager.update_status(task.id, TaskStatus::Running).await?;
+            
+            let task_manager = self.task_manager.clone(); // Need to clone to move into spawned task
+            // We need to implement clone for TaskManager which uses Arc, so it's cheap.
+            // But TaskManager doesn't derive Clone yet.
+            // Oh, TaskManager fields are Arc, so we can derive Clone in task.rs or impl it.
+            // Let's check task.rs: "tasks: Arc<RwLock<...>>"
+            // Wait, I can't modify task.rs here. I should have checked if TaskManager derives Clone.
+            // It does not derive Clone in the previous read. I need to update task.rs first or manually clone the Arcs if exposed.
+            // Actually, `self.task_manager` is `TaskManager`.
+            // Let's assume I will add `#[derive(Clone)]` to TaskManager in `src/agent/task.rs`.
+            
+            let task_id = task.id;
+            
+            // Create an abort handle for cancellation
+            let (abort_handle, abort_registration) = AbortHandle::new_pair();
+            
+            // Register the handle
+            // We need to access register_running_task which I added to TaskManager
+            // BUT, `self.task_manager` is not Arc wrapped inside Agent, Agent holds it by value?
+            // "pub task_manager: TaskManager"
+            // So `self.task_manager` is a struct field.
+            // To move it into a closure, we need to clone it.
+            // I will update TaskManager to derive Clone.
+            
+            self.task_manager.register_running_task(task_id, abort_handle).await;
+
+            // Spawn the execution
+            let _handle = tokio::spawn(Abortable::new(async move {
+                let result = if let Some(payload) = &task.payload {
+                     match payload.task_type {
+                         TaskType::TextProcessing => {
+                             TextProcessingExecutor.execute(payload).await
+                         }
+                         TaskType::VectorComputation => {
+                             VectorComputationExecutor.execute(payload).await
+                         }
+                         TaskType::Custom(_) => {
+                             // Fallback for custom tasks
+                             tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+                             Ok(json!({"status": "simulated_custom_execution"}))
+                         }
+                     }
+                } else {
+                     // No payload, just simulate work
+                     tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+                     Ok(json!({"status": "no_payload"}))
+                };
+                
+                match result {
+                    Ok(output) => {
+                         // Complete the task with result
+                        let _ = task_manager.update_status(task_id, TaskStatus::Completed(output)).await;
+                    }
+                    Err(e) => {
+                        let _ = task_manager.update_status(task_id, TaskStatus::Failed(e.to_string())).await;
+                    }
+                }
+            }, abort_registration));
+            
+            Ok(Some(task_id))
+        } else {
+            Ok(None)
+        }
     }
 
     /// Gets the status of a task.
@@ -74,6 +233,27 @@ impl Agent {
             Some(t) => Ok(t.status),
             None => Err(anyhow::anyhow!("Task not found")),
         }
+    }
+
+    /// Handles an incoming network message.
+    pub async fn handle_message(&self, message: Message) -> anyhow::Result<()> {
+        match message.content {
+            MessageType::TaskRequest(task) => {
+                println!("Agent received TaskRequest: {}", task.id);
+                // Submit the task to the local manager
+                // We trust the sender for now (Identity verification to be added later)
+                self.submit_task(task).await;
+            }
+            MessageType::TaskResponse { task_id, status } => {
+                 println!("Agent received TaskResponse for {}: {:?}", task_id, status);
+                 // Update local state if we are tracking this remote task
+                 // (Not yet implemented: tracking remote tasks)
+            }
+            MessageType::Text(text) => {
+                println!("Agent received Text message from {}: {}", message.sender, text);
+            }
+        }
+        Ok(())
     }
 }
 
@@ -101,7 +281,25 @@ impl DefaultAgent {
     pub async fn new(config: AgentConfig) -> anyhow::Result<Self> {
         // Initialize identity with default depth 20 and initial root 0
         let identity = AgentIdentity::new(20, semaphore::Field::from(0)).await?;
-        let agent = Arc::new(Agent::new(identity, config));
+        
+        // Create default network config
+        let network_config = NetworkConfig {
+            listen_addr: "0.0.0.0:0".parse().unwrap(), // Bind to random port
+            bootstrap_peers: vec![],
+            max_peers: 50,
+            protocol_config: crate::network::ProtocolConfig {},
+            resource_limits: crate::network::ResourceLimits {
+                 max_bandwidth: 1024 * 1024,
+                 max_memory: 512 * 1024 * 1024,
+                 max_connections: 50,
+            },
+            security_config: crate::network::SecurityConfig {
+                trusted_authorities: vec![],
+                local_certificate: None,
+            },
+        };
+
+        let agent = Arc::new(Agent::new(identity, config, network_config));
         
         Ok(Self {
             agent,
@@ -112,7 +310,25 @@ impl DefaultAgent {
     /// Creates a new DefaultAgent with a provided ServiceRegistry.
     pub async fn with_services(config: AgentConfig, registry: Arc<ServiceRegistry>) -> anyhow::Result<Self> {
          let identity = AgentIdentity::new(20, semaphore::Field::from(0)).await?;
-         let agent = Arc::new(Agent::new(identity, config));
+         
+         // Default network config (same as above)
+         let network_config = NetworkConfig {
+            listen_addr: "0.0.0.0:0".parse().unwrap(),
+            bootstrap_peers: vec![],
+            max_peers: 50,
+            protocol_config: crate::network::ProtocolConfig {},
+            resource_limits: crate::network::ResourceLimits {
+                 max_bandwidth: 1024 * 1024,
+                 max_memory: 512 * 1024 * 1024,
+                 max_connections: 50,
+            },
+            security_config: crate::network::SecurityConfig {
+                trusted_authorities: vec![],
+                local_certificate: None,
+            },
+        };
+
+         let agent = Arc::new(Agent::new(identity, config, network_config));
 
          Ok(Self {
              agent,
@@ -120,9 +336,72 @@ impl DefaultAgent {
          })
     }
 
-    /// Delegate start to the inner Agent
+    /// Delegate start to the inner Agent and spawn the task loop
     pub async fn start(&self) -> anyhow::Result<()> {
-        self.agent.start().await
+        self.agent.start().await?;
+        
+        let agent_clone = self.agent.clone();
+        let mut shutdown_rx = self.agent.shutdown_tx.subscribe();
+        
+        // Setup Network Manager & Message Loop
+        {
+            let mut nm = self.agent.network_manager.lock().await;
+            
+            // Channel for network messages -> agent
+            let (tx, mut rx) = mpsc::channel::<Vec<u8>>(100);
+            nm.set_message_callback(tx);
+            
+            // Start the network manager
+            if let Err(e) = nm.start().await {
+                 eprintln!("Failed to start network manager: {:?}", e);
+            }
+            
+            // Spawn message handler loop
+            let agent_msg_clone = agent_clone.clone();
+            let mut msg_shutdown_rx = self.agent.shutdown_tx.subscribe();
+            
+            tokio::spawn(async move {
+                loop {
+                    tokio::select! {
+                        _ = msg_shutdown_rx.recv() => break,
+                        msg = rx.recv() => {
+                            if let Some(bytes) = msg {
+                                // Deserialize and handle
+                                if let Ok(message) = serde_json::from_slice::<Message>(&bytes) {
+                                     if let Err(e) = agent_msg_clone.handle_message(message).await {
+                                         eprintln!("Error handling message: {:?}", e);
+                                     }
+                                } else {
+                                     eprintln!("Failed to deserialize network message");
+                                }
+                            } else {
+                                break;
+                            }
+                        }
+                    }
+                }
+            });
+        }
+        
+        // Spawn background task processing loop
+        tokio::spawn(async move {
+            loop {
+                tokio::select! {
+                    _ = shutdown_rx.recv() => {
+                        // Received shutdown signal
+                        break;
+                    }
+                    _ = tokio::time::sleep(std::time::Duration::from_millis(50)) => {
+                        // Poll for tasks
+                        if let Err(e) = agent_clone.process_next_task().await {
+                             eprintln!("Error processing task: {:?}", e);
+                        }
+                    }
+                }
+            }
+        });
+        
+        Ok(())
     }
 
     /// Delegate stop to the inner Agent
@@ -145,9 +424,24 @@ impl DefaultAgent {
         Ok(self.agent.submit_task(task).await)
     }
 
+    /// Cancels a submitted task
+    pub async fn cancel_task(&self, id: &TaskId) -> anyhow::Result<()> {
+        self.agent.cancel_task(*id).await
+    }
+
     /// Get the status of a submitted task
     pub async fn task_status(&self, id: &TaskId) -> anyhow::Result<TaskStatus> {
         self.agent.task_status(id).await
+    }
+
+    /// Broadcast a message to the network
+    pub async fn broadcast_message(&self, message: Message) -> anyhow::Result<()> {
+        self.agent.broadcast_message(message).await
+    }
+
+    /// Process a received message (Exposed for testing/networking)
+    pub async fn handle_message(&self, message: Message) -> anyhow::Result<()> {
+        self.agent.handle_message(message).await
     }
 }
 

@@ -4,6 +4,7 @@
 use libp2p::{
     futures::StreamExt, identity, multiaddr::Protocol, noise, swarm::SwarmEvent, tcp, yamux,
     Multiaddr as Libp2pMultiaddr, PeerId as Libp2pPeerId,
+    gossipsub,
 };
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -38,7 +39,7 @@ pub use service::NetworkStats;
 // Re-export types from peers module
 pub use peers::{ConnectionStatus, PeerCache, PeerCapabilities, PeerInfo, PeerMetrics, PeerState};
 
-use crate::network::behavior::AgentBehavior;
+use crate::network::behavior::{AgentBehavior, AgentBehaviorEvent};
 
 /// Errors that can occur in the network module.
 #[derive(Debug, Error)]
@@ -216,6 +217,8 @@ pub struct NetworkManager {
     connected_peers: Arc<Mutex<Vec<SocketAddr>>>,
     /// Command sender for the swarm event loop
     command_sender: Option<mpsc::Sender<NetworkCommand>>,
+    /// Channel for sending received messages to the Agent
+    message_callback: Option<mpsc::Sender<Vec<u8>>>,
     /// Certificate manager for identity verification
     #[allow(dead_code)]
     certificate_manager: CertificateManager,
@@ -246,6 +249,7 @@ impl NetworkManager {
             messages: Arc::new(Mutex::new(Vec::new())),
             connected_peers: Arc::new(Mutex::new(Vec::new())),
             command_sender: None,
+            message_callback: None,
             certificate_manager,
             #[cfg(feature = "metrics-prometheus")]
             prometheus_metrics: None,
@@ -277,6 +281,7 @@ impl NetworkManager {
             messages: Arc::new(Mutex::new(Vec::new())),
             connected_peers: Arc::new(Mutex::new(Vec::new())),
             command_sender: None,
+            message_callback: None,
             certificate_manager,
             prometheus_metrics: Some(metrics),
         }
@@ -292,10 +297,16 @@ impl NetworkManager {
         self.is_running
     }
 
+    /// Set the callback channel for received messages
+    pub fn set_message_callback(&mut self, callback: mpsc::Sender<Vec<u8>>) {
+        self.message_callback = Some(callback);
+    }
+
     /// Start the network manager.
     pub async fn start(&mut self) -> NetworkResult<()> {
         if !self.is_initialized {
-            return Err(NetworkError::NotInitialized);
+            // Auto-initialize if not done yet (simplification for Agent usage)
+            self.is_initialized = true;
         }
         if self.is_running {
             return Err(NetworkError::AlreadyRunning);
@@ -314,7 +325,7 @@ impl NetworkManager {
             )
             .map_err(|e| NetworkError::Libp2p(e.to_string()))?
             .with_behaviour(|key| {
-                AgentBehavior::new(key.public())
+                AgentBehavior::new(key.clone())
                     .map_err(|e| NetworkError::Libp2p(e.to_string()))
                     .expect("Failed to create behavior")
             })
@@ -350,9 +361,18 @@ impl NetworkManager {
         // Create command channel
         let (tx, mut rx) = mpsc::channel::<NetworkCommand>(32);
         self.command_sender = Some(tx.clone());
+        
+        // Clone message callback for the event loop
+        let message_callback = self.message_callback.clone();
 
         let _messages_clone = self.messages.clone();
         let connected_peers_clone = self.connected_peers.clone();
+
+        // Subscribe to gossipsub topic
+        let topic = gossipsub::IdentTopic::new("p2p-ai-agents-global");
+        if let Some(agent_behavior) = swarm.behaviour_mut().gossipsub.subscribe(&topic).err() {
+            error!("Failed to subscribe to gossipsub topic: {:?}", agent_behavior);
+        }
 
         // Dial bootstrap peers
         for peer in &self.config.bootstrap_peers {
@@ -374,10 +394,20 @@ impl NetworkManager {
                         SwarmEvent::NewListenAddr { address, .. } => {
                             info!("Listening on {:?}", address);
                         }
+                        SwarmEvent::Behaviour(AgentBehaviorEvent::Gossipsub(gossipsub::Event::Message {
+                            propagation_source: peer_id,
+                            message_id: id,
+                            message,
+                        })) => {
+                             debug!("Got message: {:?} from peer: {:?}", id, peer_id);
+                             // Forward message to agent
+                             if let Some(callback) = &message_callback {
+                                 let _ = callback.send(message.data).await;
+                             }
+                        }
                         SwarmEvent::Behaviour(behavior_event) => {
-                             // Handle behavior events (Identify, MDNS, Kademlia, Ping)
-                             // For now we just log them. In future we might process discovery events.
-                             debug!("Behavior event: {:?}", behavior_event);
+                             // Handle other behavior events
+                             debug!("Other behavior event: {:?}", behavior_event);
                         }
                         SwarmEvent::ConnectionEstablished { peer_id, endpoint, .. } => {
                             info!("Connection established with {:?}", peer_id);
@@ -427,9 +457,12 @@ impl NetworkManager {
                                 error!("Failed to dial: {:?}", e);
                             }
                         }
-                        Some(NetworkCommand::SendMessage { peer_id: _, message: _ }) => {
-                             // TODO: Implement messaging using Request-Response or Gossipsub
-                             // For now, this is a placeholder.
+                        Some(NetworkCommand::SendMessage { peer_id: _, message }) => {
+                             // Broadcast via Gossipsub
+                             let topic = gossipsub::IdentTopic::new("p2p-ai-agents-global");
+                             if let Err(e) = swarm.behaviour_mut().gossipsub.publish(topic, message) {
+                                 error!("Failed to publish message: {:?}", e);
+                             }
                         }
                         Some(NetworkCommand::Shutdown) => {
                             break;
