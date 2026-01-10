@@ -215,6 +215,8 @@ pub struct NetworkManager {
     messages: Arc<Mutex<Vec<NetworkMessage>>>,
     /// Connected peers
     connected_peers: Arc<Mutex<Vec<SocketAddr>>>,
+    /// Listen addresses
+    listen_addresses: Arc<Mutex<Vec<Libp2pMultiaddr>>>,
     /// Command sender for the swarm event loop
     command_sender: Option<mpsc::Sender<NetworkCommand>>,
     /// Channel for sending received messages to the Agent
@@ -248,6 +250,7 @@ impl NetworkManager {
             transport_type: "tcp".to_string(),
             messages: Arc::new(Mutex::new(Vec::new())),
             connected_peers: Arc::new(Mutex::new(Vec::new())),
+            listen_addresses: Arc::new(Mutex::new(Vec::new())),
             command_sender: None,
             message_callback: None,
             certificate_manager,
@@ -280,6 +283,7 @@ impl NetworkManager {
             transport_type: "tcp".to_string(),
             messages: Arc::new(Mutex::new(Vec::new())),
             connected_peers: Arc::new(Mutex::new(Vec::new())),
+            listen_addresses: Arc::new(Mutex::new(Vec::new())),
             command_sender: None,
             message_callback: None,
             certificate_manager,
@@ -367,6 +371,7 @@ impl NetworkManager {
 
         let _messages_clone = self.messages.clone();
         let connected_peers_clone = self.connected_peers.clone();
+        let listen_addresses_clone = self.listen_addresses.clone();
 
         // Subscribe to gossipsub topic
         let topic = gossipsub::IdentTopic::new("p2p-ai-agents-global");
@@ -393,6 +398,7 @@ impl NetworkManager {
                     event = swarm.select_next_some() => match event {
                         SwarmEvent::NewListenAddr { address, .. } => {
                             info!("Listening on {:?}", address);
+                            listen_addresses_clone.lock().await.push(address);
                         }
                         SwarmEvent::Behaviour(AgentBehaviorEvent::Gossipsub(gossipsub::Event::Message {
                             propagation_source: peer_id,
@@ -535,12 +541,29 @@ impl NetworkManager {
         self.connected_peers.lock().await.push(addr);
     }
 
-    /// Send a message by pushing it to the message queue.
+    /// Send a message by pushing it to the message queue and broadcasting via swarm.
     pub async fn send_message(&self, msg: NetworkMessage) {
-        // In real implementation this would send via Swarm
-        // For now, we keep the stub behavior of pushing to internal queue for testing
-        // AND potentially send to swarm if connected
-        self.messages.lock().await.push(msg);
+        // 1. Push to internal queue for testing/debug visibility
+        self.messages.lock().await.push(msg.clone());
+        
+        // 2. Send command to swarm to publish
+        if let Some(tx) = &self.command_sender {
+            // Note: Gossipsub ignores the specific peer_id in SendMessage when we blindly publish to topic,
+            // but we pass a dummy one or the intended target if we were doing direct unicast.
+            // For now, our SendMessage handler in the loop just publishes to the global topic.
+            // We need to convert our internal peer ID string to libp2p PeerId if we wanted direct messaging,
+            // but for broadcast we just trigger the command.
+            
+            // We'll create a dummy PeerId since the handler ignores it for now
+            let dummy_peer = Libp2pPeerId::random(); 
+            
+            let _ = tx.send(NetworkCommand::SendMessage {
+                peer_id: dummy_peer,
+                message: msg.content,
+            }).await;
+        } else {
+             error!("Cannot send message: Network not running (command_sender missing)");
+        }
     }
 
     /// Receive a message by popping from the message queue.
@@ -572,6 +595,11 @@ impl NetworkManager {
     pub async fn get_connected_peers(&self) -> Vec<SocketAddr> {
         let peers = self.connected_peers.lock().await;
         peers.clone()
+    }
+
+    /// Get listen addresses
+    pub async fn get_listen_addresses(&self) -> Vec<Libp2pMultiaddr> {
+        self.listen_addresses.lock().await.clone()
     }
 
     /// Get a reference to the network configuration.

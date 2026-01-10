@@ -46,9 +46,56 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let submitter = DefaultAgent::new(config_a).await?;
     submitter.start().await?;
 
-    // Wait for MDNS discovery and connection
-    println!("⏳ Waiting for peer discovery (MDNS)...");
-    sleep(Duration::from_secs(3)).await;
+    // Wait for MDNS discovery or manual connection
+    println!("⏳ Waiting for peer discovery...");
+    
+    // We can also try manual dialing if we know the address.
+    // Since we don't know the exact port (it's random), we need to extract it.
+    // In a real app, you would exchange this out-of-band or use a known bootstrap node.
+    
+    let mut peers_found = false;
+    
+    // Attempt manual dial after a short wait if MDNS is slow
+    let worker_addrs = worker.listen_addresses().await;
+    let submitter_addrs = submitter.listen_addresses().await;
+    
+    if !worker_addrs.is_empty() {
+        println!("Worker listening on: {:?}", worker_addrs);
+    }
+    if !submitter_addrs.is_empty() {
+        println!("Submitter listening on: {:?}", submitter_addrs);
+    }
+
+    // Try to dial each other if we have addresses
+    if let Some(addr) = worker_addrs.first() {
+        // Submitter dials worker
+        println!("📞 Submitter dialing Worker at {}", addr);
+        if let Err(e) = submitter.dial(addr).await {
+            println!("  Dial failed: {:?}", e);
+        }
+    }
+
+    for _ in 0..60 { // Wait up to 6 seconds
+        let count_a = submitter.connected_peers_count().await;
+        let count_b = worker.connected_peers_count().await;
+        
+        if count_a > 0 && count_b > 0 {
+             println!("✅ Peers connected! A: {}, B: {}", count_a, count_b);
+             peers_found = true;
+             break;
+        }
+        sleep(Duration::from_millis(100)).await;
+    }
+    
+    if !peers_found {
+        println!("⚠️ Warning: No peers discovered via MDNS yet. The test might fail.");
+        // In a real test we might want to fail here, but let's try broadcasting anyway
+        // or attempt manual dialing if we had addresses.
+        // For now, we proceed.
+    } else {
+        // Give a little extra time for gossipsub mesh to form
+        sleep(Duration::from_millis(500)).await;
+    }
 
     // 3. Construct and Broadcast Task
     println!("\n📦 Submitter Broadcasting TaskRequest...");

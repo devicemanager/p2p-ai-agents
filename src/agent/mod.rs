@@ -65,48 +65,7 @@ impl Agent {
     /// Starts the Agent.
     pub async fn start(&self) -> anyhow::Result<()> {
         let _shutdown_rx = self.shutdown_tx.subscribe();
-        
-        // Setup network callback channel
-        let (tx, mut rx) = mpsc::channel::<Vec<u8>>(100);
-        
-        {
-            let mut nm = self.network_manager.lock().await;
-            nm.set_message_callback(tx);
-            if let Err(e) = nm.start().await {
-                 eprintln!("Failed to start network manager: {:?}", e);
-                 // We don't fail hard here for now to allow local testing if network fails binding
-            }
-        }
-
-        // Spawn listener for incoming network messages
-        // We need a way to pass these messages back to `self.handle_message`
-        // Since `self` is &self, we can't easily spawn a task that calls `self.handle_message` unless `self` is Arc.
-        // But `Agent` is usually wrapped in `Arc` by `DefaultAgent`.
-        // The pattern here is tricky because `Agent::start` is on `&self`.
-        //
-        // Solution: We rely on `DefaultAgent` (which holds `Arc<Agent>`) to spawn the listener loop that calls `handle_message`.
-        // OR: We define a separate "MessageHandler" struct that can be moved into the task.
-        //
-        // For now, let's expose the receiver `rx` via a method or field so DefaultAgent can consume it?
-        // Actually, `NetworkManager` is inside `Agent`.
-        //
-        // Better approach:
-        // `DefaultAgent` should handle the wiring because it owns the `Arc`.
-        // `Agent::start` handles internal state.
-        // Let's modify `DefaultAgent::start` to handle the network message loop.
-        // But `Agent` needs to configure `NetworkManager` with the callback.
-        //
-        // Revised plan:
-        // `Agent::start` configures the callback. But `Agent` cannot spawn the consumer because it needs `self`.
-        //
-        // Let's just start the network manager here without callback, and let DefaultAgent set it up?
-        // No, `NetworkManager` is private inside `Agent` (well, pub field but internal logic).
-        //
-        // Let's change `Agent` to NOT take a callback in `start`, but expose a method `subscribe_to_network_messages`.
-        // But `NetworkManager` pushes to a channel.
-        //
-        // Let's leave `start` simple and let `DefaultAgent` coordinate.
-        
+        // Network manager start is handled by the wrapper (DefaultAgent) which wires up the callbacks
         Ok(())
     }
     
@@ -442,6 +401,24 @@ impl DefaultAgent {
     /// Process a received message (Exposed for testing/networking)
     pub async fn handle_message(&self, message: Message) -> anyhow::Result<()> {
         self.agent.handle_message(message).await
+    }
+
+    /// Get the number of connected peers
+    pub async fn connected_peers_count(&self) -> usize {
+        self.agent.network_manager.lock().await.get_connected_peers().await.len()
+    }
+    
+    /// Get the listening address(es) of the agent
+    pub async fn listen_addresses(&self) -> Vec<String> {
+        let addrs = self.agent.network_manager.lock().await.get_listen_addresses().await;
+        addrs.iter().map(|a| a.to_string()).collect()
+    }
+    
+    /// Dial another peer manually
+    pub async fn dial(&self, addr: &str) -> anyhow::Result<()> {
+        let multiaddr = crate::network::Multiaddr(addr.to_string());
+        self.agent.network_manager.lock().await.dial(multiaddr).await?;
+        Ok(())
     }
 }
 
