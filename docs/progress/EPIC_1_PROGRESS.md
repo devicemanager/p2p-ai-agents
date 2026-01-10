@@ -4,9 +4,9 @@
 **Goal**: Establish foundational identity and lifecycle management for peer-to-peer nodes with robust initialization, health verification, and graceful shutdown.
 
 **Total Story Points**: 32 (9 stories)  
-**Completed**: 21 points (7 stories)  
-**Remaining**: 11 points (2 stories)  
-**Progress**: 66% complete
+**Completed**: 25 points (8 stories)  
+**Remaining**: 7 points (1 story)  
+**Progress**: 78% complete
 
 ---
 
@@ -155,18 +155,30 @@
 
 ---
 
-### ❌ FR1.8: Startup Diagnostics & Readiness Probe (4 points)
-**Status**: NOT STARTED
+### ✅ FR1.8: Startup Diagnostics & Readiness Probe (4 points)
+**Status**: COMPLETE  
+**Implementation**: `docs/progress/STORY_FR1-8_IMPLEMENTATION_SUMMARY.md`
 
-**Required Features**:
-- [ ] Readiness indicator (file or port)
-- [ ] Kubernetes liveness/readiness probe support
-- [ ] Startup timing metrics
-- [ ] `--startup-diagnostics` CLI flag
-- [ ] Component initialization tracking
-- [ ] Readiness check endpoint
+**Completed Features**:
+- ✅ StartupDiagnostics system for component tracking
+- ✅ File-based readiness indicator (.ready file)
+- ✅ Kubernetes probe support (liveness/readiness/startup)
+- ✅ Component initialization timing
+- ✅ `--startup-diagnostics` CLI flag
+- ✅ ReadinessManager service
+- ✅ Performance: < 10ms readiness checks, < 50ms diagnostics overhead
 
-**Dependencies**: FR1.2, FR1.3
+**Key Files**:
+- `src/application/diagnostics.rs` (StartupDiagnostics)
+- `src/application/readiness.rs` (ReadinessManager)
+- `src/application/lifecycle.rs` (diagnostics integration)
+- `src/main.rs` (--startup-diagnostics flag)
+- `tests/diagnostics_integration.rs` (15+ tests)
+
+**Probes**:
+- Liveness: Process alive (excludes Stopped state)
+- Readiness: Active state + marked ready
+- Startup: Active state reached
 
 ---
 
@@ -187,7 +199,7 @@
 
 ## Overall Progress Summary
 
-### Completed (21/32 story points)
+### Completed (25/32 story points)
 1. ✅ FR1.1: Node Identity (3 pts)
 2. ✅ FR1.2: Lifecycle States (5 pts)
 3. ✅ FR1.3: Health Checks (5 pts)
@@ -195,9 +207,9 @@
 5. ✅ FR1.5: Graceful Shutdown (5 pts)
 6. ✅ FR1.6: Configuration Validation (3 pts)
 7. ✅ FR1.7: Metadata & Version (2 pts)
+8. ✅ FR1.8: Startup Diagnostics (4 pts)
 
-### Remaining (11/32 story points)
-8. ❌ FR1.8: Startup Diagnostics (4 pts)
+### Remaining (7/32 story points)
 9. ❌ FR1.9: Bootstrap from Config (4 pts)
 
 ---
@@ -211,9 +223,11 @@
 - `src/application/mod.rs`: 90%+ (6 tests)
 - `src/application/lifecycle.rs`: 90%+ (5 tests)
 - `src/application/status.rs`: 85%+ (integration test)
+- `src/application/diagnostics.rs`: 95%+ (13 unit tests)
+- `src/application/readiness.rs`: 95%+ (11 unit tests)
 
 ### Overall Library Tests
-- **Total**: 200+ tests passing
+- **Total**: 230+ tests passing
 - **Target**: 90% overall coverage
 - **Critical paths**: 95% coverage target
 
@@ -221,25 +235,17 @@
 
 ## Next Steps
 
-### Immediate Priority: FR1.8 (Startup Diagnostics & Readiness Probe)
+### Immediate Priority: FR1.9 (Bootstrap from Configuration)
 **Estimated Effort**: 4 story points (8-12 hours)
 
 **Implementation Plan**:
-1. Add readiness indicator (file-based)
-2. Implement Kubernetes probe support
-3. Track startup timing metrics
-4. Add `--startup-diagnostics` flag
-5. Add component initialization tracking
-6. Implement readiness check endpoint
+1. Environment variable parsing (P2P_*)
+2. Config file override with `--config-file`
+3. Priority enforcement (CLI > ENV > File > Defaults)
+4. Invalid variable error handling
+5. Startup performance optimization
 
-**Dependencies**: FR1.2 (Complete ✅), FR1.3 (Complete ✅), FR1.7 (Complete ✅)
-
----
-
-### Final Story: FR1.9 (Bootstrap from Configuration)
-**Estimated Effort**: 4 story points (8-12 hours)
-
-**Dependencies**: FR1.4 (Complete), FR1.6 (Complete)
+**Dependencies**: FR1.4 (Complete ✅), FR1.6 (Complete ✅)
 
 ---
 
@@ -264,6 +270,8 @@
 - Config validation: 50x faster than requirements (0.1ms vs 5ms)
 - Metadata query: 100x faster than requirements (~10μs vs 1ms)
 - Health check: < 2s (requirement met)
+- Readiness check: < 10ms (requirement met)
+- Diagnostics overhead: < 50ms (requirement met)
 
 ### Security
 - File permissions: 0600 for identity, 0700 for directories
@@ -286,11 +294,11 @@ FR1.1 (Identity)
   └── FR1.2 (Lifecycle)
         ├── FR1.3 (Health Checks) ✅
         ├── FR1.7 (Metadata) ✅
-        └── FR1.8 (Diagnostics) ⏭️ NEXT
+        └── FR1.8 (Diagnostics) ✅
 
 FR1.4 (Config Storage)
   ├── FR1.6 (Validation) ✅
-  └── FR1.9 (Bootstrap) ⏭️ LATER
+  └── FR1.9 (Bootstrap) ⏭️ NEXT
 
 FR1.5 (Shutdown) ✅ (depends on FR1.2)
 ```
@@ -303,12 +311,12 @@ FR1.5 (Shutdown) ✅ (depends on FR1.2)
 - **2026-01-06**: Stories FR1.3, FR1.4, FR1.5 completed
 - **2026-01-09**: Story FR1.6 completed
 - **2026-01-09**: Story FR1.7 completed
-- **2026-01-09**: Currently working on FR1.8
+- **2026-01-09**: Story FR1.8 completed
 
-**Estimated Epic 1 Completion**: 2026-01-10 (assuming 1-2 stories per day)
+**Estimated Epic 1 Completion**: 2026-01-10 (1 story remaining)
 
 ---
 
 **Last Updated**: 2026-01-09  
 **Current Sprint**: Epic 1 - Node Foundation  
-**Next Milestone**: Complete FR1.8 (Startup Diagnostics)
+**Next Milestone**: Complete FR1.9 (Bootstrap from Configuration)

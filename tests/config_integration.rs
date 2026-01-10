@@ -142,6 +142,8 @@ async fn test_config_file_persistence() {
         log_level: "debug".to_string(),
         bootstrap_nodes: vec!["/ip4/127.0.0.1/tcp/9001".to_string()],
         storage_path: temp_dir.path().join("storage"),
+        readiness_file_enabled: true,
+        readiness_port: 9091,
     };
 
     // Serialize and save
@@ -376,6 +378,8 @@ async fn test_config_serialization_roundtrip() {
             "/ip4/192.168.1.1/tcp/9002".to_string(),
         ],
         storage_path: std::path::PathBuf::from("/tmp/test-storage"),
+        readiness_file_enabled: true,
+        readiness_port: 9091,
     };
 
     // Serialize

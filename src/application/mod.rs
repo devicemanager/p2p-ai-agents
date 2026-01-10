@@ -3,7 +3,9 @@
 //! This module provides the main application architecture that orchestrates
 //! all system components using dependency injection and event-driven patterns.
 
+pub mod diagnostics;
 pub mod lifecycle;
+pub mod readiness;
 pub mod status;
 
 use crate::agent::Agent;
@@ -396,6 +398,23 @@ impl Application {
 
         self.service_registry
             .register(Arc::new(status_manager))
+            .await?;
+
+        // Register readiness manager
+        let config = self.config.read().await;
+        let readiness_config = readiness::ReadinessConfig {
+            file_enabled: config.readiness_file_enabled,
+            file_path: config.storage_path.join(".ready"),
+            port_enabled: config.readiness_port > 0,
+            port: config.readiness_port,
+        };
+        drop(config);
+
+        let readiness_manager =
+            readiness::ReadinessManager::new(self.clone()).with_config(readiness_config);
+
+        self.service_registry
+            .register(Arc::new(readiness_manager))
             .await?;
 
         Ok(())

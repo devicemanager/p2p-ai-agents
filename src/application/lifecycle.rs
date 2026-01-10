@@ -3,7 +3,7 @@
 //! This module provides lifecycle management for the P2P AI Agents application,
 //! including signal handling, graceful shutdown, and state persistence.
 
-use super::{Application, ApplicationError, ApplicationState};
+use super::{diagnostics::StartupDiagnostics, Application, ApplicationError, ApplicationState};
 use crate::core::correlation::CorrelationId;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
@@ -48,6 +48,7 @@ pub struct LifecycleManager {
     application: Application,
     state: Arc<RwLock<Option<LifecycleState>>>,
     shutdown_timeout: Duration,
+    diagnostics: Option<Arc<StartupDiagnostics>>,
 }
 
 impl LifecycleManager {
@@ -57,7 +58,14 @@ impl LifecycleManager {
             application,
             state: Arc::new(RwLock::new(None)),
             shutdown_timeout: Duration::from_secs(5),
+            diagnostics: None,
         }
+    }
+
+    /// Enable startup diagnostics
+    pub fn with_diagnostics(mut self, verbose: bool) -> Self {
+        self.diagnostics = Some(Arc::new(StartupDiagnostics::new(verbose)));
+        self
     }
 
     /// Set the shutdown timeout
@@ -79,22 +87,91 @@ impl LifecycleManager {
 
         info!("Starting application startup sequence");
 
+        // Register components for diagnostics if enabled
+        if let Some(diagnostics) = &self.diagnostics {
+            diagnostics.register_component("crash_recovery").await;
+            diagnostics.register_component("initialization").await;
+            diagnostics.register_component("registration").await;
+            diagnostics.register_component("services").await;
+        }
+
         // Check for existing state (crash recovery)
+        if let Some(diagnostics) = &self.diagnostics {
+            diagnostics.start_component("crash_recovery").await;
+        }
         if let Err(e) = self.check_previous_state().await {
             warn!("Failed to check previous state: {}", e);
+            if let Some(diagnostics) = &self.diagnostics {
+                diagnostics
+                    .component_failed("crash_recovery", e.to_string())
+                    .await;
+            }
+        } else if let Some(diagnostics) = &self.diagnostics {
+            diagnostics.component_success("crash_recovery").await;
         }
 
         // Initialize the application (moves to Registering state)
+        if let Some(diagnostics) = &self.diagnostics {
+            diagnostics.start_component("initialization").await;
+        }
         info!("Initializing application");
-        self.application.initialize().await?;
+        match self.application.initialize().await {
+            Ok(_) => {
+                if let Some(diagnostics) = &self.diagnostics {
+                    diagnostics.component_success("initialization").await;
+                }
+            }
+            Err(e) => {
+                if let Some(diagnostics) = &self.diagnostics {
+                    diagnostics
+                        .component_failed("initialization", e.to_string())
+                        .await;
+                }
+                return Err(e);
+            }
+        }
 
         // Register with network (moves to Active state)
+        if let Some(diagnostics) = &self.diagnostics {
+            diagnostics.start_component("registration").await;
+        }
         info!("Registering with network");
-        self.application.register().await?;
+        match self.application.register().await {
+            Ok(_) => {
+                if let Some(diagnostics) = &self.diagnostics {
+                    diagnostics.component_success("registration").await;
+                }
+            }
+            Err(e) => {
+                if let Some(diagnostics) = &self.diagnostics {
+                    diagnostics
+                        .component_failed("registration", e.to_string())
+                        .await;
+                }
+                return Err(e);
+            }
+        }
 
         // Start the application services
+        if let Some(diagnostics) = &self.diagnostics {
+            diagnostics.start_component("services").await;
+        }
         info!("Starting application services");
-        self.application.start().await?;
+        match self.application.start().await {
+            Ok(_) => {
+                if let Some(diagnostics) = &self.diagnostics {
+                    diagnostics.component_success("services").await;
+                }
+            }
+            Err(e) => {
+                if let Some(diagnostics) = &self.diagnostics {
+                    diagnostics
+                        .component_failed("services", e.to_string())
+                        .await;
+                }
+                return Err(e);
+            }
+        }
 
         // Create new lifecycle state
         let agents = self.application.agents().await;
@@ -114,6 +191,16 @@ impl LifecycleManager {
         }
 
         info!("Agent started successfully: {}", peer_id);
+
+        // Print diagnostics summary if enabled
+        if let Some(diagnostics) = &self.diagnostics {
+            diagnostics.print_summary().await;
+
+            // Measure overhead
+            let overhead = diagnostics.diagnostics_overhead().await;
+            info!("Startup diagnostics overhead: {}ms", overhead.as_millis());
+        }
+
         Ok(())
     }
 

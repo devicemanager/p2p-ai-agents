@@ -38,7 +38,7 @@ struct CodeReviewResult {
 }
 
 #[tokio::main]
-async fn main() -> Result<()> {
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Initialize logging
     tracing_subscriber::fmt::init();
 
@@ -131,7 +131,7 @@ async fn main() {
 
 /// Simulate a multi-expert review process
 /// In production, this would query actual expert nodes
-async fn simulate_expert_review(query: CodeReviewQuery) -> Result<CodeReviewResult> {
+async fn simulate_expert_review(query: CodeReviewQuery) -> Result<CodeReviewResult, Box<dyn std::error::Error>> {
     // Simulate expert analysis
     let issues = vec![
         ReviewIssue {

@@ -46,6 +46,10 @@ struct Cli {
     #[arg(long, global = true, default_value = "text")]
     log_format: String,
 
+    /// Enable verbose startup diagnostics
+    #[arg(long, global = true)]
+    startup_diagnostics: bool,
+
     /// Run as daemon (Unix only)
     #[arg(long, global = true)]
     daemon: bool,
@@ -501,7 +505,7 @@ fn display_identity(identity: &NodeIdentityData) -> Result<()> {
 }
 
 /// Main event loop with proper lifecycle management
-async fn run_event_loop(_config: &Config, _identity: &NodeIdentityData) -> Result<()> {
+async fn run_event_loop(config: &Config, _identity: &NodeIdentityData) -> Result<()> {
     use p2p_ai_agents::application::{lifecycle::LifecycleManager, Application};
     use std::sync::Arc;
 
@@ -510,8 +514,16 @@ async fn run_event_loop(_config: &Config, _identity: &NodeIdentityData) -> Resul
     // Create application
     let app = Application::new();
 
-    // Create lifecycle manager
-    let lifecycle_manager = Arc::new(LifecycleManager::new(app.clone()));
+    // Check for startup diagnostics flag
+    let cli = Cli::parse();
+    let enable_diagnostics = cli.startup_diagnostics;
+
+    // Create lifecycle manager with diagnostics if enabled
+    let lifecycle_manager = if enable_diagnostics {
+        Arc::new(LifecycleManager::new(app.clone()).with_diagnostics(true))
+    } else {
+        Arc::new(LifecycleManager::new(app.clone()))
+    };
 
     // Initialize, register, and start the application
     info!("Initializing application...");
@@ -521,6 +533,14 @@ async fn run_event_loop(_config: &Config, _identity: &NodeIdentityData) -> Resul
         .context("Failed to start application")?;
 
     info!("✅ Application started successfully");
+
+    // Check readiness indicator
+    if config.readiness_file_enabled {
+        let ready_path = config.storage_path.join(".ready");
+        if ready_path.exists() {
+            info!("📄 Readiness file: {}", ready_path.display());
+        }
+    }
 
     // Setup signal handling
     let shutdown_manager = lifecycle_manager.clone();
