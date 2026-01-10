@@ -18,6 +18,7 @@ pub mod daemon;
 /// Metrics collection and monitoring
 pub mod metrics;
 /// Network layer for peer-to-peer communication
+#[cfg(feature = "network")]
 pub mod network;
 /// The storage module provides the pluggable storage layer for the system.
 pub mod storage;

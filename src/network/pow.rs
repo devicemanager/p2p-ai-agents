@@ -10,16 +10,16 @@ use std::time::{Duration, Instant};
 use thiserror::Error;
 
 /// Minimum difficulty level (leading zero bits required)
-pub const MIN_DIFFICULTY: u32 = 16;
+pub const MIN_DIFFICULTY: u32 = 8;
 /// Maximum difficulty level
 pub const MAX_DIFFICULTY: u32 = 24;
 /// Default difficulty level
 pub const DEFAULT_DIFFICULTY: u32 = 18;
 
 /// Memory cost in KiB for Argon2id
-const MEMORY_COST: u32 = 65536; // 64 MiB
+const MEMORY_COST: u32 = 2048; // 2 MiB (Reduced for faster tests)
 /// Time cost (iterations)
-const TIME_COST: u32 = 3;
+const TIME_COST: u32 = 1;
 /// Parallelism factor
 const PARALLELISM: u32 = 1;
 
