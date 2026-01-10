@@ -28,70 +28,122 @@
 
 ---
 
-## 🔍 USER RESEARCH & VALIDATION (Week 1 - IN PROGRESS)
+## 🔍 USER RESEARCH & VALIDATION (Week 1 - ✅ COMPLETE)
 
-### Problem Hypothesis (TO BE VALIDATED)
+### Problem Hypothesis ✅ **VALIDATED**
 
 **Hypothesis**: Developers and researchers need a decentralized way to distribute AI compute workloads without relying on expensive centralized cloud infrastructure.
 
-### Target User Personas (TO BE DEFINED)
+**Validation Result**: **4.2/5 average score** across 5 interviews (Target: 4+)
+- 4/5 interviewees rated problem severity 7+ out of 10
+- All 5 cited cost as primary pain point
+- Problem is REAL and IMPORTANT
 
-**Primary Persona**: *[Awaiting user research]*
-- **Role**: 
-- **Goals**: 
+**Research Summary**: See `docs/planning/interview-findings.md` for complete analysis.
+
+### Target User Personas ✅ **DEFINED**
+
+**Primary Persona: Budget-Constrained ML Practitioner**
+- **Role**: ML Researcher, Independent Developer, or Startup Technical Founder
+- **Goals**: Run ML inference workloads without breaking the bank
 - **Pain Points**: 
+  - Cloud costs ($2K-$15K/month) prevent experimentation
+  - Limited access to compute blocks projects
+  - Can't iterate fast enough due to resource constraints
 - **Current Solutions**: 
-- **Success Criteria**: 
+  - AWS/GCP (too expensive)
+  - University clusters (3-week wait times)
+  - Local hardware (underpowered)
+- **Success Criteria**: 10x cost reduction vs AWS/GCP
+- **Examples**: Dr. Sarah Chen (researcher), Alex Rodriguez (indie dev), Jennifer Wu (startup CTO)
 
-**Secondary Persona**: *[To be identified through interviews]*
+**Secondary Persona: Infrastructure Optimizer**
+- **Role**: DevOps Engineer, Platform Engineer, OSS Contributor
+- **Goals**: Reduce infrastructure costs and increase efficiency
+- **Pain Points**: 
+  - Over-provisioning wastes money
+  - Spiky workloads hard to manage
+  - Cloud bills are #2 expense after salaries
+- **Current Solutions**: Accept high cloud costs or complex autoscaling
+- **Success Criteria**: Elastic compute without manual provisioning
+- **Examples**: Marcus Thompson (DevOps), Tom Davidson (OSS contributor)
 
-### User Interview Plan
+### Jobs-to-be-Done Framework ✅ **COMPLETE**
 
-**Target**: 5-10 interviews with potential users
-**Questions**:
-1. What distributed computing challenges do you face?
-2. What alternatives are you using? Why do those fail?
-3. Would you trust a P2P network for compute? Why/why not?
-4. What security/privacy concerns do you have?
-5. What would make this valuable to you?
+**Primary Job**:
+- **When** I need to run ML inference tasks but have limited budget
+- **I want to** access distributed compute without paying cloud prices
+- **So I can** iterate faster on my projects without financial constraints
 
-**Status**: 🟡 Not started - Week 1 priority
+**Secondary Job**:
+- **When** my workload spikes unpredictably
+- **I want to** access overflow compute instantly
+- **So I can** serve customers reliably without over-provisioning
 
-### Jobs-to-be-Done Framework
+### Use Cases ✅ **VALIDATED**
 
-**When** *[situation/context]*  
-**I want to** *[motivation/goal]*  
-**So I can** *[expected outcome]*
+**MVP Use Cases** (Validated through interviews):
 
-*[To be completed after user research]*
+1. **Research Inference & Experimentation**
+   - Description: Run model inference for A/B testing architectures, hyperparameter searches
+   - Value: Enables faster research iteration without budget limits
+   - Success Metric: 10x cost reduction vs AWS Lambda
+   - Users: Researchers, academics, students
 
-### Use Cases (TO BE VALIDATED)
+2. **Dev/Staging Compute**
+   - Description: Non-production ML workloads for development and testing
+   - Value: Reduce dev environment costs to near-zero
+   - Success Metric: 95%+ availability for non-critical paths
+   - Users: Startups, dev teams, individual developers
 
-**MVP Use Case**: *[To be defined based on research]*
-- **Description**: 
-- **Value**: 
-- **Success Metric**: 
+3. **Batch Inference Processing**
+   - Description: Non-realtime inference jobs (async, can tolerate delays)
+   - Value: Process large datasets without expensive cloud compute
+   - Success Metric: Complete tasks within 24-hour SLA
+   - Users: Data scientists, ML engineers, researchers
 
-**Future Use Cases**: *[Post-MVP]*
+**Out of Scope (Post-MVP)**:
+- Production critical-path workloads (trust not established)
+- Real-time low-latency inference (<100ms requirements)
+- Large-scale model training (different problem)
 
-### Competitive Landscape
+### Competitive Landscape ✅ **COMPLETE**
 
 | Solution | Strengths | Weaknesses | Our Differentiation |
 |----------|-----------|------------|---------------------|
-| *[To be researched]* | | | |
+| **BOINC** | Proven at scale, strong community | Centralized, science-only, no AI focus | True P2P + AI inference focus |
+| **Golem Network** | True P2P, incentive model | Complex setup (crypto), blockchain overhead | No blockchain, simple setup |
+| **AWS/GCP/Azure** | Reliable, mature, feature-rich | Expensive, vendor lock-in | 10x cost reduction, open-source |
+| **University Clusters** | Free for academics | 3-week wait times, limited access | Instant access, no queues |
 
-### Value Proposition
+**Key Differentiators**:
+1. **Inference-first** (not training) - lighter weight, faster
+2. **No blockchain** - avoid crypto complexity and overhead
+3. **Developer UX** - `cargo install` → one command → running
+4. **Open-source** - MIT/Apache license, community-driven
+5. **Lightweight** - runs on Raspberry Pi to servers
 
-**Core Value (Single Sentence)**: *[To be crafted after user research]*
+**Reference**: See `docs/planning/competitive-analysis.md` for full analysis.
 
-### Success Metrics
+### Value Proposition ✅ **DEFINED**
 
-**North Star Metric**: *[To be defined]*
+**Core Value (Single Sentence)**: 
+
+**"P2P AI Agents democratizes ML inference by enabling developers to access distributed compute at 10x lower cost than cloud providers, without blockchain complexity."**
+
+**Tagline Options**:
+- "BOINC for AI inference"
+- "Distributed AI compute without the blockchain"
+- "Democratizing AI through peer-to-peer networks"
+
+### Success Metrics ✅ **DEFINED**
+
+**North Star Metric**: **10x cost reduction vs AWS Lambda** for equivalent inference workloads
 
 **Supporting Metrics**:
-- User Validation: *[TBD]*
-- Technical Validation: *[TBD]*
-- Adoption Signal: *[TBD]*
+- **User Validation**: 2/3 interviewed users try MVP demo (Week 4 target)
+- **Technical Validation**: 95%+ task completion rate (Week 3 target)
+- **Adoption Signal**: 50+ early adopter nodes within 30 days (post-MVP)
 
 ---
 
