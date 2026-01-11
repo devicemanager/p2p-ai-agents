@@ -60,7 +60,7 @@ impl P2PAgent {
                 let mdns = mdns::tokio::Behaviour::new(mdns::Config::default(), peer_id)?;
 
                 let request_response = request_response::Behaviour::with_codec(
-                    AgentCodec::default(),
+                    AgentCodec,
                     std::iter::once((AgentProtocol, ProtocolSupport::Full)),
                     request_response::Config::default()
                         .with_request_timeout(Duration::from_secs(30)),
@@ -91,18 +91,22 @@ impl P2PAgent {
     ) -> Result<AgentResponse, Box<dyn Error>> {
         // Check message size
         if message.len() > MESSAGE_SIZE_LIMIT {
-            return Err(format!("Message exceeds size limit of {}MB", MESSAGE_SIZE_LIMIT / 1024 / 1024).into());
+            return Err(format!(
+                "Message exceeds size limit of {}MB",
+                MESSAGE_SIZE_LIMIT / 1024 / 1024
+            )
+            .into());
         }
 
         let request = AgentRequest { message };
         let (tx, rx) = tokio::sync::oneshot::channel();
-        
+
         let request_id = self
             .swarm
             .behaviour_mut()
             .request_response
             .send_request(&peer_id, request);
-        
+
         self.pending_requests.insert(request_id, tx);
 
         // Wait for response with timeout
@@ -243,11 +247,14 @@ mod tests {
             // Create message exceeding 10MB limit
             let large_message = "x".repeat(11 * 1024 * 1024);
             let fake_peer = PeerId::random();
-            
+
             // Should fail due to size limit
             let result = agent.send_message(fake_peer, large_message).await;
             assert!(result.is_err());
-            assert!(result.unwrap_err().to_string().contains("exceeds size limit"));
+            assert!(result
+                .unwrap_err()
+                .to_string()
+                .contains("exceeds size limit"));
         })
         .await;
 

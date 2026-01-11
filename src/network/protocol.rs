@@ -41,11 +41,7 @@ impl Codec for AgentCodec {
     type Request = AgentRequest;
     type Response = AgentResponse;
 
-    async fn read_request<T>(
-        &mut self,
-        _: &Self::Protocol,
-        io: &mut T,
-    ) -> io::Result<Self::Request>
+    async fn read_request<T>(&mut self, _: &Self::Protocol, io: &mut T) -> io::Result<Self::Request>
     where
         T: AsyncRead + Unpin + Send,
     {
@@ -54,8 +50,7 @@ impl Codec for AgentCodec {
             .read_to_end(&mut buf)
             .await?;
 
-        serde_json::from_slice(&buf)
-            .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))
+        serde_json::from_slice(&buf).map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))
     }
 
     async fn read_response<T>(
@@ -71,8 +66,7 @@ impl Codec for AgentCodec {
             .read_to_end(&mut buf)
             .await?;
 
-        serde_json::from_slice(&buf)
-            .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))
+        serde_json::from_slice(&buf).map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))
     }
 
     async fn write_request<T>(
@@ -84,8 +78,8 @@ impl Codec for AgentCodec {
     where
         T: AsyncWrite + Unpin + Send,
     {
-        let data = serde_json::to_vec(&req)
-            .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?;
+        let data =
+            serde_json::to_vec(&req).map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?;
 
         if data.len() > MESSAGE_SIZE_LIMIT {
             return Err(io::Error::new(
@@ -107,8 +101,8 @@ impl Codec for AgentCodec {
     where
         T: AsyncWrite + Unpin + Send,
     {
-        let data = serde_json::to_vec(&res)
-            .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?;
+        let data =
+            serde_json::to_vec(&res).map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?;
 
         if data.len() > MESSAGE_SIZE_LIMIT {
             return Err(io::Error::new(
