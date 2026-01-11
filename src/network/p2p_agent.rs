@@ -47,8 +47,8 @@ impl P2PAgent {
     /// Create new P2P agent with given identity
     #[tracing::instrument(skip(identity))]
     pub async fn new(identity: AgentIdentity) -> Result<Self, Box<dyn Error>> {
-        // Convert AgentIdentity to libp2p Keypair
-        let keypair = Keypair::ed25519_from_bytes(vec![0u8; 32]).unwrap(); // TODO: Extract from identity
+        // Extract keypair from AgentIdentity
+        let keypair = identity.keypair().clone();
         let peer_id = PeerId::from(keypair.public());
 
         // Build swarm with TCP transport + Noise + mDNS + Request-Response

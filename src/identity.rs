@@ -60,6 +60,11 @@ impl AgentIdentity {
         self.keypair.public()
     }
 
+    /// Get libp2p keypair (for network layer)
+    pub(crate) fn keypair(&self) -> &Keypair {
+        &self.keypair
+    }
+
     /// Sign a message with this agent's private key
     ///
     /// Returns Ed25519 signature (64 bytes)
