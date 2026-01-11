@@ -7,7 +7,6 @@ use crate::identity::AgentIdentity;
 use crate::network::protocol::{AgentCodec, AgentProtocol, AgentRequest, AgentResponse};
 use libp2p::{
     futures::StreamExt,
-    identity::Keypair,
     mdns, noise,
     request_response::{self, OutboundRequestId, ProtocolSupport},
     swarm::{NetworkBehaviour, SwarmEvent},
@@ -206,12 +205,9 @@ mod tests {
     use super::*;
     use tokio::time::{timeout, Duration};
 
-    // NOTE: These tests are currently ignored because mdns spawns background
-    // tasks that don't complete. Integration tests in tests/ dir work properly.
     #[tokio::test]
-    #[ignore]
     async fn test_create_agent() {
-        // Use timeout to prevent hanging
+        // Test agent creation (fast, no network operations)
         let result = timeout(Duration::from_secs(2), async {
             let identity = AgentIdentity::generate();
             let agent = P2PAgent::new(identity).await.unwrap();
@@ -225,25 +221,6 @@ mod tests {
     }
 
     #[tokio::test]
-    #[ignore]
-    async fn test_send_message() {
-        let result = timeout(Duration::from_secs(2), async {
-            let identity = AgentIdentity::generate();
-            let mut agent = P2PAgent::new(identity).await.unwrap();
-
-            // Message send will fail if not subscribed to any peers, but that's expected
-            // Just test that the function doesn't panic
-            let result = agent.send_message("Hello, world!".to_string());
-            // Gossipsub publish may fail if no peers, which is OK for unit test
-            let _ = result;
-        })
-        .await;
-
-        assert!(result.is_ok(), "Test timed out");
-    }
-
-    #[tokio::test]
-    #[ignore]
     async fn test_list_peers_empty() {
         let result = timeout(Duration::from_secs(2), async {
             let identity = AgentIdentity::generate();
@@ -251,6 +228,26 @@ mod tests {
 
             let peers = agent.list_peers();
             assert_eq!(peers.len(), 0);
+        })
+        .await;
+
+        assert!(result.is_ok(), "Test timed out");
+    }
+
+    #[tokio::test]
+    async fn test_message_size_limit() {
+        let result = timeout(Duration::from_secs(2), async {
+            let identity = AgentIdentity::generate();
+            let mut agent = P2PAgent::new(identity).await.unwrap();
+
+            // Create message exceeding 10MB limit
+            let large_message = "x".repeat(11 * 1024 * 1024);
+            let fake_peer = PeerId::random();
+            
+            // Should fail due to size limit
+            let result = agent.send_message(fake_peer, large_message).await;
+            assert!(result.is_err());
+            assert!(result.unwrap_err().to_string().contains("exceeds size limit"));
         })
         .await;
 
