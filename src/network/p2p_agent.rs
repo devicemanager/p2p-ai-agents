@@ -202,6 +202,11 @@ impl P2PAgent {
     pub fn list_peers(&self) -> Vec<PeerInfo> {
         self.peers.values().cloned().collect()
     }
+
+    /// Get this agent's PeerId
+    pub fn peer_id(&self) -> PeerId {
+        *self.swarm.local_peer_id()
+    }
 }
 
 #[cfg(test)]
