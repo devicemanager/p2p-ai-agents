@@ -279,7 +279,7 @@ impl Agent {
                 println!("Agent received TaskRequest: {}", task.id);
                 // Submit the task to the local manager
                 // We trust the sender for now (Identity verification to be added later)
-                self.submit_task(task).await;
+                self.submit_task(*task).await;
             }
             MessageType::TaskResponse { task_id, status } => {
                 println!("Agent received TaskResponse for {}: {:?}", task_id, status);

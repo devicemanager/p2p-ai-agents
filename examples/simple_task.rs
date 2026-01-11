@@ -87,8 +87,8 @@ async fn main() -> Result<(), Box<dyn Error>> {
         batch_ids.push(task_id);
     }
 
-    // Monitor all tasks (they'll all be Pending since processing isn't implemented)
-    println!("\n📊 Monitoring task statuses (all will be Pending):");
+    // Monitor all tasks (they'll all be Queued since processing isn't implemented)
+    println!("\n📊 Monitoring task statuses (all will be Queued):");
 
     // Check individual tasks
     let status1 = agent.task_status(&task1_id).await?;
@@ -253,9 +253,9 @@ mod tests {
 
         assert!(!task_id.to_string().is_empty());
 
-        // Task should be Pending (status tracking works)
+        // Task should be Queued (status tracking works)
         let status = agent.task_status(&task_id).await?;
-        assert!(matches!(status, TaskStatus::Pending));
+        assert!(matches!(status, TaskStatus::Queued));
 
         // Wait for completion to verify processing
         // Note: In test environment, the loop might be faster than this check,

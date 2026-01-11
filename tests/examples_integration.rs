@@ -209,7 +209,7 @@ async fn test_task_cancellation() -> Result<(), Box<dyn Error>> {
 
     // Note: Task cancellation is not yet implemented
     // For now, just verify the task was submitted
-    assert_eq!(agent.task_status(&task_id).await?, TaskStatus::Pending);
+    assert_eq!(agent.task_status(&task_id).await?, TaskStatus::Queued);
 
     agent.stop().await?;
     Ok(())

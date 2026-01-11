@@ -11,7 +11,7 @@ pub type MessageId = Uuid;
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum MessageType {
     /// Request to execute a task.
-    TaskRequest(Task),
+    TaskRequest(Box<Task>),
     /// Response with task status/result.
     TaskResponse {
         /// ID of the task.
@@ -70,7 +70,7 @@ impl Message {
             id: Uuid::new_v4(),
             sender: sender.into(),
             recipient: recipient.into(),
-            content: MessageType::TaskRequest(task),
+            content: MessageType::TaskRequest(Box::new(task)),
             timestamp: chrono::Utc::now(),
             signature: None,
             public_key: None,
