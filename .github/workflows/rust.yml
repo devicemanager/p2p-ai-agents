@@ -31,11 +31,26 @@ jobs:
       
       - name: Free up disk space
         run: |
+          # Show initial disk usage
+          echo "=== Initial Disk Usage ==="
+          df -h
+          
           # Remove unnecessary software
+          echo "=== Removing unnecessary packages ==="
           sudo rm -rf /usr/share/dotnet
           sudo rm -rf /opt/ghc
           sudo rm -rf /usr/local/share/boost
           sudo rm -rf "$AGENT_TOOLSDIRECTORY"
+          sudo rm -rf /usr/local/lib/android
+          sudo rm -rf /usr/share/swift
+          sudo rm -rf /opt/hostedtoolcache
+          
+          # Clean apt cache
+          sudo apt-get clean
+          sudo rm -rf /var/lib/apt/lists/*
+          
+          # Show final disk usage
+          echo "=== Disk Usage After Cleanup ==="
           df -h
       
       - name: Install system dependencies
@@ -67,7 +82,6 @@ jobs:
           path: |
             ~/.cargo/registry
             ~/.cargo/git
-            target
           key: ${{ runner.os }}-cargo-ci-${{ hashFiles('**/Cargo.toml') }}-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: |
             ${{ runner.os }}-cargo-ci-${{ hashFiles('**/Cargo.toml') }}-
@@ -76,9 +90,21 @@ jobs:
       
       - name: Run CI checks (fmt-check, clippy-strict, check, test)
         run: |
+          # Show disk space before tests
+          echo "=== Disk space before CI checks ==="
+          df -h
+          
+          # Run CI checks
           make ci-check
-          # Clean build artifacts to save space
+          
+          # Show disk space after tests
+          echo "=== Disk space after CI checks ==="
+          df -h
+          
+          # Clean build artifacts immediately to save space
           cargo clean
+          
+          echo "=== Disk space after cleanup ==="
           df -h
         timeout-minutes: 30
 
@@ -99,11 +125,26 @@ jobs:
       
       - name: Free up disk space
         run: |
+          # Show initial disk usage
+          echo "=== Initial Disk Usage ==="
+          df -h
+          
           # Remove unnecessary software
+          echo "=== Removing unnecessary packages ==="
           sudo rm -rf /usr/share/dotnet
           sudo rm -rf /opt/ghc
           sudo rm -rf /usr/local/share/boost
           sudo rm -rf "$AGENT_TOOLSDIRECTORY"
+          sudo rm -rf /usr/local/lib/android
+          sudo rm -rf /usr/share/swift
+          sudo rm -rf /opt/hostedtoolcache
+          
+          # Clean apt cache
+          sudo apt-get clean
+          sudo rm -rf /var/lib/apt/lists/*
+          
+          # Show final disk usage
+          echo "=== Disk Usage After Cleanup ==="
           df -h
       
       - name: Install system dependencies
@@ -138,7 +179,6 @@ jobs:
           path: |
             ~/.cargo/registry
             ~/.cargo/git
-            target
           key: ${{ runner.os }}-cargo-coverage-${{ hashFiles('**/Cargo.toml') }}-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: |
             ${{ runner.os }}-cargo-coverage-${{ hashFiles('**/Cargo.toml') }}-
