@@ -22,7 +22,8 @@ all: fmt-check clippy-strict check test
 help:
 	@echo "Available targets:"
 	@echo "  check      - Check code compilation"
-	@echo "  test       - Run all tests"
+	@echo "  test       - Run all tests (including Supabase)"
+	@echo "  test-ci    - Run tests without Supabase (for CI)"
 	@echo "  build      - Build all targets"
 	@echo "  fmt        - Format code"
 	@echo "  fmt-check  - Check code formatting"
@@ -31,6 +32,7 @@ help:
 	@echo "  coverage   - Generate code coverage report"
 	@echo "  clean      - Clean build artifacts"
 	@echo "  install-tools - Install development tools"
+	@echo "  ci-check   - Run CI checks (fmt-check, clippy-strict, check, test-ci)"
 	@echo "  all        - Run all code quality checks and tests (fmt-check, clippy-strict, check, test)"
 	@echo "  supabase-up - Start Supabase Docker containers"
 
@@ -49,6 +51,11 @@ check:
 test:
 	@echo "Running tests..."
 	$(CARGO_ENV) RUST_TEST_THREADS=1 cargo test --all-features --workspace -- --test-threads=1
+
+# Run tests without Supabase integration (for CI)
+test-ci:
+	@echo "Running tests (excluding Supabase integration tests)..."
+	$(CARGO_ENV) RUST_TEST_THREADS=1 cargo test --features="network,storage,cli,metrics-prometheus" --workspace -- --test-threads=1
 
 # Build all targets
 build:
@@ -75,13 +82,24 @@ clippy-strict:
 	@echo "Running clippy (strict mode)..."
 	$(CARGO_ENV) cargo clippy --all-targets --all-features -- -D warnings
 
-# Generate coverage report
+# Generate coverage report (full, including Supabase)
 # Note: Requires llvm-tools component. Install with: rustup component add llvm-tools
 # Coverage generates successfully despite warnings about LLVM tools configuration
 coverage:
 	@echo "Generating coverage report..."
 	@# Run coverage with proper error handling
 	@if $(CARGO_ENV) cargo llvm-cov --all-features --workspace --lcov --output-path lcov.info 2>/dev/null; then \
+		echo "✅ Coverage report generated: lcov.info"; \
+	else \
+		echo "⚠️  Coverage generated with warnings (this is normal on some platforms)"; \
+		echo "✅ Coverage report generated: lcov.info"; \
+	fi
+
+# Generate coverage report for CI (excludes Supabase)
+coverage-ci:
+	@echo "Generating coverage report (CI - no Supabase)..."
+	@# Run coverage with proper error handling
+	@if $(CARGO_ENV) cargo llvm-cov --features="network,storage,cli,metrics-prometheus" --workspace --lcov --output-path lcov.info 2>/dev/null; then \
 		echo "✅ Coverage report generated: lcov.info"; \
 	else \
 		echo "⚠️  Coverage generated with warnings (this is normal on some platforms)"; \
@@ -100,7 +118,7 @@ clean:
 	$(CARGO_ENV) cargo clean
 
 # CI-like check that runs all validations
-ci-check: fmt-check clippy-strict check test
+ci-check: fmt-check clippy-strict check test-ci
 
 # Quick development check
 dev-check: fmt check test

@@ -147,7 +147,7 @@ jobs:
             ${{ runner.os }}-cargo-
       
       - name: Generate code coverage
-        run: make coverage
+        run: make coverage-ci
         timeout-minutes: 30
         continue-on-error: true
       
