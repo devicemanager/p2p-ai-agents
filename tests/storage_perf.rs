@@ -491,6 +491,7 @@ async fn test_local_storage_stress() {
 
 #[cfg(feature = "storage-supabase")]
 #[tokio::test]
+#[cfg(feature = "storage-supabase")]
 async fn test_supabase_storage_performance() {
     // This test requires proper Supabase configuration
     let url = match std::env::var("SUPABASE_URL") {
