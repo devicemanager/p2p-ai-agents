@@ -4,7 +4,7 @@
 **Story Key**: 3-3-implement-network-layer  
 **Epic**: Week 3 - MVP Implementation  
 **Owner**: Amelia (Dev)  
-**Status**: not-started  
+**Status**: in-progress  
 **Priority**: High  
 **Effort**: 2 days  
 **Created**: 2026-01-10  
