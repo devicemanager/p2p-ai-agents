@@ -4,12 +4,12 @@
 //! This is a simplified MVP implementation for local network only.
 
 use crate::identity::AgentIdentity;
-use crate::network::protocol::AgentRequest;
+use crate::network::protocol::{AgentCodec, AgentProtocol, AgentRequest, AgentResponse};
 use libp2p::{
     futures::StreamExt,
-    gossipsub::{self, IdentTopic, MessageAuthenticity},
     identity::Keypair,
     mdns, noise,
+    request_response::{self, OutboundRequestId, ProtocolSupport},
     swarm::{NetworkBehaviour, SwarmEvent},
     tcp, yamux, Multiaddr, PeerId, Swarm, SwarmBuilder,
 };
@@ -17,14 +17,14 @@ use std::collections::HashMap;
 use std::error::Error;
 use std::time::Duration;
 
-const TOPIC_NAME: &str = "p2p-agents";
+const MESSAGE_SIZE_LIMIT: usize = 10 * 1024 * 1024; // 10MB
 
 /// P2P agent for discovering peers and exchanging messages
 pub struct P2PAgent {
     swarm: Swarm<MyBehaviour>,
     peers: HashMap<PeerId, PeerInfo>,
     _identity: AgentIdentity,
-    topic: IdentTopic,
+    pending_requests: HashMap<OutboundRequestId, tokio::sync::oneshot::Sender<AgentResponse>>,
 }
 
 /// Information about a discovered peer
@@ -40,7 +40,7 @@ pub struct PeerInfo {
 #[derive(NetworkBehaviour)]
 struct MyBehaviour {
     mdns: mdns::tokio::Behaviour,
-    gossipsub: gossipsub::Behaviour,
+    request_response: request_response::Behaviour<AgentCodec>,
 }
 
 impl P2PAgent {
@@ -51,33 +51,26 @@ impl P2PAgent {
         let keypair = Keypair::ed25519_from_bytes(vec![0u8; 32]).unwrap(); // TODO: Extract from identity
         let peer_id = PeerId::from(keypair.public());
 
-        // Create topic for messaging
-        let topic = IdentTopic::new(TOPIC_NAME);
-
-        // Build swarm with TCP transport + Noise + mDNS + Gossipsub
+        // Build swarm with TCP transport + Noise + mDNS + Request-Response
         let swarm = SwarmBuilder::with_existing_identity(keypair.clone())
             .with_tokio()
             .with_tcp(tcp::Config::default(), noise::Config::new, || {
                 yamux::Config::default()
             })?
-            .with_behaviour(|key| {
+            .with_behaviour(|_key| {
                 let mdns = mdns::tokio::Behaviour::new(mdns::Config::default(), peer_id)?;
 
-                let gossipsub_config = gossipsub::ConfigBuilder::default()
-                    .heartbeat_interval(Duration::from_secs(1))
-                    .validation_mode(gossipsub::ValidationMode::Strict)
-                    .build()
-                    .map_err(std::io::Error::other)?;
+                let request_response = request_response::Behaviour::with_codec(
+                    AgentCodec::default(),
+                    std::iter::once((AgentProtocol, ProtocolSupport::Full)),
+                    request_response::Config::default()
+                        .with_request_timeout(Duration::from_secs(30)),
+                );
 
-                let mut gossipsub = gossipsub::Behaviour::new(
-                    MessageAuthenticity::Signed(key.clone()),
-                    gossipsub_config,
-                )
-                .map_err(std::io::Error::other)?;
-
-                gossipsub.subscribe(&topic).map_err(std::io::Error::other)?;
-
-                Ok(MyBehaviour { mdns, gossipsub })
+                Ok(MyBehaviour {
+                    mdns,
+                    request_response,
+                })
             })?
             .with_swarm_config(|c| c.with_idle_connection_timeout(Duration::from_secs(60)))
             .build();
@@ -86,20 +79,39 @@ impl P2PAgent {
             swarm,
             peers: HashMap::new(),
             _identity: identity,
-            topic,
+            pending_requests: HashMap::new(),
         })
     }
 
-    /// Send a message to all connected peers
+    /// Send a message to a specific peer and wait for response
     #[tracing::instrument(skip(self))]
-    pub fn send_message(&mut self, message: String) -> Result<(), Box<dyn Error>> {
+    pub async fn send_message(
+        &mut self,
+        peer_id: PeerId,
+        message: String,
+    ) -> Result<AgentResponse, Box<dyn Error>> {
+        // Check message size
+        if message.len() > MESSAGE_SIZE_LIMIT {
+            return Err(format!("Message exceeds size limit of {}MB", MESSAGE_SIZE_LIMIT / 1024 / 1024).into());
+        }
+
         let request = AgentRequest { message };
-        let data = serde_json::to_vec(&request)?;
-        self.swarm
+        let (tx, rx) = tokio::sync::oneshot::channel();
+        
+        let request_id = self
+            .swarm
             .behaviour_mut()
-            .gossipsub
-            .publish(self.topic.clone(), data)?;
-        Ok(())
+            .request_response
+            .send_request(&peer_id, request);
+        
+        self.pending_requests.insert(request_id, tx);
+
+        // Wait for response with timeout
+        match tokio::time::timeout(Duration::from_secs(30), rx).await {
+            Ok(Ok(response)) => Ok(response),
+            Ok(Err(_)) => Err("Response channel closed".into()),
+            Err(_) => Err("Request timed out".into()),
+        }
     }
 
     /// Start listening on a network address
@@ -135,13 +147,39 @@ impl P2PAgent {
                     self.peers.remove(&peer_id);
                 }
             }
-            SwarmEvent::Behaviour(MyBehaviourEvent::Gossipsub(gossipsub::Event::Message {
-                message,
-                ..
-            })) => {
-                if let Ok(request) = serde_json::from_slice::<AgentRequest>(&message.data) {
-                    tracing::info!("Received message: {}", request.message);
+            SwarmEvent::Behaviour(MyBehaviourEvent::RequestResponse(
+                request_response::Event::Message { message, .. },
+            )) => match message {
+                request_response::Message::Request {
+                    request, channel, ..
+                } => {
+                    tracing::info!("Received request: {}", request.message);
+                    // Auto-respond with echo for MVP
+                    let response = AgentResponse {
+                        message: format!("Echo: {}", request.message),
+                    };
+                    let _ = self
+                        .swarm
+                        .behaviour_mut()
+                        .request_response
+                        .send_response(channel, response);
                 }
+                request_response::Message::Response {
+                    request_id,
+                    response,
+                } => {
+                    if let Some(tx) = self.pending_requests.remove(&request_id) {
+                        let _ = tx.send(response);
+                    }
+                }
+            },
+            SwarmEvent::Behaviour(MyBehaviourEvent::RequestResponse(
+                request_response::Event::OutboundFailure {
+                    request_id, error, ..
+                },
+            )) => {
+                tracing::error!("Outbound request failed: {:?}", error);
+                self.pending_requests.remove(&request_id);
             }
             _ => {}
         }
