@@ -67,6 +67,7 @@ jobs:
       
       - name: Run CI checks (fmt-check, clippy-strict, check, test)
         run: make ci-check
+        timeout-minutes: 30
 
 
   coverage:
@@ -125,6 +126,7 @@ jobs:
       
       - name: Generate code coverage
         run: make coverage
+        timeout-minutes: 30
         continue-on-error: true
       
       - name: Verify coverage file
