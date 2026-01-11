@@ -203,29 +203,67 @@ libp2p = { version = "0.53", default-features = false, features = [
 ## Dev Agent Record
 
 ### Debug Log
-*To be populated during implementation*
+**Implementation Session: 2026-01-10**
+- Switched from Gossipsub (pub/sub) to libp2p request-response protocol
+- Implemented proper protocol codec with 10MB size limit
+- Fixed security issue: removed hardcoded keypair, using real AgentIdentity
+- Protocol versioned as `/p2p-ai-agents/1.0.0` per AC3
+- Tests passing (no longer #[ignore])
 
 ### Implementation Plan
-*To be documented as tasks are executed*
+**Completed Tasks:**
+- ✅ Task 2: libp2p Swarm initialization (TCP/Noise/Yamux)
+- ✅ Task 4: Request-response protocol with JSON codec
+- ⚠️ Task 3: mDNS discovery implemented but not tested (requires 2+ agents)
+- ⚠️ Task 5: Message sending works but timeout handling needs 2-agent test
+- ⚠️ Task 6: Integration tests deferred (manual 2-agent testing needed)
+
+**Architecture Change:**
+- Original story specified request/response - initial impl used Gossipsub
+- Corrected to proper request-response protocol during code review
 
 ### Completion Notes
-*To be filled when story is complete*
+**Status:** In-progress (core implementation complete, integration tests pending)
+
+**What Works:**
+- Agent creation with unique cryptographic identity
+- Network transport (TCP/Noise/Yamux on dynamic port)
+- Request-response protocol (/p2p-ai-agents/1.0.0)
+- JSON message serialization with 10MB size limit
+- Unit tests passing (3/3)
+
+**Pending:**
+- 2-agent integration test (mDNS discovery + message exchange)
+- Performance benchmarking (discovery <5s, connection <500ms)
+- Test coverage measurement (target: 90%+)
+
+**Known Issues:**
+- None (security issue fixed, tests passing, protocol corrected)
 
 ---
 
 ## File List
 
 ### Files Created
-*To be updated as implementation proceeds*
+- `src/network/p2p_agent.rs` (206 LOC) - P2P agent with libp2p swarm
+- `src/network/protocol.rs` (125 LOC) - Request-response codec
+- `src/network/mod.rs` (minimal) - Module exports
 
 ### Files Modified
-*To be updated as implementation proceeds*
+- `src/identity.rs` - Added pub(crate) keypair() accessor
+- `_bmad-output/implementation-artifacts/3-3-implement-network-layer.md` - Story tracking updates
 
 ---
 
 ## Change Log
 
 - **2026-01-10**: Story created (Amelia) - Core P2P networking layer
+- **2026-01-11**: Code review fixes (Amelia):
+  - Fixed story status tracking (not-started → in-progress)
+  - Switched from Gossipsub to proper request-response protocol
+  - Fixed security issue: removed hardcoded keypair
+  - Re-enabled unit tests (all passing)
+  - Updated Dev Agent Record and File List
 
 ---
 
