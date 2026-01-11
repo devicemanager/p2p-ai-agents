@@ -43,6 +43,12 @@ pub mod diversity;
 /// Reputation system
 pub mod reputation;
 
+/// MVP P2P agent for local network (mDNS + TCP)
+pub mod p2p_agent;
+
+/// Custom protocol for agent message exchange
+pub mod protocol;
+
 // Re-export NetworkStats from service module
 pub use service::NetworkStats;
 
