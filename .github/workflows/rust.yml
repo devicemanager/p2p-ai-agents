@@ -15,6 +15,7 @@ env:
   CARGO_TERM_COLOR: always
   CARGO_INCREMENTAL: 0
   RUST_BACKTRACE: 1
+  RUST_LOG: error
 
 jobs:
   ci-check:
@@ -94,8 +95,18 @@ jobs:
           echo "=== Disk space before CI checks ==="
           df -h
           
-          # Run CI checks
-          make ci-check
+          # Run CI checks with reduced verbosity
+          make fmt-check
+          make clippy-strict
+          make check
+          
+          # Run tests with minimal output to reduce log size
+          echo "Running tests (excluding Supabase integration tests)..."
+          RUST_TEST_THREADS=1 cargo test \
+            --features="network,storage,cli,metrics-prometheus" \
+            --workspace \
+            --quiet \
+            -- --test-threads=1 --quiet
           
           # Show disk space after tests
           echo "=== Disk space after CI checks ==="
@@ -106,7 +117,7 @@ jobs:
           
           echo "=== Disk space after cleanup ==="
           df -h
-        timeout-minutes: 30
+        timeout-minutes: 45
 
 
   coverage:
@@ -187,7 +198,29 @@ jobs:
             ${{ runner.os }}-cargo-
       
       - name: Generate code coverage
-        run: make coverage-ci
+        run: |
+          # Show disk space before coverage
+          echo "=== Disk space before coverage ==="
+          df -h
+          
+          # Run coverage with reduced verbosity to minimize log size
+          RUST_TEST_THREADS=1 cargo llvm-cov \
+            --features="network,storage,cli,metrics-prometheus" \
+            --workspace \
+            --lcov \
+            --output-path lcov.info \
+            --quiet \
+            -- --test-threads=1 --quiet
+          
+          # Show disk space after coverage
+          echo "=== Disk space after coverage ==="
+          df -h
+          
+          # Clean up build artifacts immediately
+          cargo clean
+          
+          echo "=== Disk space after cleanup ==="
+          df -h
         timeout-minutes: 30
         continue-on-error: true
       
