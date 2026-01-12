@@ -236,7 +236,7 @@ jobs:
       
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v4
-        if: always() && secrets.CODECOV_TOKEN != ''
+        if: always() && secrets.CODECOV_TOKEN != null
         with:
           files: lcov.info
           fail_ci_if_error: false
