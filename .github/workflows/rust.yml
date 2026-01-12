@@ -106,7 +106,7 @@ jobs:
             --features="network,storage,cli,metrics-prometheus" \
             --workspace \
             --quiet \
-            -- --test-threads=1 --quiet
+            -- --test-threads=1
           
           # Show disk space after tests
           echo "=== Disk space after CI checks ==="
@@ -210,7 +210,7 @@ jobs:
             --lcov \
             --output-path lcov.info \
             --quiet \
-            -- --test-threads=1 --quiet
+            -- --test-threads=1
           
           # Show disk space after coverage
           echo "=== Disk space after coverage ==="
@@ -236,7 +236,7 @@ jobs:
       
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v4
-        if: always()
+        if: always() && secrets.CODECOV_TOKEN != ''
         with:
           files: lcov.info
           fail_ci_if_error: false
