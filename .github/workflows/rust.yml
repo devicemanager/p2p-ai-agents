@@ -71,9 +71,6 @@ jobs:
           # Show disk space after tests
           echo "=== Disk space after CI checks ==="
           df -h
-          
-          echo "=== Disk space after CI checks ==="
-          df -h
         timeout-minutes: 45
 
 
@@ -126,9 +123,6 @@ jobs:
             -- --test-threads=1
           
           # Show disk space after coverage
-          echo "=== Disk space after coverage ==="
-          df -h
-          
           echo "=== Disk space after coverage ==="
           df -h
         timeout-minutes: 30
