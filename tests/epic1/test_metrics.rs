@@ -4,9 +4,6 @@ use crate::common;
 #[cfg(feature = "metrics-prometheus")]
 use p2p_ai_agents::metrics::{MetricsCollector, MetricsConfig};
 
-#[cfg(feature = "metrics-prometheus")]
-use prometheus;
-
 #[cfg(not(feature = "metrics-prometheus"))]
 #[tokio::test]
 async fn test_metrics_endpoint() {
