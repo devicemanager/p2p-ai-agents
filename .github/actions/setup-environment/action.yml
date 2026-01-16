@@ -15,10 +15,8 @@ runs:
         sudo rm -rf /usr/share/dotnet
         sudo rm -rf /opt/ghc
         sudo rm -rf /usr/local/share/boost
-        sudo rm -rf "$AGENT_TOOLSDIRECTORY"
         sudo rm -rf /usr/local/lib/android
         sudo rm -rf /usr/share/swift
-        sudo rm -rf /opt/hostedtoolcache
         
         # Clean apt cache
         sudo apt-get clean
