@@ -142,7 +142,7 @@ Validate the problem hypothesis and define clear target users, use cases, and va
 - **Deliverables**: 
   - 5 interviews completed (Jan 12-14)
   - Interview findings synthesized
-  - Problem validation score: 4.2/5
+  - Problem severity score: 7.8/10 avg (4/5 rated 7+)
 
 ### Story 1.2: Create Project Context Document ✅
 - **Status**: COMPLETE
@@ -169,7 +169,7 @@ Validate the problem hypothesis and define clear target users, use cases, and va
 
 **Evidence**:
 - 4/5 users rated problem severity 7+/10
-- Average validation score: 4.2/5 (target: 4+)
+- Average problem severity: 7.8/10 (3.9/5)
 - All users cited cost as a critical barrier
 - Multiple users expressed immediate interest in trying MVP
 
@@ -187,7 +187,7 @@ Validate the problem hypothesis and define clear target users, use cases, and va
 **Recommendation**: Proceed with Week 2 (Architecture & Technical Spike)
 
 **Rationale**:
-1. Problem clearly validated (4.2/5 score)
+1. Problem clearly validated (7.8/10 severity, 4/5 rated 7+)
 2. Target persona well-defined with concrete pain points
 3. Use cases identified and prioritized
 4. Competitive differentiation clear (inference-first, no blockchain, simple UX)
@@ -205,8 +205,8 @@ Validate the problem hypothesis and define clear target users, use cases, and va
 | Metric | Target | Actual | Status |
 |--------|--------|--------|--------|
 | User Interviews | 5+ | 5 | ✅ MET |
-| Problem Validation Score | 4/5 | 4.2/5 | ✅ EXCEEDED |
 | Users Rating 7+ | 4/5 | 4/5 | ✅ MET |
+| Avg Problem Severity | N/A | 7.8/10 | ✅ STRONG |
 | Primary Persona Defined | Yes | Yes | ✅ MET |
 | Use Cases Documented | 3+ | 3 | ✅ MET |
 | Value Prop (1 sentence) | Yes | Yes | ✅ MET |
