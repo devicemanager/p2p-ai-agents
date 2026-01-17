@@ -169,6 +169,7 @@ pub async fn process_task(task: Task) -> anyhow::Result<TaskResult> {
 - **Error Propagation**: Do not leak sensitive information in error messages that are exposed to the outside world.
 - **Least Privilege**: Ensure processes and file permissions are as restrictive as possible. Private keys should have `0600` permissions.
 
+<!-- Test commit -->
 ## 6. Current Development Context
 
 **Last Updated:** Sat Jan 17 2026
