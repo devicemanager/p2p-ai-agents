@@ -170,3 +170,27 @@ pub async fn process_task(task: Task) -> anyhow::Result<TaskResult> {
 - **Least Privilege**: Ensure processes and file permissions are as restrictive as possible. Private keys should have `0600` permissions.
 
 <!-- Test commit -->
+## 6. Current Development Context
+
+**Last Updated:** Sat Jan 17 2026
+
+**Active Story:** Story 3.3: Implement Network Layer (In Progress)
+
+**Recent Achievements:**
+- Validated Story 3.2 (Identity Module) as ready for review.
+- Confirmed MVP architecture: TCP + Noise + mDNS + Request-Response (No Gossipsub).
+- Initialized libp2p Swarm with TCP, Noise, and Yamux.
+- Implemented basic Request-Response protocol structure.
+- Implemented mDNS Discovery logic (handling `mdns::Event::Discovered`) in `P2PAgent`.
+- Implemented `send_message` using Request-Response behavior in `P2PAgent`.
+
+**Current Focus:**
+- **Verification:** Run `cargo run --example mvp_demo` to verify agent interaction and discovery.
+- **Refinement:** Address any bugs found during verification.
+- **Story Completion:** Mark tasks as complete in story files.
+
+**Key Files:**
+- `src/network/p2p_agent.rs`: Main agent logic (Includes mDNS and Request-Response).
+- `src/network/behavior.rs`: Network behavior definition.
+- `src/network/protocol.rs`: Request/Response codec.
+- `examples/mvp_demo.rs`: MVP entry point.
