@@ -118,6 +118,7 @@ clean:
 	$(CARGO_ENV) cargo clean
 
 # CI-like check that runs all validations
+ci-check: export CI=true
 ci-check: fmt-check clippy-strict check test-ci
 
 # Quick development check
