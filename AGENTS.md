@@ -168,3 +168,5 @@ pub async fn process_task(task: Task) -> anyhow::Result<TaskResult> {
 - **Cryptographic Operations**: Use constant-time functions for all cryptographic comparisons to prevent timing attacks.
 - **Error Propagation**: Do not leak sensitive information in error messages that are exposed to the outside world.
 - **Least Privilege**: Ensure processes and file permissions are as restrictive as possible. Private keys should have `0600` permissions.
+
+<!-- Test commit -->
