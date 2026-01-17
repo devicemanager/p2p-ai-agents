@@ -1,6 +1,16 @@
+#[cfg(feature = "metrics-prometheus")]
 use crate::common;
+
+#[cfg(feature = "metrics-prometheus")]
 use p2p_ai_agents::metrics::{MetricsCollector, MetricsConfig};
 
+#[cfg(not(feature = "metrics-prometheus"))]
+#[tokio::test]
+async fn test_metrics_endpoint() {
+    eprintln!("skipped: enable feature 'metrics-prometheus' to run");
+}
+
+#[cfg(feature = "metrics-prometheus")]
 #[tokio::test]
 async fn test_metrics_endpoint() {
     let _ctx = common::setup_test_agent();
