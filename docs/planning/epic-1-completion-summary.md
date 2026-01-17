@@ -97,10 +97,10 @@ Validate the problem hypothesis and define clear target users, use cases, and va
 ### 5. ✅ 4/5 Users Validate Problem as Real and Important
 **Target**: 4/5 users rate problem 4+ (out of 5) or 7+ (out of 10)  
 **Actual**: 4/5 users rated problem 7+ out of 10  
-**Average Score**: 4.2/5  
-**Status**: ✅ MET (EXCEEDED TARGET)
+**Average Problem Severity Score**: 7.8/10 (3.9/5)  
+**Status**: ✅ MET (Target: 4/5 users rate 7+, Actual: 4/5 rated 7+)
 
-**Individual Scores**:
+**Individual Scores** (Problem Severity out of 10):
 - Dr. Sarah Chen: 9/10 (Critical blocker)
 - Marcus Thompson: 7/10 (Significant, has workarounds)
 - Alex Rodriguez: 8/10 (Blocks learning and projects)
@@ -110,7 +110,7 @@ Validate the problem hypothesis and define clear target users, use cases, and va
 **Validation Summary**:
 - **Result**: Problem is REAL and IMPORTANT
 - **Cost**: Cited by 5/5 interviewees as primary pain point
-- **Severity**: 4/5 rated 7+ out of 10
+- **Severity**: 4/5 rated 7+ out of 10 (exceeded target)
 - **Willingness to Use**: 4/5 would use for non-critical workloads
 
 **Documentation**: `docs/planning/interview-findings.md` (lines 242-250)
