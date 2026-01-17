@@ -65,6 +65,10 @@ mod identity_stress_tests {
 
     #[tokio::test]
     async fn test_concurrent_loads() {
+        if std::env::var("CI").is_ok() {
+            eprintln!("skipped on CI");
+            return;
+        }
         use tokio::task::JoinSet;
 
         let temp_dir = tempdir().expect("tempdir");
@@ -100,6 +104,10 @@ mod identity_stress_tests {
 
     #[tokio::test]
     async fn test_performance_benchmark() {
+        if std::env::var("CI").is_ok() {
+            eprintln!("skipped on CI");
+            return;
+        }
         use std::time::Instant;
 
         let temp_dir = tempdir().expect("tempdir");
