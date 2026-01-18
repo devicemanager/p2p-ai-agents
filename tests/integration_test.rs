@@ -3,13 +3,14 @@
 //! Tests the complete system behavior across identity, network, and task modules.
 //! These tests validate the MVP is working end-to-end.
 
-use p2p_ai_agents::identity::AgentIdentity;
+use p2p_ai_agents::agent::identity::AgentIdentity;
 use p2p_ai_agents::network::p2p_agent::P2PAgent;
+use semaphore::Field;
 use tokio::time::{sleep, timeout, Duration};
 
 /// Test helper: Create and start an agent
 async fn create_test_agent() -> Result<P2PAgent, Box<dyn std::error::Error>> {
-    let identity = AgentIdentity::generate();
+    let identity = AgentIdentity::new(20, Field::from(0)).await?;
     let agent = P2PAgent::new(identity).await?;
     Ok(agent)
 }
@@ -23,8 +24,8 @@ async fn test_two_agents_discover_each_other() {
     }
     // Test that two agents on the same network can discover each other via mDNS
     // Arrange
-    let identity_a = AgentIdentity::generate();
-    let identity_b = AgentIdentity::generate();
+    let identity_a = AgentIdentity::new(20, Field::from(0)).await.unwrap();
+    let identity_b = AgentIdentity::new(20, Field::from(0)).await.unwrap();
 
     let mut agent_a = P2PAgent::new(identity_a).await.unwrap();
     let mut agent_b = P2PAgent::new(identity_b).await.unwrap();
@@ -34,17 +35,17 @@ async fn test_two_agents_discover_each_other() {
 
     // Act: Run agents for discovery period
     let handle_a = tokio::spawn(async move {
-        for _ in 0..50 {
-            let _ = agent_a.poll_once().await;
-            sleep(Duration::from_millis(100)).await;
+        let start = std::time::Instant::now();
+        while start.elapsed() < Duration::from_secs(5) {
+            let _ = timeout(Duration::from_millis(100), agent_a.poll_once()).await;
         }
         agent_a
     });
 
     let handle_b = tokio::spawn(async move {
-        for _ in 0..50 {
-            let _ = agent_b.poll_once().await;
-            sleep(Duration::from_millis(100)).await;
+        let start = std::time::Instant::now();
+        while start.elapsed() < Duration::from_secs(5) {
+            let _ = timeout(Duration::from_millis(100), agent_b.poll_once()).await;
         }
         agent_b
     });
@@ -78,8 +79,8 @@ async fn test_end_to_end_task_exchange() {
     }
     // Test complete task workflow: create, send, execute, receive
     // Arrange
-    let identity_a = AgentIdentity::generate();
-    let identity_b = AgentIdentity::generate();
+    let identity_a = AgentIdentity::new(20, Field::from(0)).await.unwrap();
+    let identity_b = AgentIdentity::new(20, Field::from(0)).await.unwrap();
 
     let mut agent_a = P2PAgent::new(identity_a).await.unwrap();
     let mut agent_b = P2PAgent::new(identity_b).await.unwrap();
@@ -92,42 +93,44 @@ async fn test_end_to_end_task_exchange() {
     // Spawn agent B event loop
     let handle_b = tokio::spawn(async move {
         loop {
-            if let Err(e) = agent_b.poll_once().await {
-                eprintln!("Agent B error: {}", e);
-                break;
+            // Use timeout to prevent blocking if no events
+            if timeout(Duration::from_millis(100), agent_b.poll_once())
+                .await
+                .is_err()
+            {
+                // Timeout is fine, just loop again
             }
-            sleep(Duration::from_millis(10)).await;
         }
     });
 
     // Spawn agent A polling
     let handle_a = tokio::spawn(async move {
-        for _ in 0..50 {
-            let _ = agent_a.poll_once().await;
-            sleep(Duration::from_millis(100)).await;
+        let start = std::time::Instant::now();
+        // Poll for enough time to allow discovery and connection establishment
+        while start.elapsed() < Duration::from_secs(5) {
+            let _ = timeout(Duration::from_millis(100), agent_a.poll_once()).await;
         }
         agent_a
     });
 
-    // Wait for discovery
-    sleep(Duration::from_secs(3)).await;
-
+    // Wait for discovery phase to complete (controlled by the loop duration inside the spawn)
     let mut agent_a = handle_a.await.unwrap();
 
     // Act: Send message from A to B
     let result = timeout(
         Duration::from_secs(15),
-        agent_a.send_message(agent_b_peer_id, "Hello from Agent A".to_string()),
+        agent_a.send_message(agent_b_peer_id, "Hello from Agent A".as_bytes().to_vec()),
     )
     .await;
 
     // Assert: Should receive response
     match result {
         Ok(Ok(response)) => {
+            let response_str = String::from_utf8_lossy(&response.message);
             assert!(
-                response.message.contains("Echo"),
+                response_str.contains("Echo"),
                 "Response should echo message, got: {}",
-                response.message
+                response_str
             );
         }
         Ok(Err(e)) => {
@@ -159,14 +162,22 @@ async fn test_discovery_timeout() {
     // agents/services on the LAN/runner network. So asserting "0 peers" is
     // flaky and not a reliable signal.
     let result = timeout(Duration::from_secs(15), async {
-        let identity = AgentIdentity::generate();
+        let identity = AgentIdentity::new(20, Field::from(0)).await.unwrap();
         let mut agent = P2PAgent::new(identity).await.unwrap();
         agent.listen().unwrap();
 
         // Run for a short period.
         for _ in 0..10 {
-            let _ = agent.poll_once().await;
-            sleep(Duration::from_millis(100)).await;
+            // We wrap poll_once in a timeout because it WILL block if there are no events
+            // (which is expected behavior for select_next_some when network is quiet).
+            // We just want to verify calling it doesn't crash or deadlock the runtime.
+            if let Ok(Err(e)) = timeout(Duration::from_millis(200), agent.poll_once()).await {
+                eprintln!("Poll error: {}", e);
+            }
+            // If it timed out, that's fine, it means no events.
+            // If it returned Ok(()), that's also fine.
+
+            sleep(Duration::from_millis(50)).await;
         }
 
         // Assert only that the call completes and returns a valid list.
@@ -184,7 +195,7 @@ async fn test_discovery_timeout() {
 #[ignore = "Skipped on CI"]
 async fn test_task_send_to_unknown_peer() {
     // Test error handling when sending to non-existent peer
-    let identity = AgentIdentity::generate();
+    let identity = AgentIdentity::new(20, Field::from(0)).await.unwrap();
     let mut agent = P2PAgent::new(identity).await.unwrap();
     agent.listen().unwrap();
 
@@ -193,7 +204,7 @@ async fn test_task_send_to_unknown_peer() {
 
     let result = timeout(
         Duration::from_secs(2),
-        agent.send_message(fake_peer, "test message".to_string()),
+        agent.send_message(fake_peer, "test message".as_bytes().to_vec()),
     )
     .await;
 
@@ -246,7 +257,7 @@ async fn test_multiple_agents_network() {
     let mut agents = Vec::new();
 
     for _ in 0..3 {
-        let identity = AgentIdentity::generate();
+        let identity = AgentIdentity::new(20, Field::from(0)).await.unwrap();
         let mut agent = P2PAgent::new(identity).await.unwrap();
         agent.listen().unwrap();
         agents.push(agent);
@@ -257,9 +268,9 @@ async fn test_multiple_agents_network() {
         .into_iter()
         .map(|mut agent| {
             tokio::spawn(async move {
-                for _ in 0..50 {
-                    let _ = agent.poll_once().await;
-                    sleep(Duration::from_millis(100)).await;
+                let start = std::time::Instant::now();
+                while start.elapsed() < Duration::from_secs(5) {
+                    let _ = timeout(Duration::from_millis(100), agent.poll_once()).await;
                 }
                 agent
             })
@@ -288,30 +299,38 @@ async fn test_multiple_agents_network() {
 #[ignore = "Skipped on CI"]
 async fn test_identity_uniqueness() {
     // Test that each agent has unique identity
-    let id1 = AgentIdentity::generate();
-    let id2 = AgentIdentity::generate();
-    let id3 = AgentIdentity::generate();
+    let id1 = AgentIdentity::new(20, Field::from(0)).await.unwrap();
+    let id2 = AgentIdentity::new(20, Field::from(0)).await.unwrap();
+    let id3 = AgentIdentity::new(20, Field::from(0)).await.unwrap();
 
-    assert_ne!(id1.peer_id(), id2.peer_id());
-    assert_ne!(id2.peer_id(), id3.peer_id());
-    assert_ne!(id1.peer_id(), id3.peer_id());
+    let pid1 = id1.keypair().public().to_peer_id();
+    let pid2 = id2.keypair().public().to_peer_id();
+    let pid3 = id3.keypair().public().to_peer_id();
+
+    assert_ne!(pid1, pid2);
+    assert_ne!(pid2, pid3);
+    assert_ne!(pid1, pid3);
 }
 
 #[tokio::test]
 #[ignore = "Skipped on CI"]
 async fn test_signature_verification() {
     // Test cryptographic signature workflow
-    let identity = AgentIdentity::generate();
+    let identity = AgentIdentity::new(20, Field::from(0)).await.unwrap();
     let message = b"Test message for signing";
 
-    let signature = identity.sign(message);
-    let is_valid = AgentIdentity::verify(message, &signature, &identity.public_key());
+    let signature = identity.sign_data(message).unwrap();
+    let is_valid = identity
+        .verify_signature(&identity.public_key_bytes(), message, &signature)
+        .unwrap();
 
     assert!(is_valid, "Valid signature should verify successfully");
 
     // Test invalid signature
     let wrong_message = b"Different message";
-    let is_invalid = AgentIdentity::verify(wrong_message, &signature, &identity.public_key());
+    let is_invalid = identity
+        .verify_signature(&identity.public_key_bytes(), wrong_message, &signature)
+        .unwrap();
 
     assert!(
         !is_invalid,

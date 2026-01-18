@@ -3,13 +3,15 @@
 //! Provides peer-to-peer networking using libp2p with mDNS discovery.
 //! This is a simplified MVP implementation for local network only.
 
-use crate::identity::AgentIdentity;
-use crate::network::protocol::{AgentCodec, AgentProtocol, AgentRequest, AgentResponse};
+use crate::agent::identity::AgentIdentity;
+use crate::network::behavior::{AgentBehavior, AgentBehaviorEvent};
+use crate::network::protocol::{AgentRequest, AgentResponse};
+use crate::task::{executor::TaskExecutor, Task};
 use libp2p::{
     futures::StreamExt,
     mdns, noise,
-    request_response::{self, OutboundRequestId, ProtocolSupport},
-    swarm::{NetworkBehaviour, SwarmEvent},
+    request_response::{self, OutboundRequestId},
+    swarm::SwarmEvent,
     tcp, yamux, Multiaddr, PeerId, Swarm, SwarmBuilder,
 };
 use std::collections::HashMap;
@@ -20,7 +22,7 @@ const MESSAGE_SIZE_LIMIT: usize = 10 * 1024 * 1024; // 10MB
 
 /// P2P agent for discovering peers and exchanging messages
 pub struct P2PAgent {
-    swarm: Swarm<MyBehaviour>,
+    swarm: Swarm<AgentBehavior>,
     peers: HashMap<PeerId, PeerInfo>,
     _identity: AgentIdentity,
     pending_requests: HashMap<OutboundRequestId, tokio::sync::oneshot::Sender<AgentResponse>>,
@@ -35,41 +37,21 @@ pub struct PeerInfo {
     pub addresses: Vec<Multiaddr>,
 }
 
-/// Combined network behavior
-#[derive(NetworkBehaviour)]
-struct MyBehaviour {
-    mdns: mdns::tokio::Behaviour,
-    request_response: request_response::Behaviour<AgentCodec>,
-}
-
 impl P2PAgent {
     /// Create new P2P agent with given identity
     #[tracing::instrument(skip(identity))]
     pub async fn new(identity: AgentIdentity) -> Result<Self, Box<dyn Error>> {
         // Extract keypair from AgentIdentity
         let keypair = identity.keypair().clone();
-        let peer_id = PeerId::from(keypair.public());
 
-        // Build swarm with TCP transport + Noise + mDNS + Request-Response
+        // Build swarm with TCP transport + Noise + Yamux + AgentBehavior
         let swarm = SwarmBuilder::with_existing_identity(keypair.clone())
             .with_tokio()
             .with_tcp(tcp::Config::default(), noise::Config::new, || {
                 yamux::Config::default()
             })?
-            .with_behaviour(|_key| {
-                let mdns = mdns::tokio::Behaviour::new(mdns::Config::default(), peer_id)?;
-
-                let request_response = request_response::Behaviour::with_codec(
-                    AgentCodec,
-                    std::iter::once((AgentProtocol, ProtocolSupport::Full)),
-                    request_response::Config::default()
-                        .with_request_timeout(Duration::from_secs(30)),
-                );
-
-                Ok(MyBehaviour {
-                    mdns,
-                    request_response,
-                })
+            .with_behaviour(|key| {
+                AgentBehavior::new(key.clone(), "p2p-ai-agents/1.0.0".to_string()).unwrap()
             })?
             .with_swarm_config(|c| c.with_idle_connection_timeout(Duration::from_secs(60)))
             .build();
@@ -83,11 +65,11 @@ impl P2PAgent {
     }
 
     /// Send a message to a specific peer and wait for response
-    #[tracing::instrument(skip(self))]
+    #[tracing::instrument(skip(self, message))]
     pub async fn send_message(
         &mut self,
         peer_id: PeerId,
-        message: String,
+        message: Vec<u8>,
     ) -> Result<AgentResponse, Box<dyn Error>> {
         // Check message size
         if message.len() > MESSAGE_SIZE_LIMIT {
@@ -99,7 +81,7 @@ impl P2PAgent {
         }
 
         let request = AgentRequest { message };
-        let (tx, rx) = tokio::sync::oneshot::channel();
+        let (tx, mut rx) = tokio::sync::oneshot::channel();
 
         let request_id = self
             .swarm
@@ -109,11 +91,35 @@ impl P2PAgent {
 
         self.pending_requests.insert(request_id, tx);
 
-        // Wait for response with timeout
-        match tokio::time::timeout(Duration::from_secs(30), rx).await {
-            Ok(Ok(response)) => Ok(response),
-            Ok(Err(_)) => Err("Response channel closed".into()),
-            Err(_) => Err("Request timed out".into()),
+        // Wait for response with timeout while driving the swarm
+        let timeout_duration = Duration::from_secs(30);
+        let start = std::time::Instant::now();
+
+        loop {
+            // Check if response arrived
+            if let Ok(response) = rx.try_recv() {
+                return Ok(response);
+            }
+
+            // Check total timeout
+            if start.elapsed() > timeout_duration {
+                self.pending_requests.remove(&request_id);
+                return Err("Request timed out".into());
+            }
+
+            // Poll swarm for a bit to make progress
+            // We use a short timeout for poll_once so we can check rx and total timeout regularly
+            match tokio::time::timeout(Duration::from_millis(100), self.poll_once()).await {
+                Ok(Ok(())) => {
+                    // Event processed, check rx again
+                    continue;
+                }
+                Ok(Err(e)) => return Err(e), // Swarm error
+                Err(_) => {
+                    // poll_once timed out (no events), this is fine, continue loop
+                    continue;
+                }
+            }
         }
     }
 
@@ -131,7 +137,7 @@ impl P2PAgent {
             SwarmEvent::NewListenAddr { address, .. } => {
                 tracing::info!("Listening on {}", address);
             }
-            SwarmEvent::Behaviour(MyBehaviourEvent::Mdns(mdns::Event::Discovered(peers))) => {
+            SwarmEvent::Behaviour(AgentBehaviorEvent::Mdns(mdns::Event::Discovered(peers))) => {
                 for (peer_id, addr) in peers {
                     tracing::info!("Discovered peer: {} at {}", peer_id, addr);
                     self.peers
@@ -144,22 +150,36 @@ impl P2PAgent {
                         .push(addr);
                 }
             }
-            SwarmEvent::Behaviour(MyBehaviourEvent::Mdns(mdns::Event::Expired(peers))) => {
+            SwarmEvent::Behaviour(AgentBehaviorEvent::Mdns(mdns::Event::Expired(peers))) => {
                 for (peer_id, _addr) in peers {
                     tracing::info!("Peer expired: {}", peer_id);
                     self.peers.remove(&peer_id);
                 }
             }
-            SwarmEvent::Behaviour(MyBehaviourEvent::RequestResponse(
+            SwarmEvent::Behaviour(AgentBehaviorEvent::RequestResponse(
                 request_response::Event::Message { message, .. },
             )) => match message {
                 request_response::Message::Request {
                     request, channel, ..
                 } => {
-                    tracing::info!("Received request: {}", request.message);
-                    // Auto-respond with echo for MVP
+                    let req_message = String::from_utf8_lossy(&request.message);
+                    tracing::info!("Received request: {}", req_message);
+
+                    // Try to deserialize as a Task
+                    let response_data =
+                        if let Ok(task) = serde_json::from_slice::<Task>(&request.message) {
+                            tracing::info!("Executing task: {}", task.id);
+                            let executor = TaskExecutor::new();
+                            let result = executor.execute(task).await;
+                            serde_json::to_vec(&result)
+                                .unwrap_or_else(|_| b"Error serializing result".to_vec())
+                        } else {
+                            // Fallback to echo for non-Task messages (or errors)
+                            format!("Echo: {}", req_message).into_bytes()
+                        };
+
                     let response = AgentResponse {
-                        message: format!("Echo: {}", request.message),
+                        message: response_data,
                     };
                     let _ = self
                         .swarm
@@ -176,7 +196,7 @@ impl P2PAgent {
                     }
                 }
             },
-            SwarmEvent::Behaviour(MyBehaviourEvent::RequestResponse(
+            SwarmEvent::Behaviour(AgentBehaviorEvent::RequestResponse(
                 request_response::Event::OutboundFailure {
                     request_id, error, ..
                 },
@@ -184,6 +204,7 @@ impl P2PAgent {
                 tracing::error!("Outbound request failed: {:?}", error);
                 self.pending_requests.remove(&request_id);
             }
+            // Ignore other events (Identify, Ping, Gossipsub, Kademlia) for now
             _ => {}
         }
         Ok(())
@@ -218,7 +239,9 @@ mod tests {
     async fn test_create_agent() {
         // Test agent creation (fast, no network operations)
         let result = timeout(Duration::from_secs(2), async {
-            let identity = AgentIdentity::generate();
+            let identity = AgentIdentity::new(20, semaphore::Field::from(0))
+                .await
+                .unwrap();
             let agent = P2PAgent::new(identity).await.unwrap();
 
             // Agent should be created successfully
@@ -232,7 +255,9 @@ mod tests {
     #[tokio::test]
     async fn test_list_peers_empty() {
         let result = timeout(Duration::from_secs(2), async {
-            let identity = AgentIdentity::generate();
+            let identity = AgentIdentity::new(20, semaphore::Field::from(0))
+                .await
+                .unwrap();
             let agent = P2PAgent::new(identity).await.unwrap();
 
             let peers = agent.list_peers();
@@ -246,11 +271,13 @@ mod tests {
     #[tokio::test]
     async fn test_message_size_limit() {
         let result = timeout(Duration::from_secs(2), async {
-            let identity = AgentIdentity::generate();
+            let identity = AgentIdentity::new(20, semaphore::Field::from(0))
+                .await
+                .unwrap();
             let mut agent = P2PAgent::new(identity).await.unwrap();
 
             // Create message exceeding 10MB limit
-            let large_message = "x".repeat(11 * 1024 * 1024);
+            let large_message = vec![b'x'; 11 * 1024 * 1024];
             let fake_peer = PeerId::random();
 
             // Should fail due to size limit

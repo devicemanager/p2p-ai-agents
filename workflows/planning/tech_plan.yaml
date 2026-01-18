@@ -1,0 +1,5 @@
+name: Technical Planning
+description: "Creates a technical plan from requirements."
+steps:
+  - name: "Generate Plan"
+    command: 'echo "Technical plan based on `cat {{requirements_file}}`:\n- Step 1: Scrape data from sources X, Y, Z.\n- Step 2: Analyze and synthesize data.\n- Step 3: Format into a report." > {{output_path}}'

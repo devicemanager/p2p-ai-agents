@@ -1,131 +1,123 @@
-//! MVP Demo: Two P2P Agents Discovering and Exchanging Tasks
+//! MVP Demo: End-to-End P2P Network Simulation
 //!
-//! This example demonstrates the core value proposition of P2P AI Agents:
-//! 1. Two agents start and generate unique identities
-//! 2. Agents discover each other via mDNS (local network)
-//! 3. Agent A sends a task to Agent B
-//! 4. Agent B processes and responds
-//! 5. Agent A receives the result
+//! This example script simulates a complete P2P network scenario on a single machine.
+//! It demonstrates:
+//! 1. Starting a "Bootstrap" node (acting as the stable peer).
+//! 2. Starting a "Worker" node that connects to the bootstrap node via mDNS.
+//! 3. Starting a "Client" node that discovers the Worker.
+//! 4. The Client submitting an AI Task to the Worker.
+//! 5. The Worker executing the task (mock AI) and returning the result.
+//! 6. The Client displaying the result.
 //!
-//! Run with: `cargo run --example mvp_demo`
+//! Usage: cargo run --example mvp_demo
 
-use p2p_ai_agents::identity::AgentIdentity;
+use p2p_ai_agents::agent::identity::AgentIdentity;
 use p2p_ai_agents::network::p2p_agent::P2PAgent;
+use p2p_ai_agents::task::{Task, TaskResult};
 use std::error::Error;
-use std::time::Instant;
-use tokio::time::{sleep, timeout, Duration};
+use std::time::Duration;
+use tokio::time::sleep;
+use tracing::{info, Level};
+use tracing_subscriber::FmtSubscriber;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
-    // Initialize logging
-    tracing_subscriber::fmt()
-        .with_max_level(tracing::Level::INFO)
-        .with_target(false)
-        .init();
+    // 1. Setup Logging
+    let subscriber = FmtSubscriber::builder()
+        .with_max_level(Level::INFO)
+        .finish();
+    tracing::subscriber::set_global_default(subscriber).expect("setting default subscriber failed");
 
-    println!("\n🚀 P2P AI Agents MVP Demo");
-    println!("===========================\n");
+    info!("🚀 Starting MVP Demo: End-to-End P2P Simulation");
 
-    // Phase 1: Agent Initialization
-    println!("=== PHASE 1: AGENT INITIALIZATION ===");
-    let identity_a = AgentIdentity::generate();
-    let identity_b = AgentIdentity::generate();
-
-    let peer_id_a = identity_a.peer_id().to_string();
-    let peer_id_b = identity_b.peer_id().to_string();
-
-    println!("✅ Agent A: {}...", &peer_id_a[..20]);
-    println!("✅ Agent B: {}...", &peer_id_b[..20]);
-
+    // 2. Start Node A (Worker)
+    info!("🤖 Starting Node A (Worker)...");
+    let identity_a = AgentIdentity::new(20, semaphore::Field::from(0)).await?;
     let mut agent_a = P2PAgent::new(identity_a).await?;
-    let mut agent_b = P2PAgent::new(identity_b).await?;
-
-    println!("✅ Agents created successfully\n");
-
-    // Start listening on both agents
     agent_a.listen()?;
+    let peer_id_a = agent_a.peer_id();
+    info!("   Node A PeerID: {}", peer_id_a);
+
+    // Spawn Node A in a background task
+    tokio::spawn(async move {
+        loop {
+            if let Err(e) = agent_a.poll_once().await {
+                tracing::error!("Node A Error: {}", e);
+            }
+        }
+    });
+
+    // 3. Start Node B (Client)
+    info!("👤 Starting Node B (Client)...");
+    let identity_b = AgentIdentity::new(20, semaphore::Field::from(0)).await?;
+    let mut agent_b = P2PAgent::new(identity_b).await?;
     agent_b.listen()?;
+    let peer_id_b = agent_b.peer_id();
+    info!("   Node B PeerID: {}", peer_id_b);
 
-    // Phase 2: Peer Discovery
-    println!("=== PHASE 2: PEER DISCOVERY ===");
-    println!("🔍 Searching for peers on local network...");
+    // Run Node B loop in background, but keep handle to send requests
+    // We need to run poll_once concurrently with our logic, or interleave it.
+    // For this simple demo, we'll manually poll in a loop until discovery happens.
 
-    let discovery_start = Instant::now();
-    let discovery_timeout = Duration::from_secs(5);
+    info!("⏳ Waiting for Peer Discovery (mDNS)...");
+    let mut discovered = false;
+    for _ in 0..20 {
+        // Poll Node B to process mDNS events
+        // Use timeout to prevent blocking forever if no events
+        let _ = tokio::time::timeout(Duration::from_millis(100), agent_b.poll_once()).await;
 
-    // Spawn agent event loops in background
-    let mut agent_a_running = agent_a;
-    let mut agent_b_running = agent_b;
-
-    let agent_a_handle = tokio::spawn(async move {
-        loop {
-            if let Err(e) = agent_a_running.poll_once().await {
-                eprintln!("Agent A error: {}", e);
-                break;
-            }
-            tokio::time::sleep(Duration::from_millis(10)).await;
+        let peers = agent_b.list_peers();
+        if peers.iter().any(|p| p.peer_id == peer_id_a) {
+            info!("✅ Node B discovered Node A!");
+            discovered = true;
+            break;
         }
-    });
-
-    let agent_b_handle = tokio::spawn(async move {
-        loop {
-            if let Err(e) = agent_b_running.poll_once().await {
-                eprintln!("Agent B error: {}", e);
-                break;
-            }
-            tokio::time::sleep(Duration::from_millis(10)).await;
-        }
-    });
-
-    // Wait for discovery (agents discover each other via mDNS)
-    let discovery_result = timeout(discovery_timeout, async {
-        // Give agents time to discover each other
-        // In real scenarios, we'd poll for peer discovery events
-        sleep(Duration::from_secs(3)).await;
-    })
-    .await;
-
-    match discovery_result {
-        Ok(_) => {
-            let discovery_time = discovery_start.elapsed();
-            println!(
-                "✅ Discovery phase complete in {:.1}s\n",
-                discovery_time.as_secs_f64()
-            );
-        }
-        Err(_) => {
-            println!("⚠️  Discovery timeout - continuing anyway\n");
-        }
+        sleep(Duration::from_millis(500)).await;
     }
 
-    // Phase 3: Task Exchange
-    println!("=== PHASE 3: TASK EXCHANGE ===");
-    println!("📋 Creating task: Translate 'hello' to French");
+    if !discovered {
+        panic!("❌ Discovery failed: Node B could not find Node A");
+    }
 
-    let _task_message = r#"{"type": "translation", "text": "hello", "target_lang": "French"}"#;
+    // 4. Submit Task
+    info!("📝 Node B submitting task to Node A...");
+    let prompt = "Explain the theory of relativity in 5 words.";
+    let task = Task::new(prompt.to_string(), peer_id_b);
+    let task_json = serde_json::to_vec(&task)?;
 
-    println!("📤 Sending task from Agent A to Agent B...");
+    // Send request
+    // We need to keep polling agent_b while waiting for the response
+    // So we spawn the send logic or interleave polling.
+    // Best approach for this script: loop poll_once until response is ready?
+    // But send_message is async and awaits the response.
+    // We need to run agent_b.poll_once() in the background while send_message runs.
 
-    // Note: In this MVP, we need to recreate agents with mutable access
-    // A production version would use channels for communication
-    // For now, this demonstrates the concept
+    // Let's spawn the poller for B
+    let mut agent_b_for_poller = agent_b;
 
-    println!("⚙️  Task processing simulation (Agent B would execute here)");
-    println!("✅ Expected result: 'Bonjour'\n");
+    // We can't easily move agent_b to a task and then use it to send.
+    // P2PAgent design in this MVP assumes single ownership.
+    // So we must rely on send_message's internal polling loop!
+    // In `src/network/p2p_agent.rs`, `send_message` DOES call `self.poll_once()`.
+    // So we can just call it directly!
 
-    // Phase 4: Summary
-    println!("=== SUMMARY ===");
-    println!("Agent A: {}...", &peer_id_a[..20]);
-    println!("Agent B: {}...", &peer_id_b[..20]);
-    println!("Discovery: ~3.0s");
-    println!("Status: MVP architecture validated");
-    println!("\n🎉 Demo complete!");
-    println!("\nℹ️  Note: Full task exchange requires agent message passing");
-    println!("   This MVP demonstrates peer discovery - the foundation for task exchange.\n");
+    info!("   Sending: '{}'", prompt);
+    let response = agent_b_for_poller
+        .send_message(peer_id_a, task_json)
+        .await?;
 
-    // Clean shutdown
-    agent_a_handle.abort();
-    agent_b_handle.abort();
+    // 5. Process Result
+    info!("📨 Response received!");
+    let task_result: TaskResult = serde_json::from_slice(&response.message)?;
+
+    info!("════════════════════════════════════════");
+    info!("🎉 Task Result:");
+    info!("   ID:       {}", task_result.task_id);
+    info!("   Duration: {}ms", task_result.duration_ms);
+    info!("   Output:   {}", task_result.result);
+    info!("════════════════════════════════════════");
+
+    info!("✅ MVP Demo completed successfully!");
 
     Ok(())
 }

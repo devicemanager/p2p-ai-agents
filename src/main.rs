@@ -12,11 +12,12 @@ use p2p_ai_agents::core::{
     logging::{init_logging, LogFormat, LoggingConfig},
     metadata::version_display,
 };
+use p2p_ai_agents::project_manager::ProjectManager;
 use semaphore::Field;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use tracing::info;
 
-#[derive(Parser, Debug)]
+#[derive(Parser, Debug, Clone)]
 #[command(author, version, about, long_about = None)]
 #[command(name = "p2p-ai-agents")]
 #[command(about = "A distributed peer-to-peer network of AI agents")]
@@ -63,7 +64,7 @@ struct Cli {
     pid_file: Option<String>,
 }
 
-#[derive(Subcommand, Debug)]
+#[derive(Subcommand, Debug, Clone)]
 enum Commands {
     /// Initialize a new node (generate identity)
     Init {
@@ -78,6 +79,9 @@ enum Commands {
     /// Start the node daemon
     Start,
 
+    /// Stop the running node daemon
+    Stop,
+
     /// List connected peers
     Peers,
 
@@ -88,12 +92,22 @@ enum Commands {
         interval: u64,
     },
 
+    /// Run a project from a master workflow file
+    RunProject {
+        /// Path to the master workflow YAML file
+        #[arg(long)]
+        workflow: PathBuf,
+
+        /// High-level goal for the project
+        #[arg(long)]
+        goal: String,
+    },
+
     /// Display node ID
     NodeId,
 }
 
-#[tokio::main]
-async fn main() -> Result<()> {
+fn main() -> Result<()> {
     let cli = Cli::parse();
 
     // Handle --version flag early
@@ -102,7 +116,126 @@ async fn main() -> Result<()> {
         return Ok(());
     }
 
-    // Initialize logging
+    // Initialize logging ONLY if NOT daemon mode (or if we are not about to daemonize)
+    // Actually, we want to log the "Starting..." message.
+    // But we can't re-init logging in the child if it's already init in parent.
+    // So we delay logging init until we know if we are daemonizing.
+
+    // Check command early
+    let is_daemon_start = match &cli.command {
+        Some(Commands::Start) | None => cli.daemon,
+        _ => false,
+    };
+
+    if !is_daemon_start {
+        let log_format = match cli.log_format.to_lowercase().as_str() {
+            "json" => LogFormat::Json,
+            "pretty" => LogFormat::Pretty,
+            _ => LogFormat::Compact,
+        };
+
+        let logging_config = LoggingConfig {
+            level: cli.log_level.to_uppercase(),
+            format: log_format,
+            ..Default::default()
+        };
+
+        init_logging(&logging_config).context("Failed to initialize logging")?;
+        info!("Starting P2P AI Agent Node");
+    }
+
+    // Create runtime for non-daemon commands or foreground start
+    // We only need this if NOT daemonizing
+    let rt = if !is_daemon_start {
+        Some(tokio::runtime::Runtime::new().context("Failed to create Tokio runtime")?)
+    } else {
+        None
+    };
+
+    // Handle commands
+    match cli.command {
+        Some(Commands::Init { force }) => {
+            rt.as_ref().unwrap().block_on(cmd_init(force))?;
+        }
+        Some(Commands::Status) => {
+            rt.as_ref().unwrap().block_on(cmd_status(&cli))?;
+        }
+        Some(Commands::NodeId) => {
+            rt.as_ref().unwrap().block_on(cmd_node_id())?;
+        }
+        Some(Commands::Start) | None => {
+            // Check for daemon mode
+            if cli.daemon {
+                #[cfg(unix)]
+                {
+                    cmd_start_daemon(&cli)?;
+                }
+                #[cfg(not(unix))]
+                {
+                    anyhow::bail!("Daemon mode is not supported on Windows");
+                }
+            } else {
+                rt.as_ref().unwrap().block_on(cmd_start(&cli))?;
+            }
+        }
+        Some(Commands::Stop) => {
+            rt.as_ref().unwrap().block_on(cmd_stop(&cli))?;
+        }
+        Some(Commands::Peers) => {
+            rt.as_ref().unwrap().block_on(cmd_peers())?;
+        }
+        Some(Commands::Monitor { interval }) => {
+            rt.as_ref().unwrap().block_on(cmd_monitor(interval))?;
+        }
+        Some(Commands::RunProject { workflow, goal }) => {
+            rt.as_ref()
+                .unwrap()
+                .block_on(cmd_run_project(&workflow, &goal))?;
+        }
+    }
+
+    Ok(())
+}
+
+/// Start the node in daemon mode (Unix only)
+#[cfg(unix)]
+fn cmd_start_daemon(cli: &Cli) -> Result<()> {
+    use p2p_ai_agents::daemon::{daemonize, default_log_path, PidFileManager};
+
+    info!("🔧 Configuring daemon mode...");
+
+    // Setup PID file manager
+    let pid_file_path = if let Some(path) = &cli.pid_file {
+        PathBuf::from(path)
+    } else {
+        PidFileManager::default_path().context("Failed to get default PID file path")?
+    };
+
+    let pid_manager = PidFileManager::new(pid_file_path);
+
+    // Check if already running
+    if let Some(existing_pid) = pid_manager.check_running()? {
+        anyhow::bail!(
+            "Another instance is already running with PID: {}. \
+             PID file: {}",
+            existing_pid,
+            pid_manager.path().display()
+        );
+    }
+
+    // Get log file path
+    let log_path = default_log_path().context("Failed to get default log path")?;
+
+    info!("📝 Log file: {}", log_path.display());
+    info!("📋 PID file: {}", pid_manager.path().display());
+    info!("🔀 Forking to background...");
+
+    // Daemonize the process (this will fork and exit the parent)
+    daemonize(log_path.clone()).context("Failed to daemonize process")?;
+
+    // --- WE ARE NOW IN THE DAEMON PROCESS ---
+
+    // After daemonization, re-initialize logging
     let log_format = match cli.log_format.to_lowercase().as_str() {
         "json" => LogFormat::Json,
         "pretty" => LogFormat::Pretty,
@@ -115,33 +248,28 @@ async fn main() -> Result<()> {
         ..Default::default()
     };
 
-    init_logging(&logging_config).context("Failed to initialize logging")?;
+    // Re-init logging for the new process (redirected to file)
+    init_logging(&logging_config).context("Failed to re-initialize logging after daemonization")?;
 
-    info!("Starting P2P AI Agent Node");
+    info!("✅ Daemon process started");
+    info!("📝 Logs: {}", log_path.display());
 
-    // Handle commands
-    match cli.command {
-        Some(Commands::Init { force }) => {
-            cmd_init(force).await?;
-        }
-        Some(Commands::Status) => {
-            cmd_status(&cli).await?;
-        }
-        Some(Commands::NodeId) => {
-            cmd_node_id().await?;
-        }
-        Some(Commands::Start) | None => {
-            cmd_start(&cli).await?;
-        }
-        Some(Commands::Peers) => {
-            cmd_peers().await?;
-        }
-        Some(Commands::Monitor { interval }) => {
-            cmd_monitor(interval).await?;
-        }
+    // Write PID file
+    pid_manager.write().context("Failed to write PID file")?;
+
+    // Create a NEW runtime for the daemon process
+    let runtime = tokio::runtime::Runtime::new().context("Failed to create daemon runtime")?;
+
+    // Run the node
+    let result = runtime.block_on(async { run_node(cli).await });
+
+    // Clean up PID file on exit
+
+    if let Err(e) = pid_manager.remove() {
+        tracing::warn!("Failed to remove PID file: {}", e);
     }
 
-    Ok(())
+    result
 }
 
 /// Initialize node identity
@@ -191,10 +319,14 @@ async fn cmd_status(cli: &Cli) -> Result<()> {
     info!("════════════════");
 
     // Try to load dynamic status
-    let status_path = std::path::Path::new("data/node_status.json");
+    // Use Config to resolve the correct path
+    let status_path = match Config::load().await {
+        Ok(config) => config.storage_path.join("node_status.json"),
+        Err(_) => std::path::PathBuf::from("data/node_status.json"),
+    };
 
     if status_path.exists() {
-        match tokio::fs::read_to_string(status_path).await {
+        match tokio::fs::read_to_string(&status_path).await {
             Ok(content) => match serde_json::from_str::<NodeStatus>(&content) {
                 Ok(status) => {
                     info!("Node ID:         {}", status.node_id);
@@ -263,10 +395,14 @@ async fn cmd_status(cli: &Cli) -> Result<()> {
 /// List connected peers
 async fn cmd_peers() -> Result<()> {
     // Try to load dynamic status
-    let status_path = std::path::Path::new("data/node_status.json");
+    // Use Config to resolve the correct path
+    let status_path = match Config::load().await {
+        Ok(config) => config.storage_path.join("node_status.json"),
+        Err(_) => std::path::PathBuf::from("data/node_status.json"),
+    };
 
     if status_path.exists() {
-        match tokio::fs::read_to_string(status_path).await {
+        match tokio::fs::read_to_string(&status_path).await {
             Ok(content) => match serde_json::from_str::<NodeStatus>(&content) {
                 Ok(status) => {
                     info!("Connected Peers ({})", status.connected_peers);
@@ -327,97 +463,87 @@ async fn cmd_node_id() -> Result<()> {
 async fn cmd_start(cli: &Cli) -> Result<()> {
     info!("🚀 Starting P2P AI Agent Node");
 
-    // Handle daemon mode
-    if cli.daemon {
-        #[cfg(not(unix))]
-        {
-            anyhow::bail!(
-                "Daemon mode is not supported on Windows. Please run in foreground mode."
-            );
+    // Daemon mode is now handled in main() before runtime creation
+    // This function is only for foreground execution
+
+    // Run in foreground
+    run_node(cli).await?;
+    Ok(())
+}
+
+/// Stop the node daemon
+async fn cmd_stop(cli: &Cli) -> Result<()> {
+    #[cfg(unix)]
+    {
+        use nix::sys::signal::{kill, Signal};
+        use nix::unistd::Pid;
+        use p2p_ai_agents::daemon::PidFileManager;
+        use std::time::Duration;
+
+        let pid_file_path = if let Some(path) = &cli.pid_file {
+            PathBuf::from(path)
+        } else {
+            PidFileManager::default_path().context("Failed to get default PID file path")?
+        };
+
+        let pid_manager = PidFileManager::new(pid_file_path.clone());
+
+        match pid_manager.check_running()? {
+            Some(pid) => {
+                info!("Stopping node with PID: {}", pid);
+
+                // Send SIGTERM
+                kill(Pid::from_raw(pid), Signal::SIGTERM)
+                    .context("Failed to send SIGTERM to process")?;
+
+                // Wait a bit for it to exit (simple check)
+                let mut retries = 0;
+                while retries < 20 {
+                    // Wait up to 2 seconds
+                    if pid_manager.check_running()?.is_none() {
+                        info!("✅ Node stopped successfully.");
+                        return Ok(());
+                    }
+                    tokio::time::sleep(Duration::from_millis(100)).await;
+                    retries += 1;
+                }
+
+                // If still running, warn user
+                if pid_manager.check_running()?.is_some() {
+                    tracing::warn!("Node did not stop gracefully within 2 seconds. You may need to use 'kill -9 {}'.", pid);
+                }
+            }
+            None => {
+                info!("⚠️  No running node found (PID file missing or stale).");
+                info!("   Checked path: {}", pid_file_path.display());
+            }
         }
-
-        #[cfg(unix)]
-        {
-            use p2p_ai_agents::daemon::{daemonize, default_log_path, PidFileManager};
-
-            info!("🔧 Configuring daemon mode...");
-
-            // Setup PID file manager
-            let pid_file_path = if let Some(path) = &cli.pid_file {
-                PathBuf::from(path)
-            } else {
-                PidFileManager::default_path().context("Failed to get default PID file path")?
-            };
-
-            let pid_manager = PidFileManager::new(pid_file_path);
-
-            // Check if already running
-            if let Some(existing_pid) = pid_manager.check_running()? {
-                anyhow::bail!(
-                    "Another instance is already running with PID: {}. \
-                     PID file: {}",
-                    existing_pid,
-                    pid_manager.path().display()
-                );
-            }
-
-            // Get log file path
-            let log_path = default_log_path().context("Failed to get default log path")?;
-
-            info!("📝 Log file: {}", log_path.display());
-            info!("📋 PID file: {}", pid_manager.path().display());
-            info!("🔀 Forking to background...");
-
-            // Daemonize the process (this will fork and exit the parent)
-            daemonize(log_path.clone()).context("Failed to daemonize process")?;
-
-            // After daemonization, re-initialize logging
-            let log_format = match cli.log_format.to_lowercase().as_str() {
-                "json" => LogFormat::Json,
-                "pretty" => LogFormat::Pretty,
-                _ => LogFormat::Compact,
-            };
-
-            let logging_config = LoggingConfig {
-                level: cli.log_level.to_uppercase(),
-                format: log_format,
-                ..Default::default()
-            };
-
-            init_logging(&logging_config)
-                .context("Failed to re-initialize logging after daemonization")?;
-
-            info!("✅ Daemon process started");
-            info!("📝 Logs: {}", log_path.display());
-
-            // Write PID file
-            pid_manager.write().context("Failed to write PID file")?;
-
-            // Setup cleanup on exit
-            let pid_manager_clone = PidFileManager::new(pid_manager.path().to_path_buf());
-            let cleanup_result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-                // Run the node
-                let runtime = tokio::runtime::Runtime::new().unwrap();
-                runtime.block_on(async { run_node(cli).await })
-            }));
-
-            // Clean up PID file
-            if let Err(e) = pid_manager_clone.remove() {
-                tracing::warn!("Failed to remove PID file: {}", e);
-            }
-
-            // Re-throw panic if there was one
-            match cleanup_result {
-                Ok(result) => result?,
-                Err(e) => std::panic::resume_unwind(e),
-            }
-
-            return Ok(());
-        }
+        Ok(())
     }
 
-    // Normal foreground mode
-    run_node(cli).await
+    #[cfg(not(unix))]
+    {
+        anyhow::bail!("Daemon commands are not supported on Windows.");
+    }
+}
+
+/// Run a project from a master workflow
+async fn cmd_run_project(workflow_path: &Path, goal: &str) -> Result<()> {
+    info!("🚀 Starting Autonomous Project Manager");
+    info!("   Workflow: {}", workflow_path.display());
+    info!("   Goal: {}", goal);
+
+    let project_manager = ProjectManager::new(workflow_path.to_path_buf(), goal.to_string())
+        .await
+        .context("Failed to initialize Project Manager")?;
+
+    project_manager
+        .run()
+        .await
+        .context("Project execution failed")?;
+
+    info!("✅ Project completed successfully!");
+    Ok(())
 }
 
 /// Run the node (common logic for daemon and foreground modes)

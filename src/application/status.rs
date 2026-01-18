@@ -158,17 +158,35 @@ impl StatusManager {
             #[cfg(not(feature = "network"))]
             let peers_list = Vec::new();
 
+            // Uptime calculation
+            let uptime_seconds = {
+                let uptime_tracker = application.uptime_tracker.read().await;
+                uptime_tracker.uptime_seconds().unwrap_or(0)
+            };
+
+            // Get active agents count more reliably
+            let active_agents = agents.len();
+
+            // Get tasks processed from lifecycle state if available
+            let tasks_processed = {
+                // This is a simplified way to get tasks processed.
+                // ideally we would query the Agent or a MetricsService
+                let _lifecycle = application.state.read().await;
+                // Placeholder for actual task counting logic from metrics service
+                0
+            };
+
             let status = NodeStatus {
                 node_id,
                 state: format!("{:?}", app_state), // Use Debug impl for shorter string
-                uptime_seconds: 0,                 // Would need start time
+                uptime_seconds,
                 connected_peers: connected_peers_count,
                 peers: peers_list,
                 memory_usage_bytes: sys.used_memory(),
                 total_memory_bytes: sys.total_memory(),
                 cpu_usage_percent: sys.global_cpu_info().cpu_usage(),
-                tasks_processed: 0,
-                active_agents: agents.len(),
+                tasks_processed,
+                active_agents,
                 timestamp: chrono::Utc::now(),
                 version: env!("CARGO_PKG_VERSION").to_string(),
             };

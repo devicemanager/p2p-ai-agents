@@ -1,6 +1,7 @@
 #![allow(missing_docs)]
 
-use libp2p::{gossipsub, identify, kad, mdns, ping};
+use crate::network::protocol::{AgentCodec, AgentProtocol};
+use libp2p::{gossipsub, identify, kad, mdns, ping, request_response};
 use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
 use std::time::Duration;
@@ -18,6 +19,8 @@ pub struct AgentBehavior {
     pub kademlia: kad::Behaviour<kad::store::MemoryStore>,
     /// Gossipsub for message propagation
     pub gossipsub: gossipsub::Behaviour,
+    /// Request-Response for direct messaging
+    pub request_response: request_response::Behaviour<AgentCodec>,
 }
 
 impl AgentBehavior {
@@ -25,7 +28,7 @@ impl AgentBehavior {
     pub fn new(
         local_key: libp2p::identity::Keypair,
         agent_version: String,
-    ) -> Result<Self, Box<dyn std::error::Error>> {
+    ) -> Result<Self, std::io::Error> {
         let local_public_key = local_key.public();
         let peer_id = local_public_key.to_peer_id();
         let store = kad::store::MemoryStore::new(peer_id);
@@ -51,10 +54,11 @@ impl AgentBehavior {
         )
         .map_err(std::io::Error::other)?;
 
-        // We will customize the agent version to include capabilities string if possible,
-        // but Identify config is static here.
-        // We need to pass the capabilities string to `new`.
-        // Let's change the signature of `new`.
+        let request_response = request_response::Behaviour::with_codec(
+            AgentCodec,
+            std::iter::once((AgentProtocol, request_response::ProtocolSupport::Full)),
+            request_response::Config::default().with_request_timeout(Duration::from_secs(30)),
+        );
 
         Ok(Self {
             identify: identify::Behaviour::new(identify::Config::new(
@@ -65,6 +69,7 @@ impl AgentBehavior {
             ping: ping::Behaviour::new(ping::Config::new()),
             kademlia,
             gossipsub,
+            request_response,
         })
     }
 }

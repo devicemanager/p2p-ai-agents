@@ -110,14 +110,13 @@ impl RedisStorage {
     /// Ping Redis to verify connectivity
     pub async fn ping(&self) -> Result<(), StorageError> {
         let mut conn = self.connection.clone();
-        redis::cmd("PING")
-            .query_async::<_, String>(&mut conn)
-            .await
+        let result: Result<String, _> = redis::cmd("PING").query_async(&mut conn).await;
+        result
             .map_err(|e| {
                 error!("Redis ping failed: {}", e);
                 StorageError::ConnectionFailed(format!("Redis ping failed: {}", e))
-            })?;
-        Ok(())
+            })
+            .map(|_| ())
     }
 
     /// Execute an operation with retry logic and exponential backoff

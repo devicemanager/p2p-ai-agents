@@ -416,6 +416,9 @@ impl Application {
 
         // Register status manager
         let config = self.config.read().await;
+        // Make sure we use an absolute path for the status file if possible, or relative to CWD.
+        // But since daemon changes CWD to /, we MUST rely on `storage_path` being absolute.
+        // `Config::load()` usually sets `storage_path` to `~/.p2p-ai-agents/data` (absolute).
         let status_path = config.storage_path.join("node_status.json");
         drop(config);
 

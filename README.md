@@ -9,22 +9,21 @@
 [![Dependency Status](https://deps.rs/repo/github/p2p-ai-agents/p2p-ai-agents/status.svg)](https://deps.rs/repo/github/p2p-ai-agents/p2p-ai-agents)
 [![Code Coverage](https://codecov.io/gh/p2p-ai-agents/p2p-ai-agents/branch/main/graph/badge.svg)](https://codecov.io/gh/p2p-ai-agents/p2p-ai-agents)
 
-> **⚠️ WORK IN PROGRESS - MAJOR VISION TRANSFORMATION**
+> **⚠️ MVP RELEASE AVAILABLE**
 > 
-> **January 2026 Update**: This project is undergoing a strategic transformation from a distributed ML compute network to a **Distributed Expert System** architecture.
+> **January 2026 Update**: We have successfully implemented the MVP for the P2P Expert Network!
 > 
 > **New Vision**: Building a peer-to-peer network where domain experts contribute knowledge and reasoning rules, enabling transparent, explainable decision support across multiple domains. Unlike black-box AI, our system shows WHY and HOW it reaches conclusions.
 > 
-> **Recent Major Updates:**
-> - ✅ **Vision Transformation**: Pivoting to expert system architecture (January 2026)
-> - ✅ **Core Architecture**: Complete dependency injection, event system, service registry, and access control
-> - ✅ **Security Framework**: RBAC authentication and authorization with pluggable providers
-> - ✅ **P2P Foundation**: libp2p networking with peer discovery and secure messaging
-> - ✅ **Structured Logging**: JSON logging with correlation IDs for distributed tracing
-> - 🔲 **Inference Engine**: Rule-based reasoning system (in development)
-> - 🔲 **Knowledge Base**: Expert knowledge repository (in development)
+> **Completed Milestones:**
+> - ✅ **P2P Networking**: Fully functional discovery (mDNS), reliable message passing (Request/Response), and secure connections (Noise protocol).
+> - ✅ **Agent Identity**: Ephemeral cryptographic identities (Ed25519) with public key verification.
+> - ✅ **Task Execution**: Distributed task submission and execution pipeline (Mock AI executor for MVP).
+> - ✅ **CLI Control Plane**: Robust CLI for node management (`start`, `stop`, `status`, `monitor`).
+> - ✅ **Autonomous Project Manager**: A standalone agent capable of executing multi-step workflows (Shell + AI steps).
+> - ✅ **End-to-End Demo**: Fully verifiable simulation script `examples/mvp_demo.rs`.
 > 
-> We welcome contributions, especially from domain experts interested in democratizing knowledge!
+> We welcome contributions to help us build the next phase: The Inference Engine!
 
 ## Vision
 
@@ -53,7 +52,7 @@ This project transforms how expert knowledge is shared and applied by creating a
 
 ### Core Components
 
-**Expert System Layer (New - In Development):**
+**Expert System Layer (In Development):**
 - **Inference Engine**: Forward/backward chaining reasoning
 - **Knowledge Base**: Domain-specific rules and facts
 - **Expert Registry**: Credential verification and expertise matching
@@ -177,6 +176,9 @@ for issue in result.issues {
    
    # Generate coverage report
    make coverage
+   
+   # Run the MVP Demo
+   cargo run --example mvp_demo
    ```
 
 3. **Task Management**
@@ -253,4 +255,3 @@ See [LICENSE](LICENSE) for details.
 For details on the vision transformation from distributed ML compute to expert systems:
 - [Vision Transformation Executive Summary](_bmad-output/vision-transformation-2026-01-09/EXECUTIVE_SUMMARY.md)
 - [Impact Analysis & Roadmap](_bmad-output/vision-transformation-2026-01-09/)
-
