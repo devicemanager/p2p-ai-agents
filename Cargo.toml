@@ -70,7 +70,7 @@ lazy_static = { version = "1.4", optional = true }
 
 # Supabase/PostgreSQL (optional)
 postgrest = { version = "1.5", optional = true }
-reqwest = { version = "0.11", features = ["json"], optional = true }
+reqwest = { version = "0.11", features = ["json", "rustls-tls"], optional = true }
 url = { version = "2.5", optional = true }
 
 # Redis (optional)
@@ -86,6 +86,7 @@ bytes = { version = "1.5", optional = true }
 age = { version = "0.11", features = ["armor", "ssh", "cli-common"] }
 lru = "0.16"
 libc = "0.2.179"
+dotenv = "0.15.0"
 
 [dev-dependencies]
 tokio-test = "0.4"
@@ -108,7 +109,7 @@ opt-level = 0
 debug = true
 
 [features]
-default = ["network"]  # MVP requires network layer
+default = ["network", "reqwest"]  # MVP requires network layer
 full = ["network", "storage", "cli", "metrics-prometheus"]
 network = ["libp2p", "bytes"]
 storage = []
