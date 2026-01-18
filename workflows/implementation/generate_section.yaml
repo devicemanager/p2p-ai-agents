@@ -1,0 +1,20 @@
+name: Generate Section
+description: "Generates a single report section based on loop parameters."
+steps:
+  - name: "Generate Content"
+    kind: ai
+    command: |
+      Write the report section '{{title}}'.
+      
+      Description of this section:
+      {{description}}
+
+      Use the following technical plan as context:
+      {{tech_plan_content}}
+      
+      Output ONLY the content for this section, formatted in Markdown.
+    output_var: section_content
+
+  - name: "Save Content"
+    kind: save_to_file
+    command: "{{output_path}}/{{filename}}"
