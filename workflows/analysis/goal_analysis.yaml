@@ -1,7 +1,22 @@
 name: Goal Analysis
 description: "Breaks down a high-level goal into actionable requirements using an LLM."
 steps:
+  - name: "Read Context"
+    kind: shell
+    command: "if [ -f _bmad-output/autonomous-project/raw_tasks.txt ]; then cat _bmad-output/autonomous-project/raw_tasks.txt; else echo 'No context file'; fi"
+    output_var: "task_context"
+
   - name: "Generate Requirements"
-    command: 'echo "TODO: Implement LLM call to analyze goal: {{goal}} and write to {{output_path}}"'
+    kind: ai
+    command: |
+      Analyze the following project goal and context to generate a concise list of key requirements and deliverables.
+      
+      Goal: {{goal}}
+      
+      Context (Existing Tasks):
+      {{task_context}}
+    output_var: "requirements_content"
+
   - name: "Create Requirements File"
-    command: 'echo "Based on the goal ''{{goal}}'', the key requirements are:\n- Research DePIN landscape\n- Identify key players\n- Analyze market trends" > {{output_path}}'
+    command: 'echo "{{requirements_content}}" > {{output_path}}'
+

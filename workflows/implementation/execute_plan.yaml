@@ -1,9 +1,16 @@
 name: Execute Plan
-description: "Executes the steps in the technical plan."
+description: "Executes the steps in the technical plan to generate the report content."
 steps:
-  - name: "Execute Step 1"
-    command: 'echo "Executing: Scrape data..." > {{output_path}}/implementation_log.txt'
-  - name: "Execute Step 2"
-    command: 'echo "Executing: Analyze data..." >> {{output_path}}/implementation_log.txt'
-  - name: "Execute Step 3"
-    command: 'echo "Executing: Format report..." >> {{output_path}}/implementation_log.txt'
+  - name: "Read Technical Plan"
+    kind: shell
+    command: "cat {{plan_file}}"
+    output_var: "tech_plan_content"
+
+  - name: "Execute Dynamic Plan"
+    kind: loop
+    loop_var: planned_tasks_json
+    loop_workflow: workflows/implementation/generate_section.yaml
+
+  - name: "Compile Full Report"
+    kind: shell
+    command: "cat {{output_path}}/*.md > {{output_path}}/full_draft_report.md"

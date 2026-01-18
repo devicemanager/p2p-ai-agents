@@ -133,6 +133,7 @@ dmypy.json
 
 # P2P AI Agents specific
 # Agent data and logs
+_bmad-output/
 logs/
 data/
 agents/
@@ -192,3 +193,4 @@ profile_results/
 # Editor
 .idea/
 .vscode/
+.env
