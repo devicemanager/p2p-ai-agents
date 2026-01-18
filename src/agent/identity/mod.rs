@@ -151,4 +151,10 @@ impl AgentIdentity {
 
         Field::from(num)
     }
+
+    /// Accessor to the keypair for Libp2p usage
+    pub fn keypair(&self) -> libp2p_identity::Keypair {
+        let guard = self.manager.keypair.lock().unwrap();
+        guard.clone()
+    }
 }

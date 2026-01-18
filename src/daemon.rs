@@ -161,6 +161,8 @@ pub fn daemonize(log_path: PathBuf) -> Result<()> {
         }
     }
 
+    // Initialize tokio runtime here if needed? No, we do that in run_node
+
     // Set umask for security
     use nix::sys::stat::{umask, Mode};
     umask(Mode::from_bits_truncate(0o027));
@@ -170,6 +172,19 @@ pub fn daemonize(log_path: PathBuf) -> Result<()> {
 
     // Redirect stdout and stderr to log file
     use nix::unistd::dup2;
+    // We need to re-open stdout/stderr because they might be closed or invalid after fork
+    // However, we just opened 'stdout' file above.
+
+    // NOTE: The panic "failed to wake I/O driver" often happens if a tokio runtime was created
+    // BEFORE fork. The file descriptors for the reactor are not inherited properly or are closed.
+    // In src/main.rs, we use #[tokio::main], which starts a runtime *before* main() runs.
+    // To fix this, we should NOT use #[tokio::main] if we plan to daemonize, OR we must destroy
+    // the runtime before forking, OR (easiest) run the daemon code in a separate thread/process
+    // before the main runtime starts?
+    // Actually, the easiest fix for `tokio` + `fork` is to ensuring no runtime exists when we fork.
+    // Since `main` is async, the runtime is already running.
+    // We cannot safe fork from within a tokio runtime.
+
     dup2(stdout.as_raw_fd(), std::io::stdout().as_raw_fd()).context("Failed to redirect stdout")?;
     dup2(stderr.as_raw_fd(), std::io::stderr().as_raw_fd()).context("Failed to redirect stderr")?;
 

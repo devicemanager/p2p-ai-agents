@@ -10,15 +10,15 @@ const MESSAGE_SIZE_LIMIT: usize = 10 * 1024 * 1024; // 10MB
 /// Request message type
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct AgentRequest {
-    /// Message content
-    pub message: String,
+    /// Message content (serialized data)
+    pub message: Vec<u8>,
 }
 
 /// Response message type
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct AgentResponse {
-    /// Response content
-    pub message: String,
+    /// Response content (serialized data)
+    pub message: Vec<u8>,
 }
 
 /// Protocol identifier
@@ -123,32 +123,34 @@ mod tests {
     #[test]
     fn test_serialize_request() {
         let req = AgentRequest {
-            message: "Hello, peer!".to_string(),
+            message: "Hello, peer!".to_string().into_bytes(),
         };
         let json = serde_json::to_string(&req).unwrap();
-        assert!(json.contains("Hello, peer!"));
+        // Since it's bytes now, it will be a list of numbers in JSON
+        assert!(json.contains("["));
     }
 
     #[test]
     fn test_deserialize_request() {
-        let json = r#"{"message":"Test message"}"#;
-        let req: AgentRequest = serde_json::from_str(json).unwrap();
-        assert_eq!(req.message, "Test message");
+        let message_bytes = "Test message".as_bytes();
+        let json = format!("{{\"message\":{:?}}}", message_bytes);
+        let req: AgentRequest = serde_json::from_str(&json).unwrap();
+        assert_eq!(req.message, message_bytes);
     }
 
     #[test]
     fn test_serialize_response() {
         let res = AgentResponse {
-            message: "Response data".to_string(),
+            message: "Response data".to_string().into_bytes(),
         };
         let json = serde_json::to_string(&res).unwrap();
-        assert!(json.contains("Response data"));
+        assert!(json.contains("["));
     }
 
     #[test]
     fn test_roundtrip() {
         let req = AgentRequest {
-            message: "Test".to_string(),
+            message: "Test".to_string().into_bytes(),
         };
         let json = serde_json::to_string(&req).unwrap();
         let req2: AgentRequest = serde_json::from_str(&json).unwrap();

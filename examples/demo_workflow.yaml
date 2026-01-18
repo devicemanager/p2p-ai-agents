@@ -1,0 +1,15 @@
+name: "Rust Research Project"
+description: "A demo project to research Rust and write a summary."
+params:
+  - name: "output_root"
+    type: "string"
+    description: "Root directory for output"
+    default: "./_bmad-output/demo-project"
+
+phases:
+  - name: "Research Phase"
+    description: "Gather information about Rust."
+    workflow: "examples/research_workflow.yaml"
+    params:
+      - name: "topic"
+        value: "{{project_goal}}"

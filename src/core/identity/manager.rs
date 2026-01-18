@@ -10,7 +10,7 @@ use std::sync::Mutex;
 pub struct IdentityManager {
     /// The active keypair for the identity.
     /// In a real implementation this would be stored securely.
-    keypair: Mutex<Keypair>,
+    pub keypair: Mutex<Keypair>,
 }
 
 impl IdentityManager {

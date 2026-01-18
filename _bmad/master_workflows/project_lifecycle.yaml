@@ -1,0 +1,94 @@
+# ==============================================================================
+# Master Workflow: Autonomous Project Lifecycle
+# ==============================================================================
+#
+# This master workflow orchestrates the entire lifecycle of a software project,
+# from initial analysis to final verification. It is designed to be executed
+# by an autonomous "Project Manager" agent that coordinates a team of
+# specialized AI agents.
+#
+# Each phase calls a sub-workflow from the `_bmad/bmm/workflows` directory,
+# ensuring a modular and repeatable process. The output of each phase serves
+# as the input for the next, creating a continuous, autonomous loop.
+#
+
+name: Autonomous Project Lifecycle
+description: "An end-to-end workflow to manage a project from conception to completion."
+
+# Variables that would be passed in at runtime, such as the overall project goal.
+# These provide the initial context for the entire lifecycle.
+params:
+  - name: project_goal
+    type: string
+    description: "The high-level objective for the project."
+  - name: output_root
+    type: string
+    description: "The root directory for all generated project artifacts."
+    default: "./_bmad-output/autonomous-project"
+
+# The sequence of phases that constitute the project lifecycle.
+phases:
+  - name: 1. Analysis
+    description: "Understand the problem domain, market, and technical landscape."
+    workflow: "_bmad/bmm/workflows/1-analysis/research/workflow.md"
+    params:
+      - name: research_topic
+        value: "{{project_goal}}"
+      - name: output_dir
+        value: "{{output_root}}/1-analysis"
+
+  - name: 2. Planning
+    description: "Define the product requirements, user journeys, and success metrics."
+    workflow: "_bmad/bmm/workflows/2-plan-workflows/prd/workflow.md"
+    params:
+      - name: input_research_artifacts
+        value: "{{output_root}}/1-analysis"
+      - name: output_dir
+        value: "{{output_root}}/2-planning"
+
+  - name: 3. Solutioning
+    description: "Create the high-level architecture and break down the work into epics and stories."
+    workflow: "_bmad/bmm/workflows/3-solutioning/create-epics-and-stories/workflow.md"
+    params:
+      - name: input_prd
+        value: "{{output_root}}/2-planning/prd.md"
+      - name: output_dir
+        value: "{{output_root}}/3-solutioning"
+
+  - name: 4. Implementation Sprint
+    description: "Plan and execute a development sprint to implement a specific story."
+    # This phase combines sprint planning and the actual development of one story.
+    # In a real scenario, this phase would loop until all stories are complete.
+    sub_phases:
+      - name: 4a. Sprint Planning
+        workflow: "_bmad/bmm/workflows/4-implementation/sprint-planning/workflow.yaml"
+        params:
+          - name: input_epics
+            value: "{{output_root}}/3-solutioning/epics.md"
+          - name: output_dir
+            value: "{{output_root}}/4-implementation/sprint-0"
+      - name: 4b. Story Development
+        workflow: "_bmad/bmm/workflows/4-implementation/dev-story/workflow.xml"
+        params:
+          - name: input_story
+            value: "{{output_root}}/4-implementation/sprint-0/sprint_backlog/story-1.md"
+          - name: output_dir
+            value: "{{output_root}}/4-implementation/sprint-0/development"
+
+  - name: 5. Verification
+    description: "Perform code review and automated testing on the implemented code."
+    sub_phases:
+      - name: 5a. Code Review
+        workflow: "_bmad/bmm/workflows/4-implementation/code-review/workflow.yaml"
+        params:
+          - name: input_code_path
+            value: "{{output_root}}/4-implementation/sprint-0/development/src"
+          - name: output_dir
+            value: "{{output_root}}/5-verification/code-review"
+      - name: 5b. Test Automation
+        workflow: "_bmad/bmm/workflows/testarch/automate/workflow.yaml"
+        params:
+          - name: input_code_path
+            value: "{{output_root}}/4-implementation/sprint-0/development/src"
+          - name: output_dir
+            value: "{{output_root}}/5-verification/test-automation"

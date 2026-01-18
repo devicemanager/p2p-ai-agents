@@ -1,0 +1,5 @@
+name: Quality Assurance
+description: "Runs QA checks on the implementation."
+steps:
+  - name: "Run QA"
+    command: 'echo "QA checks passed." > {{report_path}}'

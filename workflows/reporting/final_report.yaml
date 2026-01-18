@@ -1,0 +1,5 @@
+name: Final Report
+description: "Generates the final project report."
+steps:
+  - name: "Generate Report"
+    command: 'echo "# Final Report for: {{project_goal}}\n\nQA Status: `cat {{qa_report}}`\n\nThis is the final report." > {{output_path}}'

@@ -1,2 +1,1 @@
-// Temporarily disabled - needs API updates
-// pub mod test_network_connectivity;
+pub mod test_network_connectivity;

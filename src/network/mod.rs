@@ -236,6 +236,9 @@ pub struct NetworkManager {
     /// Listen addresses
     listen_addresses: Arc<Mutex<Vec<Libp2pMultiaddr>>>,
 
+    /// The local PeerId (assigned upon start)
+    local_peer_id: Option<Libp2pPeerId>,
+
     /// Agent version string for Identify protocol
     agent_version: String,
 
@@ -274,6 +277,7 @@ impl NetworkManager {
             connected_peers: Arc::new(Mutex::new(Vec::new())),
             peer_cache: Arc::new(PeerCache::new()),
             listen_addresses: Arc::new(Mutex::new(Vec::new())),
+            local_peer_id: None,
             agent_version: "p2p-ai-agent/1.0.0".to_string(),
             command_sender: None,
             message_callback: None,
@@ -309,6 +313,7 @@ impl NetworkManager {
             connected_peers: Arc::new(Mutex::new(Vec::new())),
             peer_cache: Arc::new(PeerCache::new()),
             listen_addresses: Arc::new(Mutex::new(Vec::new())),
+            local_peer_id: None,
             agent_version: "p2p-ai-agent/1.0.0".to_string(),
             command_sender: None,
             message_callback: None,
@@ -325,6 +330,11 @@ impl NetworkManager {
     /// Check if the manager is running.
     pub fn is_running(&self) -> bool {
         self.is_running
+    }
+
+    /// Get the local PeerId if initialized
+    pub fn local_peer_id(&self) -> Option<Libp2pPeerId> {
+        self.local_peer_id
     }
 
     /// Set the callback channel for received messages
@@ -349,6 +359,7 @@ impl NetworkManager {
 
         let local_key = identity::Keypair::generate_ed25519();
         let local_peer_id = Libp2pPeerId::from(local_key.public());
+        self.local_peer_id = Some(local_peer_id);
         info!("Local peer id: {:?}", local_peer_id);
 
         let agent_version = self.agent_version.clone();

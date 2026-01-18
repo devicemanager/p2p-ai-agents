@@ -1,0 +1,64 @@
+name: Autonomous Project Lifecycle
+description: "A master workflow to orchestrate a project from goal to completion."
+params:
+  - name: project_goal
+    type: string
+    description: "The high-level goal for the project."
+  - name: output_root
+    type: path
+    description: "The root directory for all project outputs."
+    default: "./_bmad-output/autonomous-project"
+
+phases:
+  - name: "Phase 1: Analysis & Planning"
+    description: "Analyze the goal and create a detailed project plan."
+    sub_phases:
+      - name: "1.1: Goal Analysis"
+        description: "Break down the user's goal into actionable requirements."
+        workflow: "./workflows/analysis/goal_analysis.yaml"
+        params:
+          - name: goal
+            value: "{{project_goal}}"
+          - name: output_path
+            value: "{{output_root}}/analysis/requirements.md"
+
+      - name: "1.2: Technical Planning"
+        description: "Create a technical plan based on the requirements."
+        workflow: "./workflows/planning/tech_plan.yaml"
+        params:
+          - name: requirements_file
+            value: "{{output_root}}/analysis/requirements.md"
+          - name: output_path
+            value: "{{output_root}}/planning/technical_plan.md"
+
+  - name: "Phase 2: Implementation"
+    description: "Execute the technical plan to build the project."
+    workflow: "./workflows/implementation/execute_plan.yaml"
+    params:
+      - name: plan_file
+        value: "{{output_root}}/planning/technical_plan.md"
+      - name: output_path
+        value: "{{output_root}}/implementation/"
+
+  - name: "Phase 3: Verification & Report"
+    description: "Verify the implementation and generate a final report."
+    sub_phases:
+      - name: "3.1: Quality Assurance"
+        description: "Run tests and checks to ensure quality."
+        workflow: "./workflows/verification/qa_run.yaml"
+        params:
+          - name: implementation_path
+            value: "{{output_root}}/implementation/"
+          - name: report_path
+            value: "{{output_root}}/verification/qa_report.json"
+
+      - name: "3.2: Final Report"
+        description: "Generate the final project report."
+        workflow: "./workflows/reporting/final_report.yaml"
+        params:
+          - name: project_goal
+            value: "{{project_goal}}"
+          - name: qa_report
+            value: "{{output_root}}/verification/qa_report.json"
+          - name: output_path
+            value: "{{output_root}}/final_project_report.md"

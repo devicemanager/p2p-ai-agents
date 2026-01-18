@@ -1,0 +1,14 @@
+name: "Research Workflow"
+description: "Research a topic and save notes."
+steps:
+  - name: "Create Directory"
+    kind: "shell"
+    command: "mkdir -p {{output_root}}/research"
+    
+  - name: "Analyze Topic"
+    kind: "ai"
+    command: "Analyze the following topic and provide 3 key points: {{topic}}"
+
+  - name: "Save Notes"
+    kind: "shell"
+    command: "echo 'Research on {{topic}} completed.' > {{output_root}}/research/notes.txt"

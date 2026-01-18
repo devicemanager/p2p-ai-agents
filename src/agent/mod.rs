@@ -3,16 +3,18 @@
 //! This module contains the core agent logic, including identity management,
 //! messaging, and task execution.
 
+pub mod executors;
 pub mod identity;
 pub mod messaging;
+pub mod resource;
 pub mod task;
 
+use crate::agent::executors::{
+    ExecutorRegistry, TextProcessingExecutor, VectorComputationExecutor,
+};
 use crate::agent::identity::AgentIdentity;
 use crate::agent::messaging::{Message, MessageType};
-use crate::agent::task::{
-    Task, TaskExecutor, TaskId, TaskManager, TaskStatus, TaskType, TextProcessingExecutor,
-    VectorComputationExecutor,
-};
+use crate::agent::task::{Task, TaskId, TaskManager, TaskStatus, TaskType};
 use crate::core::identity::IdentityError;
 use crate::network::{NetworkConfig, NetworkManager, NetworkMessage, PeerId as NetworkPeerId};
 use futures::future::{AbortHandle, Abortable};
@@ -40,6 +42,8 @@ pub struct Agent {
     pub config: AgentConfig,
     /// The agent's task manager.
     pub task_manager: TaskManager,
+    /// The agent's task executor registry.
+    pub executor_registry: ExecutorRegistry,
     /// Network manager (protected by mutex for mutable access during start/stop).
     pub network_manager: Arc<Mutex<NetworkManager>>,
     /// Shutdown signal sender.
@@ -56,10 +60,16 @@ impl Agent {
         let (shutdown_tx, _) = broadcast::channel(1);
         let network_manager = NetworkManager::new(network_config);
 
+        let executor_registry = ExecutorRegistry::new();
+        // Register default executors
+        executor_registry.register(TaskType::TextProcessing, TextProcessingExecutor);
+        executor_registry.register(TaskType::VectorComputation, VectorComputationExecutor);
+
         Self {
             identity,
             config,
             task_manager: TaskManager::new(),
+            executor_registry,
             network_manager: Arc::new(Mutex::new(network_manager)),
             shutdown_tx,
         }
@@ -150,29 +160,14 @@ impl Agent {
                 .update_status(task.id, TaskStatus::Running)
                 .await?;
 
-            let task_manager = self.task_manager.clone(); // Need to clone to move into spawned task
-                                                          // We need to implement clone for TaskManager which uses Arc, so it's cheap.
-                                                          // But TaskManager doesn't derive Clone yet.
-                                                          // Oh, TaskManager fields are Arc, so we can derive Clone in task.rs or impl it.
-                                                          // Let's check task.rs: "tasks: Arc<RwLock<...>>"
-                                                          // Wait, I can't modify task.rs here. I should have checked if TaskManager derives Clone.
-                                                          // It does not derive Clone in the previous read. I need to update task.rs first or manually clone the Arcs if exposed.
-                                                          // Actually, `self.task_manager` is `TaskManager`.
-                                                          // Let's assume I will add `#[derive(Clone)]` to TaskManager in `src/agent/task.rs`.
-
+            let task_manager = self.task_manager.clone();
             let task_id = task.id;
+            let executor_registry = self.executor_registry.clone();
 
             // Create an abort handle for cancellation
             let (abort_handle, abort_registration) = AbortHandle::new_pair();
 
             // Register the handle
-            // We need to access register_running_task which I added to TaskManager
-            // BUT, `self.task_manager` is not Arc wrapped inside Agent, Agent holds it by value?
-            // "pub task_manager: TaskManager"
-            // So `self.task_manager` is a struct field.
-            // To move it into a closure, we need to clone it.
-            // I will update TaskManager to derive Clone.
-
             self.task_manager
                 .register_running_task(task_id, abort_handle)
                 .await;
@@ -181,17 +176,20 @@ impl Agent {
             let _handle = tokio::spawn(Abortable::new(
                 async move {
                     let result = if let Some(payload) = &task.payload {
-                        match payload.task_type {
-                            TaskType::TextProcessing => {
-                                TextProcessingExecutor.execute(payload).await
-                            }
-                            TaskType::VectorComputation => {
-                                VectorComputationExecutor.execute(payload).await
-                            }
-                            TaskType::Custom(_) => {
-                                // Fallback for custom tasks
-                                tokio::time::sleep(std::time::Duration::from_millis(100)).await;
-                                Ok(json!({"status": "simulated_custom_execution"}))
+                        if let Some(executor) = executor_registry.get(&payload.task_type) {
+                            executor.execute(payload).await
+                        } else {
+                            // Fallback or legacy handling
+                            match payload.task_type {
+                                TaskType::Custom(_) => {
+                                    // Fallback for custom tasks
+                                    tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+                                    Ok(json!({"status": "simulated_custom_execution"}))
+                                }
+                                _ => Err(anyhow::anyhow!(
+                                    "No executor found for task type: {}",
+                                    payload.task_type
+                                )),
                             }
                         }
                     } else {
@@ -501,6 +499,17 @@ impl DefaultAgent {
     /// Process a received message (Exposed for testing/networking)
     pub async fn handle_message(&self, message: Message) -> anyhow::Result<()> {
         self.agent.handle_message(message).await
+    }
+
+    /// Get the local PeerId string
+    pub async fn local_peer_id(&self) -> String {
+        self.agent
+            .network_manager
+            .lock()
+            .await
+            .local_peer_id()
+            .map(|p| p.to_string())
+            .unwrap_or_default()
     }
 
     /// Get the number of connected peers

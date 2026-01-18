@@ -1,0 +1,7 @@
+name: Goal Analysis
+description: "Breaks down a high-level goal into actionable requirements using an LLM."
+steps:
+  - name: "Generate Requirements"
+    command: 'echo "TODO: Implement LLM call to analyze goal: {{goal}} and write to {{output_path}}"'
+  - name: "Create Requirements File"
+    command: 'echo "Based on the goal ''{{goal}}'', the key requirements are:\n- Research DePIN landscape\n- Identify key players\n- Analyze market trends" > {{output_path}}'

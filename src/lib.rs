@@ -16,18 +16,23 @@ pub mod core;
 /// Daemon process management (Unix only)
 pub mod daemon;
 /// Agent cryptographic identity (Ed25519)
-pub mod identity;
+// pub mod identity; // Removed as it was a duplicate of src/agent/identity
 /// Metrics collection and monitoring
 pub mod metrics;
 /// Network layer for peer-to-peer communication
 #[cfg(feature = "network")]
 pub mod network;
+/// The project_manager module provides the autonomous project management system.
+pub mod project_manager;
 /// The storage module provides the pluggable storage layer for the system.
 pub mod storage;
+/// Task management and execution
+pub mod task;
 // pub mod cli;
 
 /// Re-exports of commonly used types
 pub mod prelude {
+    pub use crate::agent::identity::AgentIdentity;
     pub use crate::agent::{Agent, AgentConfig, AgentId};
     pub use crate::application::{Application, ApplicationError, ApplicationState};
     pub use crate::core::{
@@ -38,7 +43,6 @@ pub mod prelude {
         logging::{init_default_logging, init_logging, LogFormat, LoggingConfig, LoggingError},
         services::{Service, ServiceError, ServiceRegistry},
     };
-    pub use crate::identity::AgentIdentity;
     #[cfg(feature = "network")]
     pub use crate::network::{
         discovery::{DiscoveryManager, PeerInfo},
