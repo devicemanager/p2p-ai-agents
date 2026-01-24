@@ -93,6 +93,7 @@ async fn test_hello_agent_runs() -> Result<(), Box<dyn Error>> {
     let config = AgentConfig {
         capabilities: vec![],
         name: "test-hello-agent".to_string(),
+        models: vec![],
     };
 
     let agent = DefaultAgent::new(config).await?;
@@ -115,6 +116,7 @@ async fn test_task_processing_workflow() -> Result<(), Box<dyn Error>> {
     let config = AgentConfig {
         capabilities: vec![],
         name: "test-task-agent".to_string(),
+        models: vec![],
     };
 
     let agent = DefaultAgent::new(config).await?;
@@ -162,6 +164,7 @@ async fn test_batch_task_processing() -> Result<(), Box<dyn Error>> {
     let config = AgentConfig {
         capabilities: vec![],
         name: "test-batch-agent".to_string(),
+        models: vec![],
     };
 
     let agent = DefaultAgent::new(config).await?;
@@ -207,6 +210,7 @@ async fn test_task_cancellation() -> Result<(), Box<dyn Error>> {
     let config = AgentConfig {
         capabilities: vec![],
         name: "test-cancel-agent".to_string(),
+        models: vec![],
     };
 
     let agent = DefaultAgent::new(config).await?;
@@ -239,11 +243,13 @@ async fn test_network_peer_communication() -> Result<(), Box<dyn Error>> {
     let config1 = AgentConfig {
         capabilities: vec![],
         name: "net-test-1".to_string(),
+        models: vec![],
     };
 
     let config2 = AgentConfig {
         capabilities: vec![],
         name: "net-test-2".to_string(),
+        models: vec![],
     };
 
     let agent1 = DefaultAgent::new(config1).await?;
@@ -269,6 +275,7 @@ async fn test_complete_workflow_integration() -> Result<(), Box<dyn Error>> {
     let config = AgentConfig {
         capabilities: vec![],
         name: "integration-test-agent".to_string(),
+        models: vec![],
     };
 
     let agent = DefaultAgent::new(config).await?;

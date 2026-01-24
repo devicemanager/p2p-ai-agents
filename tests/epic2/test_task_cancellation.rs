@@ -1,7 +1,7 @@
 use p2p_ai_agents::agent::task::{
     Task, TaskManager, TaskPayload, TaskPriority, TaskStatus, TaskType,
 };
-use p2p_ai_agents::agent::{Agent, AgentConfig, DefaultAgent};
+use p2p_ai_agents::agent::{Agent, AgentConfig};
 use p2p_ai_agents::network::{NetworkConfig, PeerId};
 use p2p_ai_agents::storage::local::LocalStorage;
 use std::collections::HashMap;
@@ -14,6 +14,7 @@ async fn create_test_agent(name: &str, port: u16, capabilities: Vec<TaskType>) -
     let config = AgentConfig {
         name: name.to_string(),
         capabilities,
+        models: vec![],
     };
 
     let network_config = NetworkConfig {
@@ -38,12 +39,24 @@ async fn create_test_agent(name: &str, port: u16, capabilities: Vec<TaskType>) -
     let storage = Arc::new(LocalStorage::new(&storage_path).expect("Failed to create storage"));
     let task_manager = TaskManager::new(storage);
 
+    // Create model manager for test agent
+    let model_storage_path = std::path::PathBuf::from(format!("data/models_{}", name));
+    let model_manager = Arc::new(p2p_ai_agents::agent::ai::ModelManager::new(
+        &model_storage_path,
+    ));
+
     // Create Agent directly instead of using DefaultAgent wrapper to inject dependencies
     let identity =
         p2p_ai_agents::agent::identity::AgentIdentity::new(20, semaphore::Field::from(0))
             .await
             .unwrap();
-    let agent = Arc::new(Agent::new(identity, config, network_config, task_manager));
+    let agent = Arc::new(Agent::new(
+        identity,
+        config,
+        network_config,
+        task_manager,
+        model_manager,
+    ));
 
     let agent_clone = agent.clone();
     tokio::spawn(async move {
@@ -92,6 +105,7 @@ async fn test_remote_task_cancellation() {
                 reputation: 100,
                 capabilities: PeerCapabilities {
                     supported_tasks: vec![TaskType::Custom("LongRunning".to_string())],
+                    supported_models: vec![],
                 },
                 status: ConnectionStatus::Connected,
             })

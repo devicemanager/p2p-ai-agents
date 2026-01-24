@@ -14,6 +14,9 @@ use crate::agent::task::TaskType;
 pub struct PeerCapabilities {
     /// List of tasks this peer can perform
     pub supported_tasks: Vec<TaskType>,
+    /// List of AI models available on this peer (e.g., "prajjwal1/bert-tiny")
+    #[serde(default)]
+    pub supported_models: Vec<String>,
 }
 
 /// Connection status of a peer
@@ -115,6 +118,12 @@ impl PeerCache {
             .filter(|state| state.info.status == ConnectionStatus::Connected)
             .map(|state| state.info.clone())
             .collect()
+    }
+
+    /// Get all peers
+    pub async fn get_all_peers(&self) -> Vec<PeerInfo> {
+        let peers = self.peers.read().await;
+        peers.values().map(|state| state.info.clone()).collect()
     }
 
     /// Update peer metrics

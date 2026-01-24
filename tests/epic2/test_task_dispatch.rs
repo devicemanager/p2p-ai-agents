@@ -9,6 +9,7 @@ async fn test_task_dispatch_flow() {
     let config_a = AgentConfig {
         name: "agent-a".to_string(),
         capabilities: vec![], // No capabilities needed for requestor
+        models: vec![],
     };
 
     let agent_a = DefaultAgent::new(config_a.clone()).await.unwrap();
@@ -20,6 +21,7 @@ async fn test_task_dispatch_flow() {
     let config_b = AgentConfig {
         name: "agent-b".to_string(),
         capabilities: vec![TaskType::TextProcessing], // Capable of TextProcessing
+        models: vec![],
     };
 
     let agent_b = DefaultAgent::new(config_b.clone()).await.unwrap();
@@ -82,7 +84,7 @@ async fn test_task_dispatch_flow() {
         // Debugging: check discovered peers
         let peers = agent_a
             .internal_agent()
-            .find_peers_with_capability(TaskType::TextProcessing)
+            .find_peers_with_capability(TaskType::TextProcessing, None)
             .await;
         println!("Peers with TextProcessing capability: {:?}", peers);
     }

@@ -48,6 +48,10 @@ pub enum TaskType {
     TextProcessing,
     /// Vector computation
     VectorComputation,
+    /// AI Model Download and Management
+    AiModelDownload,
+    /// AI Model Inference
+    AiInference,
     /// Custom task type
     Custom(String),
 }
@@ -57,6 +61,8 @@ impl std::fmt::Display for TaskType {
         match self {
             TaskType::TextProcessing => write!(f, "TextProcessing"),
             TaskType::VectorComputation => write!(f, "VectorComputation"),
+            TaskType::AiModelDownload => write!(f, "AiModelDownload"),
+            TaskType::AiInference => write!(f, "AiInference"),
             TaskType::Custom(s) => write!(f, "Custom({})", s),
         }
     }

@@ -3,12 +3,15 @@
 //! This module contains the core agent logic, including identity management,
 //! messaging, and task execution.
 
+/// AI integration and model management.
+pub mod ai;
 pub mod executors;
 pub mod identity;
 pub mod messaging;
 pub mod resource;
 pub mod task;
 
+use crate::agent::ai::ModelManager;
 use crate::agent::executors::{
     ExecutorRegistry, TextProcessingExecutor, VectorComputationExecutor,
 };
@@ -31,6 +34,9 @@ pub struct AgentConfig {
     pub name: String,
     /// List of capabilities this agent supports.
     pub capabilities: Vec<TaskType>,
+    /// List of AI models this agent has available.
+    #[serde(default)]
+    pub models: Vec<String>,
     // Add other config fields if necessary, currently minimal for compilation
 }
 
@@ -44,6 +50,8 @@ pub struct Agent {
     pub task_manager: TaskManager,
     /// The agent's task executor registry.
     pub executor_registry: ExecutorRegistry,
+    /// The agent's AI model manager.
+    pub model_manager: Arc<ModelManager>,
     /// Network manager (protected by mutex for mutable access during start/stop).
     pub network_manager: Arc<Mutex<NetworkManager>>,
     /// Shutdown signal sender.
@@ -68,6 +76,7 @@ impl Agent {
         config: AgentConfig,
         network_config: NetworkConfig,
         task_manager: TaskManager,
+        model_manager: Arc<ModelManager>,
     ) -> Self {
         let (shutdown_tx, _) = broadcast::channel(1);
         let network_manager = NetworkManager::new(network_config);
@@ -78,6 +87,7 @@ impl Agent {
             config,
             task_manager,
             executor_registry,
+            model_manager,
             network_manager: Arc::new(Mutex::new(network_manager)),
             shutdown_tx,
         }
@@ -89,14 +99,30 @@ impl Agent {
         self.config.name.clone()
     }
 
-    /// Finds peers that support a specific task capability.
-    pub async fn find_peers_with_capability(&self, task_type: TaskType) -> Vec<NetworkPeerId> {
+    /// Finds peers that support a specific task capability and optionally a specific model.
+    pub async fn find_peers_with_capability(
+        &self,
+        task_type: TaskType,
+        required_model: Option<&str>,
+    ) -> Vec<NetworkPeerId> {
         let network = self.network_manager.lock().await;
         let connected_peers = network.peer_cache.get_connected_peers().await;
 
         connected_peers
             .into_iter()
-            .filter(|p| p.capabilities.supported_tasks.contains(&task_type))
+            .filter(|p| {
+                // Check task capability
+                let has_task = p.capabilities.supported_tasks.contains(&task_type);
+
+                // Check model capability if required
+                let has_model = if let Some(model) = required_model {
+                    p.capabilities.supported_models.contains(&model.to_string())
+                } else {
+                    true
+                };
+
+                has_task && has_model
+            })
             .map(|p| p.peer_id)
             .collect()
     }
@@ -161,6 +187,7 @@ impl Agent {
                     let msg = Message::new_capability_announcement(
                         agent_announce.id(),
                         agent_announce.config.capabilities.clone(),
+                        agent_announce.config.models.clone(),
                     );
                     if let Err(e) = agent_announce.broadcast_message(msg).await {
                         tracing::error!("Failed to broadcast capability announcement: {:?}", e);
@@ -269,19 +296,27 @@ impl Agent {
             .await
             .ok_or_else(|| anyhow::anyhow!("Task not found"))?;
 
-        // 1. Identify TaskType
-        let task_type = if let Some(payload) = &task.payload {
-            payload.task_type.clone()
+        // 1. Identify TaskType and Model Requirement
+        let (task_type, required_model) = if let Some(payload) = &task.payload {
+            let model = if payload.task_type == TaskType::AiInference {
+                payload.data.get("model").and_then(|v| v.as_str())
+            } else {
+                None
+            };
+            (payload.task_type.clone(), model)
         } else {
             return Err(anyhow::anyhow!("Task has no payload to determine type"));
         };
 
         // 2. Find Peers
-        let peers = self.find_peers_with_capability(task_type.clone()).await;
+        let peers = self
+            .find_peers_with_capability(task_type.clone(), required_model)
+            .await;
         if peers.is_empty() {
             return Err(anyhow::anyhow!(
-                "No peers found with capability {}",
-                task_type
+                "No peers found with capability {} (model: {:?})",
+                task_type,
+                required_model
             ));
         }
 
@@ -391,10 +426,10 @@ impl Agent {
                 .update_status(task.id, TaskStatus::Running)
                 .await?;
 
-            let task_manager = self.task_manager.clone();
-            let identity = self.identity.clone();
-            let network_manager = self.network_manager.clone();
-            let agent_id = self.id();
+            let _task_manager = self.task_manager.clone();
+            let _identity = self.identity.clone();
+            let _network_manager = self.network_manager.clone();
+            let _agent_id = self.id();
 
             let task_id = task.id;
             let _executor_registry = self.executor_registry.clone();
@@ -407,16 +442,42 @@ impl Agent {
                 .register_running_task(task_id, abort_handle)
                 .await;
 
+            let model_manager = self.model_manager.clone();
+
             // Spawn the execution
             let _handle = tokio::spawn(Abortable::new(
                 async move {
                     let result = if let Some(payload) = &task.payload {
                         match payload.task_type {
                             TaskType::TextProcessing => {
-                                TextProcessingExecutor.execute(payload).await
+                                let executor = TextProcessingExecutor::new(model_manager);
+                                executor.execute(payload).await
                             }
                             TaskType::VectorComputation => {
                                 VectorComputationExecutor.execute(payload).await
+                            }
+                            TaskType::AiModelDownload => {
+                                let model_name = payload
+                                    .data
+                                    .get("model")
+                                    .and_then(|v| v.as_str())
+                                    .unwrap_or("prajjwal1/bert-tiny");
+
+                                match model_manager.ensure_model(model_name).await {
+                                    Ok(path) => Ok(json!({
+                                        "status": "downloaded",
+                                        "model": model_name,
+                                        "path": path.to_string_lossy()
+                                    })),
+                                    Err(e) => Err(e),
+                                }
+                            }
+                            TaskType::AiInference => {
+                                // Delegate to TextProcessingExecutor which handles "embed" and other AI ops
+                                // We might want to refactor this later to be more distinct, but for now
+                                // TextProcessingExecutor knows how to use the ModelManager and InferenceEngine.
+                                let executor = TextProcessingExecutor::new(model_manager.clone());
+                                executor.execute(payload).await
                             }
                             TaskType::Custom(_) => {
                                 // Check for requested duration in payload for testing/simulation
@@ -443,28 +504,28 @@ impl Agent {
                     };
 
                     // Update local state
-                    let _ = task_manager.update_status(task_id, status.clone()).await;
+                    let _ = _task_manager.update_status(task_id, status.clone()).await;
 
                     // Broadcast update
                     let mut message =
-                        Message::new_task_response(agent_id.clone(), "broadcast", task_id, status);
+                        Message::new_task_response(_agent_id.clone(), "broadcast", task_id, status);
 
                     // Sign and send
                     // Note: We duplicate logic from broadcast_message here because we can't easily
                     // call methods on 'self' inside this moved async block without cloning the whole Agent
                     // (which has other non-clonable fields like shutdown_tx).
                     let signable_bytes = message.to_signable_bytes();
-                    if let Ok(signature) = identity.sign_data(&signable_bytes) {
+                    if let Ok(signature) = _identity.sign_data(&signable_bytes) {
                         message.signature = Some(signature);
-                        message.public_key = Some(identity.public_key_bytes());
+                        message.public_key = Some(_identity.public_key_bytes());
 
                         if let Ok(bytes) = serde_json::to_vec(&message) {
                             let msg = NetworkMessage {
-                                from: agent_id,
+                                from: _agent_id,
                                 to: "broadcast".to_string(),
                                 content: bytes,
                             };
-                            network_manager.lock().await.send_message(msg).await;
+                            _network_manager.lock().await.send_message(msg).await;
                         }
                     } else {
                         eprintln!("Failed to sign task completion message");
@@ -568,10 +629,13 @@ impl Agent {
                     message.sender, text
                 );
             }
-            MessageType::CapabilityAnnouncement { capabilities } => {
+            MessageType::CapabilityAnnouncement {
+                capabilities,
+                models,
+            } => {
                 println!(
-                    "Agent received CapabilityAnnouncement from {}: {:?}",
-                    message.sender, capabilities
+                    "Agent received CapabilityAnnouncement from {}: {:?} (Models: {:?})",
+                    message.sender, capabilities, models
                 );
 
                 // Update peer cache in NetworkManager
@@ -588,6 +652,7 @@ impl Agent {
 
                 let peer_id_str = message.sender.clone();
                 let supported_tasks = capabilities;
+                let supported_models = models;
 
                 let nm = self.network_manager.lock().await;
 
@@ -615,6 +680,7 @@ impl Agent {
                         reputation: 50,
                         capabilities: PeerCapabilities {
                             supported_tasks: vec![],
+                            supported_models: vec![],
                         },
                         status: ConnectionStatus::Connected, // Assume connected if we heard them via gossipsub
                     }
@@ -622,6 +688,7 @@ impl Agent {
 
                 // Update capabilities
                 peer_info.capabilities.supported_tasks = supported_tasks;
+                peer_info.capabilities.supported_models = supported_models;
                 peer_info.last_seen = chrono::Utc::now();
 
                 // Write back to cache
@@ -700,8 +767,18 @@ impl DefaultAgent {
             },
         };
 
+        // TODO: Make this configurable properly, maybe pass storage path in config
+        let storage_path = std::path::PathBuf::from(".p2p-ai-agents");
+        let model_manager = Arc::new(ModelManager::new(&storage_path));
+
         let task_manager = TaskManager::default();
-        let agent = Arc::new(Agent::new(identity, config, network_config, task_manager));
+        let agent = Arc::new(Agent::new(
+            identity,
+            config,
+            network_config,
+            task_manager,
+            model_manager,
+        ));
 
         Ok(Self {
             agent,
@@ -733,8 +810,18 @@ impl DefaultAgent {
             },
         };
 
+        // TODO: Make this configurable properly
+        let storage_path = std::path::PathBuf::from(".p2p-ai-agents");
+        let model_manager = Arc::new(ModelManager::new(&storage_path));
+
         let task_manager = TaskManager::default();
-        let agent = Arc::new(Agent::new(identity, config, network_config, task_manager));
+        let agent = Arc::new(Agent::new(
+            identity,
+            config,
+            network_config,
+            task_manager,
+            model_manager,
+        ));
 
         Ok(Self {
             agent,
@@ -900,9 +987,22 @@ impl DefaultAgent {
         addrs.iter().map(|a| a.to_string()).collect()
     }
 
-    /// Dial another peer manually
+    /// Dial another peer manually (and bootstrap Kademlia if peer ID is present)
     pub async fn dial(&self, addr: &str) -> anyhow::Result<()> {
         let multiaddr = crate::network::Multiaddr(addr.to_string());
+
+        // Check if address has a peer ID
+        if let Some(pos) = addr.rfind("/p2p/") {
+            let peer_id = &addr[pos + 5..];
+            self.agent
+                .network_manager
+                .lock()
+                .await
+                .bootstrap(peer_id, multiaddr.clone())
+                .await?;
+        }
+
+        // Always perform standard dial
         self.agent
             .network_manager
             .lock()

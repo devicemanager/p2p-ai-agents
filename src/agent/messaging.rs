@@ -25,6 +25,9 @@ pub enum MessageType {
     CapabilityAnnouncement {
         /// List of supported task types.
         capabilities: Vec<crate::agent::task::TaskType>,
+        /// List of available AI models.
+        #[serde(default)]
+        models: Vec<String>,
     },
     /// Request to cancel a task.
     TaskCancellation {
@@ -109,12 +112,16 @@ impl Message {
     pub fn new_capability_announcement(
         sender: impl Into<String>,
         capabilities: Vec<crate::agent::task::TaskType>,
+        models: Vec<String>,
     ) -> Self {
         Self {
             id: Uuid::new_v4(),
             sender: sender.into(),
             recipient: "broadcast".to_string(),
-            content: MessageType::CapabilityAnnouncement { capabilities },
+            content: MessageType::CapabilityAnnouncement {
+                capabilities,
+                models,
+            },
             timestamp: chrono::Utc::now(),
             signature: None,
             public_key: None,

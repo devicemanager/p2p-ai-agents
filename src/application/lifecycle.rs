@@ -129,6 +129,7 @@ impl LifecycleManager {
                             crate::agent::task::TaskType::TextProcessing,
                             crate::agent::task::TaskType::VectorComputation,
                         ],
+                        models: vec![],
                     };
 
                     // Create default agent

@@ -2,7 +2,7 @@
 //! Provides types and helpers for network management, metrics, resources, health, and security.
 
 use libp2p::{
-    futures::StreamExt, gossipsub, identify, identity, mdns, multiaddr::Protocol, noise,
+    futures::StreamExt, gossipsub, identify, identity, kad, mdns, multiaddr::Protocol, noise,
     request_response, swarm::SwarmEvent, tcp, yamux, Multiaddr as Libp2pMultiaddr,
     PeerId as Libp2pPeerId,
 };
@@ -231,6 +231,11 @@ enum NetworkCommand {
     SendRequest {
         peer_id: Libp2pPeerId,
         request: Vec<u8>,
+    },
+    #[allow(dead_code)]
+    Bootstrap {
+        peer_id: Libp2pPeerId,
+        addr: Libp2pMultiaddr,
     },
     Shutdown,
 }
@@ -466,6 +471,24 @@ impl NetworkManager {
                             info!("Listening on {:?}", address);
                             listen_addresses_clone.lock().await.push(address);
                         }
+                        SwarmEvent::Behaviour(AgentBehaviorEvent::Kademlia(kad::Event::RoutingUpdated {
+                             peer, ..
+                        })) => {
+                            debug!("Kademlia routing updated for peer {:?}", peer);
+                        }
+                        SwarmEvent::Behaviour(AgentBehaviorEvent::Kademlia(kad::Event::OutboundQueryProgressed {
+                             id: _,
+                             result: kad::QueryResult::Bootstrap(Ok(kad::BootstrapOk { peer, num_remaining })),
+                             ..
+                        })) => {
+                             debug!("Kademlia bootstrap progressed: {:?} (remaining: {:?})", peer, num_remaining);
+                        }
+                        SwarmEvent::Behaviour(AgentBehaviorEvent::Kademlia(kad::Event::OutboundQueryProgressed {
+                             result: kad::QueryResult::Bootstrap(Err(e)),
+                             ..
+                        })) => {
+                             error!("Kademlia bootstrap error: {:?}", e);
+                        }
                         SwarmEvent::Behaviour(AgentBehaviorEvent::Gossipsub(gossipsub::Event::Message {
                             propagation_source: peer_id,
                             message_id: id,
@@ -534,6 +557,7 @@ impl NetworkManager {
                                 reputation: 50,
                                 capabilities: PeerCapabilities {
                                     supported_tasks,
+                                    supported_models: vec![], // Identify protocol doesn't support model advertisement in this MVP yet
                                 },
                                 status: ConnectionStatus::Connected,
                             };
@@ -637,6 +661,13 @@ impl NetworkManager {
                             };
                             swarm.behaviour_mut().request_response.send_request(&peer_id, request_data);
                         }
+                        Some(NetworkCommand::Bootstrap { peer_id, addr }) => {
+                             info!("Bootstrapping Kademlia to {:?}", peer_id);
+                             swarm.behaviour_mut().kademlia.add_address(&peer_id, addr);
+                             if let Err(e) = swarm.behaviour_mut().kademlia.bootstrap() {
+                                 error!("Kademlia bootstrap failed: {:?}", e);
+                             }
+                        }
                         Some(NetworkCommand::Shutdown) => {
                             break;
                         }
@@ -662,6 +693,25 @@ impl NetworkManager {
 
         self.is_running = false;
         Ok(())
+    }
+
+    /// Bootstrap Kademlia to a peer.
+    pub async fn bootstrap(&self, peer_id: &str, addr: Multiaddr) -> NetworkResult<()> {
+        let libp2p_peer_id =
+            Libp2pPeerId::from_str(peer_id).map_err(|e| NetworkError::Libp2p(e.to_string()))?;
+        let libp2p_addr = addr.to_libp2p()?;
+
+        if let Some(tx) = &self.command_sender {
+            tx.send(NetworkCommand::Bootstrap {
+                peer_id: libp2p_peer_id,
+                addr: libp2p_addr,
+            })
+            .await
+            .map_err(|_| NetworkError::NotRunning)?;
+            Ok(())
+        } else {
+            Err(NetworkError::NotRunning)
+        }
     }
 
     /// Perform a graceful shutdown of the network manager.

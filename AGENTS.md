@@ -172,25 +172,32 @@ pub async fn process_task(task: Task) -> anyhow::Result<TaskResult> {
 <!-- Test commit -->
 ## 6. Current Development Context
 
-**Last Updated:** Sat Jan 17 2026
+**Last Updated:** Sat Jan 24 2026
 
-**Active Story:** Story 3.3: Implement Network Layer (In Progress)
+**Active Story:** Story FR14.4: Remote AI Task Execution (In Progress)
 
 **Recent Achievements:**
-- Validated Story 3.2 (Identity Module) as ready for review.
-- Confirmed MVP architecture: TCP + Noise + mDNS + Request-Response (No Gossipsub).
-- Initialized libp2p Swarm with TCP, Noise, and Yamux.
-- Implemented basic Request-Response protocol structure.
-- Implemented mDNS Discovery logic (handling `mdns::Event::Discovered`) in `P2PAgent`.
-- Implemented `send_message` using Request-Response behavior in `P2PAgent`.
+- **Model Advertisement (Story FR14.3):**
+  - Updated `AgentConfig` to include a `models` list.
+  - Implemented `PeerCapabilities` to exchange supported models via the `Identify` protocol.
+  - Added integration test `tests/epic4/test_model_discovery.rs` to verify finding peers by model.
+  - Refactored all examples and tests to support the new `AgentConfig` structure.
+- **AI Task Engine (Epic 3):**
+  - Implemented `ModelManager` and `InferenceEngine`.
+  - Updated `TextProcessingExecutor` to handle AI tasks.
+- **Kademlia DHT:**
+  - Implemented Kademlia bootstrapping and routing.
 
 **Current Focus:**
-- **Verification:** Run `cargo run --example mvp_demo` to verify agent interaction and discovery.
-- **Refinement:** Address any bugs found during verification.
-- **Story Completion:** Mark tasks as complete in story files.
+- **Remote AI Execution:** Implement logic to find a peer with a specific model and dispatch the task to them.
+
+**Next Steps:**
+- Modify `dispatch_task` in `src/agent/mod.rs` to use `find_peers_with_capability` for AI tasks.
+- Serialize and send tasks to the discovered peer.
+- Verify end-to-end execution with a new test `tests/epic4/test_remote_ai_execution.rs`.
 
 **Key Files:**
-- `src/network/p2p_agent.rs`: Main agent logic (Includes mDNS and Request-Response).
-- `src/network/behavior.rs`: Network behavior definition.
-- `src/network/protocol.rs`: Request/Response codec.
-- `examples/mvp_demo.rs`: MVP entry point.
+- `src/agent/mod.rs`: Dispatch logic.
+- `src/agent/executors/text_processing.rs`: Execution logic.
+- `tests/epic4/test_model_discovery.rs`: Discovery test reference.
+

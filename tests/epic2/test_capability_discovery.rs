@@ -9,6 +9,7 @@ async fn test_capability_discovery_via_announcement() {
     let config_a = AgentConfig {
         name: "agent-a-discovery".to_string(),
         capabilities: vec![], // No capabilities
+        models: vec![],
     };
 
     let agent_a = DefaultAgent::new(config_a.clone()).await.unwrap();
@@ -20,6 +21,7 @@ async fn test_capability_discovery_via_announcement() {
     let config_b = AgentConfig {
         name: "agent-b-discovery".to_string(),
         capabilities: vec![TaskType::VectorComputation], // Unique capability
+        models: vec![],
     };
 
     let agent_b = DefaultAgent::new(config_b.clone()).await.unwrap();
@@ -46,7 +48,7 @@ async fn test_capability_discovery_via_announcement() {
     // Agent A should now have Agent B in its peer cache with VectorComputation capability.
     let peers = agent_a
         .internal_agent()
-        .find_peers_with_capability(TaskType::VectorComputation)
+        .find_peers_with_capability(TaskType::VectorComputation, None)
         .await;
 
     println!("Found peers with VectorComputation: {:?}", peers);

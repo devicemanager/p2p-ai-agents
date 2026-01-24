@@ -26,6 +26,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let config_b = AgentConfig {
         capabilities: vec![TaskType::TextProcessing],
         name: "worker-agent".to_string(),
+        models: vec![],
     };
     // Note: In a real scenario, we'd need to configure listening ports explicitly
     // to ensure they don't collide, but the random port selection in DefaultAgent helps.
@@ -44,6 +45,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let config_a = AgentConfig {
         capabilities: vec![],
         name: "submitter-agent".to_string(),
+        models: vec![],
     };
     let submitter = DefaultAgent::new(config_a).await?;
     submitter.start().await?;
