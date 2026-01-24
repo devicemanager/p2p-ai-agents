@@ -136,7 +136,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Initialize identity for the agent
     let identity = AgentIdentity::new(20, semaphore::Field::from(0)).await?;
-    let agent = Arc::new(Agent::new(identity, agent_config, network_config));
+    let task_manager = p2p_ai_agents::agent::task::TaskManager::default();
+    let agent = Arc::new(Agent::new(
+        identity,
+        agent_config,
+        network_config,
+        task_manager,
+    ));
 
     app.add_agent(agent.clone()).await?;
 
