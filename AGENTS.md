@@ -174,30 +174,26 @@ pub async fn process_task(task: Task) -> anyhow::Result<TaskResult> {
 
 **Last Updated:** Sat Jan 24 2026
 
-**Active Story:** Story FR14.4: Remote AI Task Execution (In Progress)
+**Active Story:** Story FR14.5: Robustness and Error Handling (Next)
 
 **Recent Achievements:**
+- **Remote AI Task Execution (Story FR14.4):**
+  - Implemented logic in `dispatch_task` to inspect task payloads for model requirements (even for `TextProcessing` embed tasks).
+  - Created `tests/epic4/test_remote_ai_execution.rs` verifying end-to-end flow:
+    - Client submits task -> Discovers Server with "prajjwal1/bert-tiny" -> Dispatches Task -> Server executes (downloads model) -> Client receives result.
 - **Model Advertisement (Story FR14.3):**
-  - Updated `AgentConfig` to include a `models` list.
-  - Implemented `PeerCapabilities` to exchange supported models via the `Identify` protocol.
-  - Added integration test `tests/epic4/test_model_discovery.rs` to verify finding peers by model.
-  - Refactored all examples and tests to support the new `AgentConfig` structure.
-- **AI Task Engine (Epic 3):**
-  - Implemented `ModelManager` and `InferenceEngine`.
-  - Updated `TextProcessingExecutor` to handle AI tasks.
-- **Kademlia DHT:**
-  - Implemented Kademlia bootstrapping and routing.
+  - Agents advertise supported models via Identify protocol.
+  - Verified with `tests/epic4/test_model_discovery.rs`.
 
 **Current Focus:**
-- **Remote AI Execution:** Implement logic to find a peer with a specific model and dispatch the task to them.
+- **Refinement:** Ensure error handling is robust (e.g. what if peer goes offline during execution?).
 
 **Next Steps:**
-- Modify `dispatch_task` in `src/agent/mod.rs` to use `find_peers_with_capability` for AI tasks.
-- Serialize and send tasks to the discovered peer.
-- Verify end-to-end execution with a new test `tests/epic4/test_remote_ai_execution.rs`.
+- Explore robust task recovery or retries if a peer fails.
+- Consider implementing "Story FR14.5" for better error handling or moving to next Epic.
 
 **Key Files:**
-- `src/agent/mod.rs`: Dispatch logic.
-- `src/agent/executors/text_processing.rs`: Execution logic.
-- `tests/epic4/test_model_discovery.rs`: Discovery test reference.
+- `tests/epic4/test_remote_ai_execution.rs`: End-to-end AI test.
+- `src/agent/mod.rs`: Dispatch and Discovery logic.
+- `src/agent/executors/text_processing.rs`: AI execution logic.
 

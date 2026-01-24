@@ -298,10 +298,22 @@ impl Agent {
 
         // 1. Identify TaskType and Model Requirement
         let (task_type, required_model) = if let Some(payload) = &task.payload {
-            let model = if payload.task_type == TaskType::AiInference {
-                payload.data.get("model").and_then(|v| v.as_str())
-            } else {
-                None
+            let model = match payload.task_type {
+                TaskType::AiInference => payload.data.get("model").and_then(|v| v.as_str()),
+                TaskType::TextProcessing => {
+                    // Check if it's an embedding task which requires a model
+                    let op = payload
+                        .data
+                        .get("operation")
+                        .and_then(|v| v.as_str())
+                        .unwrap_or("");
+                    if op == "embed" {
+                        payload.data.get("model").and_then(|v| v.as_str())
+                    } else {
+                        None
+                    }
+                }
+                _ => None,
             };
             (payload.task_type.clone(), model)
         } else {
