@@ -60,16 +60,13 @@ impl Agent {
         let (shutdown_tx, _) = broadcast::channel(1);
         let network_manager = NetworkManager::new(network_config);
 
-        let executor_registry = ExecutorRegistry::new();
-        // Register default executors
-        executor_registry.register(TaskType::TextProcessing, TextProcessingExecutor);
-        executor_registry.register(TaskType::VectorComputation, VectorComputationExecutor);
+        // Initialize task manager with default local storage
+        let task_manager = TaskManager::default();
 
         Self {
             identity,
             config,
-            task_manager: TaskManager::new(),
-            executor_registry,
+            task_manager,
             network_manager: Arc::new(Mutex::new(network_manager)),
             shutdown_tx,
         }

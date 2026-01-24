@@ -299,6 +299,10 @@ impl Storage for SupabaseStorage {
             }
         }
     }
+
+    async fn list(&self) -> Result<Vec<String>, StorageError> {
+        self.list_keys().await
+    }
 }
 
 // Add the list_keys method that may be expected

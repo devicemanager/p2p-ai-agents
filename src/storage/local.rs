@@ -72,6 +72,9 @@ pub trait Storage: Send + Sync {
     /// Delete a value by key with specified consistency level
     async fn delete(&self, key: &str, consistency: ConsistencyLevel) -> Result<(), StorageError>;
 
+    /// List all keys in the storage
+    async fn list(&self) -> Result<Vec<String>, StorageError>;
+
     /// Shutdown the storage backend, flushing any pending writes
     async fn shutdown(&self) -> Result<(), StorageError> {
         Ok(())
@@ -252,6 +255,26 @@ impl Storage for LocalStorage {
 
         result
     }
+
+    async fn list(&self) -> Result<Vec<String>, StorageError> {
+        let mut keys = Vec::new();
+        let mut entries = fs::read_dir(&self.storage_dir).await?;
+
+        while let Some(entry) = entries.next_entry().await? {
+            let path = entry.path();
+            if path.is_file() {
+                if let Some(file_name) = path.file_stem().and_then(|s| s.to_str()) {
+                    if path.extension().and_then(|s| s.to_str()) == Some("json") {
+                        // Filter out temp files
+                        if !file_name.starts_with(".tmp_") {
+                            keys.push(file_name.to_string());
+                        }
+                    }
+                }
+            }
+        }
+        Ok(keys)
+    }
 }
 
 /// Distributed storage backend (stub)
@@ -293,6 +316,11 @@ impl Storage for DistributedStorage {
     async fn delete(&self, _key: &str, _consistency: ConsistencyLevel) -> Result<(), StorageError> {
         // Stub: distributed delete
         Ok(())
+    }
+
+    async fn list(&self) -> Result<Vec<String>, StorageError> {
+        // Stub: distributed list
+        Ok(Vec::new())
     }
 }
 
@@ -336,6 +364,11 @@ impl Storage for CacheStorage {
         // Stub: cache delete
         Ok(())
     }
+
+    async fn list(&self) -> Result<Vec<String>, StorageError> {
+        // Stub: cache list
+        Ok(Vec::new())
+    }
 }
 
 /// Custom storage backend (stub)
@@ -377,5 +410,10 @@ impl Storage for CustomStorage {
     async fn delete(&self, _key: &str, _consistency: ConsistencyLevel) -> Result<(), StorageError> {
         // Stub: custom delete
         Ok(())
+    }
+
+    async fn list(&self) -> Result<Vec<String>, StorageError> {
+        // Stub: custom list
+        Ok(Vec::new())
     }
 }
