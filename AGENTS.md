@@ -161,6 +161,19 @@ pub async fn process_task(task: Task) -> anyhow::Result<TaskResult> {
 - **Event-Driven Architecture**: An event bus facilitates communication between components, promoting loose coupling.
 - **Pluggable Modules**: Use traits and feature flags (`Cargo.toml`) to create interchangeable implementations (e.g., for storage backends).
 
+### Remote Execution & Discovery (Epic 4 Patterns)
+
+- **Capability-Based Discovery**: Agents utilize gossipsub to broadcast `CapabilityAnnouncement` messages. Peers cache these capabilities to support `find_peers_with_capability`.
+- **Task State Machine**:
+  - `Queued`: Task submitted but not started.
+  - `Running`: Task dispatched to a local or remote executor.
+  - `Completed`: Task finished successfully with a result.
+  - `Failed`: Task encountered an error.
+  - `Timeout`: Task exceeded its duration limit (monitored by client).
+- **Resilience**:
+  - **Timeouts**: Clients monitor remote tasks and transition them to `Timeout` if no response is received.
+  - **Retries**: Timed-out tasks are automatically incremented (`retry_count`) and re-queued for dispatch to available peers.
+
 ## 5. Security
 
 - **No Secrets in Code**: Never hardcode secrets, API keys, or private keys. Load them from environment variables or a secure vault.
@@ -174,26 +187,29 @@ pub async fn process_task(task: Task) -> anyhow::Result<TaskResult> {
 
 **Last Updated:** Sat Jan 24 2026
 
-**Active Story:** Story FR14.5: Robustness and Error Handling (Next)
+**Active Story:** Story FR14.5: Robustness and Error Handling (Completed)
 
 **Recent Achievements:**
-- **Remote AI Task Execution (Story FR14.4):**
-  - Implemented logic in `dispatch_task` to inspect task payloads for model requirements (even for `TextProcessing` embed tasks).
-  - Created `tests/epic4/test_remote_ai_execution.rs` verifying end-to-end flow:
-    - Client submits task -> Discovers Server with "prajjwal1/bert-tiny" -> Dispatches Task -> Server executes (downloads model) -> Client receives result.
-- **Model Advertisement (Story FR14.3):**
-  - Agents advertise supported models via Identify protocol.
-  - Verified with `tests/epic4/test_model_discovery.rs`.
+- **Task Retries (Story FR14.5):**
+  - Implemented `retry_task` logic in `Agent` to automatically re-dispatch timed-out tasks.
+  - Verified logic with `tests/epic4/test_remote_execution_retry.rs`, demonstrating that if a primary server crashes, the task is retried and successfully executed by a secondary server.
+- **Remote Task Timeout (Story FR14.5):**
+  - Implemented `check_task_timeouts` in `Agent` to monitor running remote tasks.
+  - Updated `Agent::start` to run timeout checks periodically in the background loop.
+  - Created `tests/epic4/test_remote_execution_failure.rs` to verify client-side timeout when a server crashes.
 
 **Current Focus:**
-- **Refinement:** Ensure error handling is robust (e.g. what if peer goes offline during execution?).
+- **Completion:** Story FR14.5 is now complete. We have robust error handling for remote task timeouts and automatic retries.
 
 **Next Steps:**
-- Explore robust task recovery or retries if a peer fails.
-- Consider implementing "Story FR14.5" for better error handling or moving to next Epic.
+- Move to **Epic 5: Advanced AI Orchestration**.
+- Potential tasks:
+  - Implement task splitting (Map/Reduce style).
+  - Implement smarter peer selection (based on load, reputation, latency).
+  - Integrate more complex AI models/pipelines.
 
 **Key Files:**
-- `tests/epic4/test_remote_ai_execution.rs`: End-to-end AI test.
-- `src/agent/mod.rs`: Dispatch and Discovery logic.
-- `src/agent/executors/text_processing.rs`: AI execution logic.
+- `src/agent/mod.rs`: Added timeout and retry logic.
+- `src/agent/task.rs`: Updated Task struct for retries.
+- `tests/epic4/test_remote_execution_retry.rs`: New test for retry logic.
 

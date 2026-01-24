@@ -127,6 +127,132 @@ impl Agent {
             .collect()
     }
 
+    /// Checks for task timeouts and updates status if necessary.
+    pub async fn check_task_timeouts(&self) -> anyhow::Result<()> {
+        let tasks = self.task_manager.list_tasks().await;
+        let now = std::time::SystemTime::now();
+
+        // Use a separate vector to collect tasks that need retrying to avoid borrowing issues
+        // or concurrent modification issues if we were modifying the list being iterated.
+        // Although `list_tasks` returns a cloned Vec, so we are safe from that.
+        // But we can't await `retry_task` easily inside the loop without serializing them.
+        // Serializing is fine for now.
+
+        for task in tasks {
+            // Only check tasks that are running and assigned to remote peers
+            if task.status == TaskStatus::Running && task.assigned_to.is_some() {
+                // Determine timeout duration
+                let timeout_ms = if let Some(payload) = &task.payload {
+                    payload
+                        .data
+                        .get("timeout_ms")
+                        .and_then(|v| v.as_u64())
+                        .unwrap_or(30000) // Default 30s
+                } else {
+                    30000
+                };
+
+                if let Some(started_at) = task.started_at {
+                    if let Ok(duration) = now.duration_since(started_at) {
+                        if duration.as_millis() as u64 > timeout_ms {
+                            println!(
+                                "Task {} timed out after {}ms (limit {}ms)",
+                                task.id,
+                                duration.as_millis(),
+                                timeout_ms
+                            );
+                            self.task_manager
+                                .update_status(task.id, TaskStatus::Timeout)
+                                .await?;
+
+                            // Attempt to retry if possible
+                            // We need to clone self or have a way to call retry.
+                            // Since check_task_timeouts takes &self, we can call other methods.
+                            // But wait, `retry_task` (which I added in previous turn) is not yet in the `impl Agent` block
+                            // because the previous edit *replaced* the end of `check_task_timeouts` and added `retry_task` *after* it?
+                            // Let me double check where the edit applied.
+
+                            if let Err(e) = self.retry_task(task.id).await {
+                                eprintln!("Failed to retry task {}: {}", task.id, e);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        Ok(())
+    }
+
+    /// Retries a task by finding another capable peer.
+    pub async fn retry_task(&self, task_id: TaskId) -> anyhow::Result<()> {
+        let task = self
+            .task_manager
+            .get_task(task_id)
+            .await
+            .ok_or_else(|| anyhow::anyhow!("Task not found"))?;
+
+        if task.retry_count >= task.max_retries {
+            println!(
+                "Task {} exceeded max retries ({})",
+                task_id, task.max_retries
+            );
+            return Ok(());
+        }
+
+        // Increment retry count
+        let new_count = task.retry_count + 1;
+        self.task_manager
+            .update_retry_count(task_id, new_count)
+            .await?;
+        println!(
+            "Retrying task {} (attempt {}/{})",
+            task_id, new_count, task.max_retries
+        );
+
+        // Reset status to Queued so we can dispatch it again
+        self.task_manager
+            .update_status(task_id, TaskStatus::Queued)
+            .await?;
+
+        // We need to re-dispatch. We can try to use dispatch_task again.
+        // However, dispatch_task finds *any* peer. We might want to avoid the *failed* peer.
+        // For now, let's keep it simple and just re-dispatch. The load balancing (random/first)
+        // logic might pick the same one if it's the only one, but if there are others, it might pick another.
+        // Ideally, we should exclude the failed peer.
+
+        // Note: dispatch_task expects the task to be in the manager. We just updated it.
+        // We spawn this because we might be in the check loop.
+
+        // We can't clone &Self to Arc<Self> unless we are already Arc.
+        // Actually, `check_task_timeouts` is called on &Self.
+        // But `Agent` struct is usually wrapped in Arc.
+        // `retry_task` is async, so we can just call `dispatch_task`.
+
+        // But wait, `dispatch_task` is async and we are in `check_task_timeouts` loop.
+        // If we await here, we block the check loop. That's probably fine as retries are rare events.
+
+        // IMPORTANT: We should ideally blacklist the failed peer for this specific retry.
+        // But `dispatch_task` doesn't support exclusions yet.
+        // Implementing simple retry for now.
+
+        match self.dispatch_task(task_id).await {
+            Ok(_) => println!("Task {} re-dispatched successfully", task_id),
+            Err(e) => {
+                eprintln!("Failed to re-dispatch task {}: {}", task_id, e);
+                // If dispatch fails (e.g. no peers), mark as Failed?
+                // Or leave as Queued?
+                // If we leave as Queued, `process_next_task` might pick it up if it was local,
+                // but this is for remote tasks.
+                // Let's mark as Failed if immediate re-dispatch fails.
+                self.task_manager
+                    .update_status(task_id, TaskStatus::Failed(format!("Retry failed: {}", e)))
+                    .await?;
+            }
+        }
+
+        Ok(())
+    }
+
     /// Starts the Agent.
     pub async fn start(self: Arc<Self>) -> anyhow::Result<()> {
         let _shutdown_rx = self.shutdown_tx.subscribe();
@@ -236,6 +362,11 @@ impl Agent {
                         // Poll for tasks
                         if let Err(e) = agent_clone.process_next_task().await {
                              eprintln!("Error processing task: {:?}", e);
+                        }
+
+                        // Check for task timeouts
+                        if let Err(e) = agent_clone.check_task_timeouts().await {
+                             eprintln!("Error checking timeouts: {:?}", e);
                         }
                     }
                 }
@@ -916,6 +1047,11 @@ impl DefaultAgent {
                         // Poll for tasks
                         if let Err(e) = agent_clone.process_next_task().await {
                              eprintln!("Error processing task: {:?}", e);
+                        }
+
+                        // Check for task timeouts
+                        if let Err(e) = agent_clone.check_task_timeouts().await {
+                             eprintln!("Error checking timeouts: {:?}", e);
                         }
                     }
                 }

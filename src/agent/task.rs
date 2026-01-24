@@ -110,6 +110,10 @@ pub struct Task {
     pub result_size_bytes: Option<usize>,
     /// ID of the peer executing this task (if dispatched remotely).
     pub assigned_to: Option<String>,
+    /// Number of times this task has been retried.
+    pub retry_count: u32,
+    /// Maximum number of retries allowed (default 3).
+    pub max_retries: u32,
 }
 
 impl Task {
@@ -130,6 +134,8 @@ impl Task {
             error_details: None,
             result_size_bytes: None,
             assigned_to: None,
+            retry_count: 0,
+            max_retries: 3,
         }
     }
 
@@ -150,6 +156,8 @@ impl Task {
             error_details: None,
             result_size_bytes: None,
             assigned_to: None,
+            retry_count: 0,
+            max_retries: 3,
         }
     }
 
@@ -367,6 +375,26 @@ impl TaskManager {
         let mut tasks = self.tasks.write().await;
         if let Some(task) = tasks.get_mut(&id) {
             task.progress_percent = Some(progress_percent.min(100));
+
+            // Update in storage
+            if let Ok(json) = serde_json::to_vec(&task) {
+                let _ = self
+                    .storage
+                    .put(&id.to_string(), json, ConsistencyLevel::Strong)
+                    .await;
+            }
+
+            Ok(())
+        } else {
+            Err(anyhow::anyhow!("Task not found"))
+        }
+    }
+
+    /// Updates task retry count.
+    pub async fn update_retry_count(&self, id: TaskId, count: u32) -> anyhow::Result<()> {
+        let mut tasks = self.tasks.write().await;
+        if let Some(task) = tasks.get_mut(&id) {
+            task.retry_count = count;
 
             // Update in storage
             if let Ok(json) = serde_json::to_vec(&task) {
