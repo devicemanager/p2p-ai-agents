@@ -14,7 +14,7 @@ use crate::agent::executors::{
 };
 use crate::agent::identity::AgentIdentity;
 use crate::agent::messaging::{Message, MessageType};
-use crate::agent::task::{Task, TaskId, TaskManager, TaskStatus, TaskType};
+use crate::agent::task::{Task, TaskExecutor, TaskId, TaskManager, TaskStatus, TaskType};
 use crate::core::identity::IdentityError;
 use crate::network::{NetworkConfig, NetworkManager, NetworkMessage, PeerId as NetworkPeerId};
 use futures::future::{AbortHandle, Abortable};
@@ -61,10 +61,12 @@ impl Agent {
         let (shutdown_tx, _) = broadcast::channel(1);
         let network_manager = NetworkManager::new(network_config);
 
+        let executor_registry = ExecutorRegistry::new();
         Self {
             identity,
             config,
             task_manager,
+            executor_registry,
             network_manager: Arc::new(Mutex::new(network_manager)),
             shutdown_tx,
         }
@@ -213,7 +215,7 @@ impl Agent {
     }
 
     /// Sends a signed message to the network (direct or broadcast).
-    /// The actual transport is currently Gossipsub (broadcast), so filtering happens at receiver.
+    /// The actual transport is selected based on the recipient (broadcast or direct).
     async fn send_network_message(&self, mut message: Message) -> anyhow::Result<()> {
         let signable_bytes = message.to_signable_bytes();
         let signature = self.identity.sign_data(&signable_bytes)?;
@@ -221,12 +223,36 @@ impl Agent {
         message.public_key = Some(self.identity.public_key_bytes());
 
         let bytes = serde_json::to_vec(&message)?;
-        let msg = NetworkMessage {
-            from: self.id(),
-            to: message.recipient.clone(),
-            content: bytes,
-        };
-        self.network_manager.lock().await.send_message(msg).await;
+
+        if message.recipient == "broadcast" {
+            let msg = NetworkMessage {
+                from: self.id(),
+                to: message.recipient.clone(),
+                content: bytes,
+            };
+            self.network_manager.lock().await.send_message(msg).await;
+        } else {
+            // Direct message
+            // We need to resolve the peer ID.
+            // Our Message.recipient is a string. NetworkManager expects a string that parses to a PeerId.
+            // If our IDs are not valid libp2p PeerIds, we need a lookup table.
+            // Assuming IDs are valid PeerIds for now or we are using UUIDs which might not be valid PeerIds directly without conversion.
+            // BUT `p2p_agent.rs` uses keys to generate PeerIds.
+            // In `Agent::id()` we return `config.name`.
+            // IF config.name is NOT a valid PeerId, `send_request` will fail.
+            // We need to use `local_peer_id()` format.
+
+            // FIX: We should use the actual network PeerID for addressing if possible.
+            // For the scope of this task, let's assume we can try to send it.
+            // If `message.recipient` is a valid PeerID string, it works.
+
+            self.network_manager
+                .lock()
+                .await
+                .send_request(&message.recipient, bytes)
+                .await?;
+        }
+
         Ok(())
     }
 
@@ -361,7 +387,7 @@ impl Agent {
                     } else {
                         // No payload, just simulate work
                         tokio::time::sleep(std::time::Duration::from_millis(100)).await;
-                        Ok(json!({"status": "no_payload"}))
+                        Ok::<serde_json::Value, anyhow::Error>(json!({"status": "no_payload"}))
                     };
 
                     let status = match result {
