@@ -316,15 +316,20 @@ impl Storage for RedisStorage {
 
     async fn list(&self) -> Result<Vec<String>, StorageError> {
         let mut conn = self.connection.clone();
-        // Use SCAN for better performance and to avoid blocking, but for simplicity here using KEYS *
-        // In a real production environment SCAN should be used.
-        // For trait compatibility, we list all keys.
 
-        let keys: Vec<String> = redis::cmd("KEYS")
-            .arg("*")
-            .query_async(&mut conn)
+        // Using SCAN instead of KEYS * for better performance
+        let mut keys: Vec<String> = Vec::new();
+        let mut iter: redis::AsyncIter<String> = redis::cmd("SCAN")
+            .cursor_arg(0)
+            .clone()
+            .iter_async(&mut conn)
             .await
             .map_err(|e| StorageError::ConnectionFailed(format!("Redis list failed: {}", e)))?;
+
+        use futures::StreamExt;
+        while let Some(key) = iter.next().await {
+            keys.push(key);
+        }
 
         Ok(keys)
     }

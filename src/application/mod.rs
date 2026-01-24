@@ -225,7 +225,7 @@ impl Application {
         // Start agents
         let agents = self.agents.read().await;
         for agent in agents.iter() {
-            agent.start().await?;
+            agent.clone().start().await?;
         }
 
         tracing::info!("All services started successfully");

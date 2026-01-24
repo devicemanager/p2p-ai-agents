@@ -56,12 +56,10 @@ impl Agent {
         identity: AgentIdentity,
         config: AgentConfig,
         network_config: NetworkConfig,
+        task_manager: TaskManager,
     ) -> Self {
         let (shutdown_tx, _) = broadcast::channel(1);
         let network_manager = NetworkManager::new(network_config);
-
-        // Initialize task manager with default local storage
-        let task_manager = TaskManager::default();
 
         Self {
             identity,
@@ -91,9 +89,119 @@ impl Agent {
     }
 
     /// Starts the Agent.
-    pub async fn start(&self) -> anyhow::Result<()> {
+    pub async fn start(self: Arc<Self>) -> anyhow::Result<()> {
         let _shutdown_rx = self.shutdown_tx.subscribe();
-        // Network manager start is handled by the wrapper (DefaultAgent) which wires up the callbacks
+
+        // Load persisted tasks
+        match self.task_manager.load_tasks().await {
+            Ok(count) => {
+                if count > 0 {
+                    println!("Recovered {} tasks from storage", count);
+                    tracing::info!("Recovered {} tasks from storage", count);
+                }
+            }
+            Err(e) => {
+                eprintln!("Failed to load tasks from storage: {}", e);
+                tracing::error!("Failed to load tasks from storage: {}", e);
+                // Continue startup even if load fails
+            }
+        }
+
+        let agent_clone = self.clone();
+        let mut shutdown_rx = self.shutdown_tx.subscribe();
+
+        // Setup Network Manager & Message Loop
+        {
+            let mut nm = self.network_manager.lock().await;
+
+            // Construct agent version string with capabilities
+            // e.g. "/p2p-ai-agents/1.0.0/TextProcessor,VectorComputer"
+            let mut version = "/p2p-ai-agents/1.0.0".to_string();
+            if !self.config.capabilities.is_empty() {
+                version.push('/');
+                let caps: Vec<String> = self
+                    .config
+                    .capabilities
+                    .iter()
+                    .map(|c| c.to_string())
+                    .collect();
+                version.push_str(&caps.join(","));
+            }
+            nm.set_agent_version(version);
+
+            // Channel for network messages -> agent
+            let (tx, mut rx) = mpsc::channel::<Vec<u8>>(100);
+            nm.set_message_callback(tx);
+
+            // Start the network manager
+            if let Err(e) = nm.start().await {
+                eprintln!("Failed to start network manager: {:?}", e);
+            }
+
+            // Announce Capabilities (if any)
+            // We spawn a task to do this shortly after startup to ensure peers are connected
+            let agent_announce = self.clone();
+            tokio::spawn(async move {
+                if !agent_announce.config.capabilities.is_empty() {
+                    // Wait a bit for initial connections
+                    tokio::time::sleep(std::time::Duration::from_secs(2)).await;
+                    let msg = Message::new_capability_announcement(
+                        agent_announce.id(),
+                        agent_announce.config.capabilities.clone(),
+                    );
+                    if let Err(e) = agent_announce.broadcast_message(msg).await {
+                        tracing::error!("Failed to broadcast capability announcement: {:?}", e);
+                    } else {
+                        tracing::info!("Broadcasted capability announcement");
+                    }
+                }
+            });
+
+            // Spawn message handler loop
+            let agent_msg_clone = self.clone();
+            let mut msg_shutdown_rx = self.shutdown_tx.subscribe();
+
+            tokio::spawn(async move {
+                loop {
+                    tokio::select! {
+                        _ = msg_shutdown_rx.recv() => break,
+                        msg = rx.recv() => {
+                            if let Some(bytes) = msg {
+                                // Deserialize and handle
+                                if let Ok(message) = serde_json::from_slice::<Message>(&bytes) {
+                                     if let Err(e) = agent_msg_clone.handle_message(message).await {
+                                         eprintln!("Error handling message: {:?}", e);
+                                     }
+                                } else {
+                                     eprintln!("Failed to deserialize network message");
+                                }
+                            } else {
+                                break;
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Spawn background task processing loop
+        tokio::spawn(async move {
+            loop {
+                tokio::select! {
+                    _ = shutdown_rx.recv() => {
+                        // Received shutdown signal
+                        break;
+                    }
+                    _ = tokio::time::sleep(std::time::Duration::from_millis(50)) => {
+                        // Poll for tasks
+                        if let Err(e) = agent_clone.process_next_task().await {
+                             eprintln!("Error processing task: {:?}", e);
+                        }
+                    }
+                }
+            }
+        });
+
         Ok(())
     }
 
@@ -104,9 +212,9 @@ impl Agent {
         Ok(())
     }
 
-    /// Broadcast a message to the network.
-    pub async fn broadcast_message(&self, mut message: Message) -> anyhow::Result<()> {
-        // Sign the message
+    /// Sends a signed message to the network (direct or broadcast).
+    /// The actual transport is currently Gossipsub (broadcast), so filtering happens at receiver.
+    async fn send_network_message(&self, mut message: Message) -> anyhow::Result<()> {
         let signable_bytes = message.to_signable_bytes();
         let signature = self.identity.sign_data(&signable_bytes)?;
         message.signature = Some(signature);
@@ -115,24 +223,57 @@ impl Agent {
         let bytes = serde_json::to_vec(&message)?;
         let msg = NetworkMessage {
             from: self.id(),
-            to: "broadcast".to_string(),
+            to: message.recipient.clone(),
             content: bytes,
         };
-        // Use send_message which queues it.
-        // We need to implement actual sending in NetworkManager.
-        // Wait, I updated `NetworkManager` to handle `SendMessage` command via Gossipsub!
-        // So we need to push a command.
-        // But `NetworkManager::send_message` currently just pushes to a queue for testing.
-        // I need to update `NetworkManager::send_message` to send the command.
-
-        // Actually, let's look at `NetworkManager`. I didn't update `send_message` method, only the command loop.
-        // So `NetworkManager::send_message` still just pushes to internal vector.
-        // This is fine for now, but for real broadcast we need to trigger the command.
-        // Accessing command_sender is hard because it's private.
-        //
-        // Let's assume `NetworkManager` will be updated later to use the command channel in `send_message`.
-        // For this step, I will just call `send_message` on the manager.
         self.network_manager.lock().await.send_message(msg).await;
+        Ok(())
+    }
+
+    /// Broadcast a message to the network.
+    pub async fn broadcast_message(&self, message: Message) -> anyhow::Result<()> {
+        self.send_network_message(message).await
+    }
+
+    /// Dispatches a task to a capable peer.
+    pub async fn dispatch_task(&self, task_id: TaskId) -> anyhow::Result<()> {
+        let task = self
+            .task_manager
+            .get_task(task_id)
+            .await
+            .ok_or_else(|| anyhow::anyhow!("Task not found"))?;
+
+        // 1. Identify TaskType
+        let task_type = if let Some(payload) = &task.payload {
+            payload.task_type.clone()
+        } else {
+            return Err(anyhow::anyhow!("Task has no payload to determine type"));
+        };
+
+        // 2. Find Peers
+        let peers = self.find_peers_with_capability(task_type.clone()).await;
+        if peers.is_empty() {
+            return Err(anyhow::anyhow!(
+                "No peers found with capability {}",
+                task_type
+            ));
+        }
+
+        // 3. Select Peer (Simple: First one)
+        let target_peer = peers[0].clone();
+        println!("Dispatching task {} to peer {}", task_id, target_peer);
+
+        // 4. Update Task with Assignment
+        self.task_manager
+            .assign_task(task_id, target_peer.to_string())
+            .await?;
+
+        // 5. Construct Message
+        let message = Message::new_task_request(self.id(), target_peer, task);
+
+        // 6. Sign and Send
+        self.send_network_message(message).await?;
+
         Ok(())
     }
 
@@ -144,6 +285,26 @@ impl Agent {
 
     /// Cancels a task.
     pub async fn cancel_task(&self, id: TaskId) -> anyhow::Result<()> {
+        // 1. Check if the task is remote
+        if let Some(task) = self.task_manager.get_task(id).await {
+            if let Some(assigned_peer) = task.assigned_to {
+                // Task was dispatched to a remote peer. Send cancellation request.
+                // Only send if not already completed/failed/cancelled
+                match task.status {
+                    TaskStatus::Queued | TaskStatus::Running => {
+                        let message =
+                            Message::new_task_cancellation(self.id(), assigned_peer.clone(), id);
+                        // Best effort send
+                        if let Err(e) = self.send_network_message(message).await {
+                            eprintln!("Failed to send cancellation to {}: {:?}", assigned_peer, e);
+                        }
+                    }
+                    _ => {} // Already done, no need to send cancel
+                }
+            }
+        }
+
+        // 2. Cancel locally (stops local execution or marks as cancelled)
         self.task_manager.cancel_task(id).await
     }
 
@@ -158,6 +319,10 @@ impl Agent {
                 .await?;
 
             let task_manager = self.task_manager.clone();
+            let identity = self.identity.clone();
+            let network_manager = self.network_manager.clone();
+            let agent_id = self.id();
+
             let task_id = task.id;
             let executor_registry = self.executor_registry.clone();
 
@@ -173,20 +338,24 @@ impl Agent {
             let _handle = tokio::spawn(Abortable::new(
                 async move {
                     let result = if let Some(payload) = &task.payload {
-                        if let Some(executor) = executor_registry.get(&payload.task_type) {
-                            executor.execute(payload).await
-                        } else {
-                            // Fallback or legacy handling
-                            match payload.task_type {
-                                TaskType::Custom(_) => {
-                                    // Fallback for custom tasks
-                                    tokio::time::sleep(std::time::Duration::from_millis(100)).await;
-                                    Ok(json!({"status": "simulated_custom_execution"}))
-                                }
-                                _ => Err(anyhow::anyhow!(
-                                    "No executor found for task type: {}",
-                                    payload.task_type
-                                )),
+                        match payload.task_type {
+                            TaskType::TextProcessing => {
+                                TextProcessingExecutor.execute(payload).await
+                            }
+                            TaskType::VectorComputation => {
+                                VectorComputationExecutor.execute(payload).await
+                            }
+                            TaskType::Custom(_) => {
+                                // Check for requested duration in payload for testing/simulation
+                                let duration = payload
+                                    .data
+                                    .get("duration_ms")
+                                    .and_then(|v| v.as_u64())
+                                    .unwrap_or(100);
+
+                                tokio::time::sleep(std::time::Duration::from_millis(duration))
+                                    .await;
+                                Ok(json!({"status": "simulated_custom_execution"}))
                             }
                         }
                     } else {
@@ -195,18 +364,37 @@ impl Agent {
                         Ok(json!({"status": "no_payload"}))
                     };
 
-                    match result {
-                        Ok(output) => {
-                            // Complete the task with result
-                            let _ = task_manager
-                                .update_status(task_id, TaskStatus::Completed(output))
-                                .await;
+                    let status = match result {
+                        Ok(output) => TaskStatus::Completed(output),
+                        Err(e) => TaskStatus::Failed(e.to_string()),
+                    };
+
+                    // Update local state
+                    let _ = task_manager.update_status(task_id, status.clone()).await;
+
+                    // Broadcast update
+                    let mut message =
+                        Message::new_task_response(agent_id.clone(), "broadcast", task_id, status);
+
+                    // Sign and send
+                    // Note: We duplicate logic from broadcast_message here because we can't easily
+                    // call methods on 'self' inside this moved async block without cloning the whole Agent
+                    // (which has other non-clonable fields like shutdown_tx).
+                    let signable_bytes = message.to_signable_bytes();
+                    if let Ok(signature) = identity.sign_data(&signable_bytes) {
+                        message.signature = Some(signature);
+                        message.public_key = Some(identity.public_key_bytes());
+
+                        if let Ok(bytes) = serde_json::to_vec(&message) {
+                            let msg = NetworkMessage {
+                                from: agent_id,
+                                to: "broadcast".to_string(),
+                                content: bytes,
+                            };
+                            network_manager.lock().await.send_message(msg).await;
                         }
-                        Err(e) => {
-                            let _ = task_manager
-                                .update_status(task_id, TaskStatus::Failed(e.to_string()))
-                                .await;
-                        }
+                    } else {
+                        eprintln!("Failed to sign task completion message");
                     }
                 },
                 abort_registration,
@@ -229,6 +417,15 @@ impl Agent {
 
     /// Handles an incoming incoming network message.
     pub async fn handle_message(&self, message: Message) -> anyhow::Result<()> {
+        // 0. Filter by Recipient
+        // Since we currently use Gossipsub (broadcast) for transport, we must filter messages
+        // intended for others.
+        if message.recipient != "broadcast" && message.recipient != self.id() {
+            // Message is not for us. Ignore it.
+            // In a future direct-transport implementation, we wouldn't receive this.
+            return Ok(());
+        }
+
         // Verify Signature
         if let (Some(sig), Some(pk_bytes)) = (&message.signature, &message.public_key) {
             let signable_bytes = message.to_signable_bytes();
@@ -279,13 +476,109 @@ impl Agent {
             MessageType::TaskResponse { task_id, status } => {
                 println!("Agent received TaskResponse for {}: {:?}", task_id, status);
                 // Update local state if we are tracking this remote task
-                // (Not yet implemented: tracking remote tasks)
+                if let Some(_task) = self.task_manager.get_task(task_id).await {
+                    // Only update if the task is not already in a final state locally
+                    // or if we decide to trust the remote update.
+                    // For now, we update it if we have it.
+
+                    // Note: We might want to check if the status transition is valid
+                    // e.g. from Queued/Running -> Completed/Failed.
+
+                    let _ = self.task_manager.update_status(task_id, status).await;
+                } else {
+                    tracing::warn!("Received response for unknown task: {}", task_id);
+                }
             }
             MessageType::Text(text) => {
                 println!(
                     "Agent received Text message from {}: {}",
                     message.sender, text
                 );
+            }
+            MessageType::CapabilityAnnouncement { capabilities } => {
+                println!(
+                    "Agent received CapabilityAnnouncement from {}: {:?}",
+                    message.sender, capabilities
+                );
+
+                // Update peer cache in NetworkManager
+                // Note: NetworkManager tracks peers by PeerId (string), which matches message.sender
+                // But we need to be careful if message.sender is a human-readable name vs a proper DID/Key.
+                // For now, our implementation uses human-readable names or UUIDs as IDs uniformly.
+                // However, `PeerCache` uses `PeerId` struct.
+
+                // We need to resolve the sender ID to a network PeerId if they differ,
+                // but in our current mock setup, they are likely the same or we treat them as such.
+
+                // IMPORTANT: `NetworkManager` manages `PeerCache`. We need to access it.
+                // But `NetworkManager` is locked behind a Mutex.
+
+                let peer_id_str = message.sender.clone();
+                let supported_tasks = capabilities;
+
+                let nm = self.network_manager.lock().await;
+
+                // Create or update PeerInfo
+                // We don't have the full PeerInfo (like address) here if we haven't seen them before,
+                // but usually we would have established a connection.
+                // If we don't know them, we can't really "connect" to them just from a broadcast message
+                // unless the message contained their multiaddr (which it doesn't currently).
+                // However, for `find_peers_with_capability` to work, we need them in the cache.
+
+                use crate::network::{ConnectionStatus, PeerCapabilities, PeerId, PeerInfo};
+
+                // Try to find existing entry to preserve address/reputation
+                let mut peer_info = if let Some(existing) =
+                    nm.peer_cache.get_peer(&PeerId(peer_id_str.clone())).await
+                {
+                    existing
+                } else {
+                    // New peer (or at least new to cache).
+                    // We might not know their address yet.
+                    PeerInfo {
+                        peer_id: PeerId(peer_id_str.clone()),
+                        addresses: vec![],
+                        last_seen: chrono::Utc::now(),
+                        reputation: 50,
+                        capabilities: PeerCapabilities {
+                            supported_tasks: vec![],
+                        },
+                        status: ConnectionStatus::Connected, // Assume connected if we heard them via gossipsub
+                    }
+                };
+
+                // Update capabilities
+                peer_info.capabilities.supported_tasks = supported_tasks;
+                peer_info.last_seen = chrono::Utc::now();
+
+                // Write back to cache
+                nm.peer_cache.upsert_peer(peer_info).await;
+            }
+            MessageType::TaskCancellation { task_id } => {
+                println!(
+                    "Agent received TaskCancellation from {} for task {}",
+                    message.sender, task_id
+                );
+                // We should verify that the sender is actually the one who requested the task
+                // For now, we trust the sender (assuming verified signature & trust checks passed above)
+
+                if let Err(e) = self.task_manager.cancel_task(task_id).await {
+                    eprintln!("Error cancelling task {}: {:?}", task_id, e);
+                } else {
+                    println!("Successfully cancelled task {}", task_id);
+                    // Optionally send a status update back confirming cancellation?
+                    // The task execution loop will eventually stop and might send a Failed/Cancelled update,
+                    // but `cancel_task` sets status to Cancelled immediately.
+
+                    // Let's send a confirmation
+                    let confirm_msg = Message::new_task_response(
+                        self.id(),
+                        "broadcast", // or specifically to sender? Broadcast for now to be safe with current setup
+                        task_id,
+                        TaskStatus::Cancelled,
+                    );
+                    let _ = self.broadcast_message(confirm_msg).await;
+                }
             }
         }
         Ok(())
@@ -334,7 +627,8 @@ impl DefaultAgent {
             },
         };
 
-        let agent = Arc::new(Agent::new(identity, config, network_config));
+        let task_manager = TaskManager::default();
+        let agent = Arc::new(Agent::new(identity, config, network_config, task_manager));
 
         Ok(Self {
             agent,
@@ -366,7 +660,8 @@ impl DefaultAgent {
             },
         };
 
-        let agent = Arc::new(Agent::new(identity, config, network_config));
+        let task_manager = TaskManager::default();
+        let agent = Arc::new(Agent::new(identity, config, network_config, task_manager));
 
         Ok(Self {
             agent,
@@ -376,7 +671,7 @@ impl DefaultAgent {
 
     /// Delegate start to the inner Agent and spawn the task loop
     pub async fn start(&self) -> anyhow::Result<()> {
-        self.agent.start().await?;
+        self.agent.clone().start().await?;
 
         let agent_clone = self.agent.clone();
         let mut shutdown_rx = self.agent.shutdown_tx.subscribe();

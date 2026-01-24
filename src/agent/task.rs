@@ -102,6 +102,8 @@ pub struct Task {
     pub error_details: Option<String>,
     /// Size of result in bytes (for completed tasks).
     pub result_size_bytes: Option<usize>,
+    /// ID of the peer executing this task (if dispatched remotely).
+    pub assigned_to: Option<String>,
 }
 
 impl Task {
@@ -121,6 +123,7 @@ impl Task {
             error_reason: None,
             error_details: None,
             result_size_bytes: None,
+            assigned_to: None,
         }
     }
 
@@ -140,6 +143,7 @@ impl Task {
             error_reason: None,
             error_details: None,
             result_size_bytes: None,
+            assigned_to: None,
         }
     }
 
@@ -261,6 +265,24 @@ impl TaskManager {
 
         self.tasks.write().await.insert(id, task);
         id
+    }
+
+    /// Assigns a task to a peer.
+    pub async fn assign_task(&self, id: TaskId, peer_id: String) -> anyhow::Result<()> {
+        let mut tasks = self.tasks.write().await;
+        if let Some(task) = tasks.get_mut(&id) {
+            task.assigned_to = Some(peer_id);
+            // Persist
+            if let Ok(json) = serde_json::to_vec(&task) {
+                let _ = self
+                    .storage
+                    .put(&id.to_string(), json, ConsistencyLevel::Strong)
+                    .await;
+            }
+            Ok(())
+        } else {
+            Err(anyhow::anyhow!("Task not found"))
+        }
     }
 
     /// Updates the status of a task.

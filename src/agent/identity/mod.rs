@@ -129,6 +129,14 @@ impl AgentIdentity {
         self.trust_registry.is_trusted(&commitment)
     }
 
+    /// Explicitly trusts a peer by registering their public key.
+    /// This is a helper for testing/bootstrapping.
+    pub fn trust_peer(&self, public_key_bytes: &[u8]) -> Result<()> {
+        let commitment = self.derive_commitment(public_key_bytes);
+        self.register_peer(&commitment)?;
+        Ok(())
+    }
+
     /// Helper to derive a Semaphore commitment from a Public Key.
     /// This effectively maps a Public Key to a "Identity" in the Trust Registry.
     pub fn derive_commitment(&self, public_key_bytes: &[u8]) -> Field {
