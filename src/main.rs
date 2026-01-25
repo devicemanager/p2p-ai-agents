@@ -108,6 +108,7 @@ enum Commands {
 }
 
 fn main() -> Result<()> {
+    dotenv::dotenv().ok(); // Load .env file at the very start of the application
     let cli = Cli::parse();
 
     // Handle --version flag early

@@ -1,5 +1,39 @@
 name: Technical Planning
-description: "Creates a technical plan from requirements."
+description: "Creates a technical plan from requirements using an AI."
 steps:
+  - name: "Read Requirements"
+    command: 'cat {{requirements_file}}'
   - name: "Generate Plan"
-    command: 'echo "Technical plan based on `cat {{requirements_file}}`:\n- Step 1: Scrape data from sources X, Y, Z.\n- Step 2: Analyze and synthesize data.\n- Step 3: Format into a report." > {{output_path}}'
+    kind: ai
+    command: |
+      Analyze the following requirements and generate a detailed technical plan.
+      Requirements: {{last_output}}
+      
+      After your analysis, you MUST append a JSON block defining the files to be generated.
+      The JSON block must be a valid JSON array of objects.
+      Each object must have:
+      - "title": The title of the section.
+      - "description": A brief instruction for writing this section.
+      - "filename": The filename (e.g., "01_intro.md").
+      
+      Format the JSON block like this:
+      ```json
+      [
+        {"title": "Executive Summary", "description": "High-level overview...", "filename": "01_exec_summary.md"}
+      ]
+      ```
+    output_var: tech_plan_with_json
+
+  - name: "Extract Task List"
+    kind: ai
+    command: |
+      Extract ONLY the JSON array from the following text. Do not include any explanation or markdown formatting outside the JSON structure.
+      
+      Text:
+      {{tech_plan_with_json}}
+    output_var: planned_tasks_json
+
+  - name: "Save Plan to File"
+    kind: save_to_file
+    command: "{{output_path}}"
+

@@ -187,29 +187,4 @@ pub async fn process_task(task: Task) -> anyhow::Result<TaskResult> {
 
 **Last Updated:** Sat Jan 24 2026
 
-**Active Story:** Story FR14.5: Robustness and Error Handling (Completed)
-
-**Recent Achievements:**
-- **Task Retries (Story FR14.5):**
-  - Implemented `retry_task` logic in `Agent` to automatically re-dispatch timed-out tasks.
-  - Verified logic with `tests/epic4/test_remote_execution_retry.rs`, demonstrating that if a primary server crashes, the task is retried and successfully executed by a secondary server.
-- **Remote Task Timeout (Story FR14.5):**
-  - Implemented `check_task_timeouts` in `Agent` to monitor running remote tasks.
-  - Updated `Agent::start` to run timeout checks periodically in the background loop.
-  - Created `tests/epic4/test_remote_execution_failure.rs` to verify client-side timeout when a server crashes.
-
-**Current Focus:**
-- **Completion:** Story FR14.5 is now complete. We have robust error handling for remote task timeouts and automatic retries.
-
-**Next Steps:**
-- Move to **Epic 5: Advanced AI Orchestration**.
-- Potential tasks:
-  - Implement task splitting (Map/Reduce style).
-  - Implement smarter peer selection (based on load, reputation, latency).
-  - Integrate more complex AI models/pipelines.
-
-**Key Files:**
-- `src/agent/mod.rs`: Added timeout and retry logic.
-- `src/agent/task.rs`: Updated Task struct for retries.
-- `tests/epic4/test_remote_execution_retry.rs`: New test for retry logic.
 
