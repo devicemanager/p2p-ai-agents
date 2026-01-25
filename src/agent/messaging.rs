@@ -21,6 +21,19 @@ pub enum MessageType {
     },
     /// Generic text message (legacy/chat).
     Text(String),
+    /// Announcement of agent capabilities.
+    CapabilityAnnouncement {
+        /// List of supported task types.
+        capabilities: Vec<crate::agent::task::TaskType>,
+        /// List of available AI models.
+        #[serde(default)]
+        models: Vec<String>,
+    },
+    /// Request to cancel a task.
+    TaskCancellation {
+        /// ID of the task to cancel.
+        task_id: TaskId,
+    },
 }
 
 /// A message exchanged between agents.
@@ -89,6 +102,43 @@ impl Message {
             sender: sender.into(),
             recipient: recipient.into(),
             content: MessageType::TaskResponse { task_id, status },
+            timestamp: chrono::Utc::now(),
+            signature: None,
+            public_key: None,
+        }
+    }
+
+    /// Creates a capability announcement message.
+    pub fn new_capability_announcement(
+        sender: impl Into<String>,
+        capabilities: Vec<crate::agent::task::TaskType>,
+        models: Vec<String>,
+    ) -> Self {
+        Self {
+            id: Uuid::new_v4(),
+            sender: sender.into(),
+            recipient: "broadcast".to_string(),
+            content: MessageType::CapabilityAnnouncement {
+                capabilities,
+                models,
+            },
+            timestamp: chrono::Utc::now(),
+            signature: None,
+            public_key: None,
+        }
+    }
+
+    /// Creates a task cancellation message.
+    pub fn new_task_cancellation(
+        sender: impl Into<String>,
+        recipient: impl Into<String>,
+        task_id: TaskId,
+    ) -> Self {
+        Self {
+            id: Uuid::new_v4(),
+            sender: sender.into(),
+            recipient: recipient.into(),
+            content: MessageType::TaskCancellation { task_id },
             timestamp: chrono::Utc::now(),
             signature: None,
             public_key: None,

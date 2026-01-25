@@ -67,6 +67,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         let config = AgentConfig {
             capabilities: vec![],
             name: "peer-node".to_string(),
+            models: vec![],
         };
 
         let agent = DefaultAgent::new(config).await?;
@@ -231,6 +232,7 @@ mod tests {
             let config = AgentConfig {
                 capabilities: vec![],
                 name: "test-peer".to_string(),
+                models: vec![],
             };
 
             let agent = DefaultAgent::new(config).await?;

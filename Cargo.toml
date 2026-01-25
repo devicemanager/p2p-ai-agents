@@ -88,6 +88,12 @@ lru = "0.16"
 libc = "0.2.179"
 dotenv = "0.15.0"
 
+# AI / Inference
+candle-core = { version = "0.8", optional = true }
+candle-nn = { version = "0.8", optional = true }
+tokenizers = { version = "0.21", optional = true }
+hf-hub = { version = "0.4", features = ["tokio"], optional = true }
+
 [dev-dependencies]
 tokio-test = "0.4"
 tempfile = "3.10"
@@ -111,7 +117,10 @@ debug = true
 [features]
 default = ["network", "reqwest"]  # MVP requires network layer
 full = ["network", "storage", "cli", "metrics-prometheus"]
+default = ["network"]  # MVP requires network layer
+full = ["network", "storage", "cli", "metrics-prometheus", "ai"]
 network = ["libp2p", "bytes"]
+ai = ["candle-core", "candle-nn", "tokenizers", "hf-hub", "dep:reqwest"]
 storage = []
 storage-supabase = ["postgrest", "reqwest", "url"]
 storage-redis = ["redis"]

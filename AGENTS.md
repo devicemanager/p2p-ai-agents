@@ -161,6 +161,19 @@ pub async fn process_task(task: Task) -> anyhow::Result<TaskResult> {
 - **Event-Driven Architecture**: An event bus facilitates communication between components, promoting loose coupling.
 - **Pluggable Modules**: Use traits and feature flags (`Cargo.toml`) to create interchangeable implementations (e.g., for storage backends).
 
+### Remote Execution & Discovery (Epic 4 Patterns)
+
+- **Capability-Based Discovery**: Agents utilize gossipsub to broadcast `CapabilityAnnouncement` messages. Peers cache these capabilities to support `find_peers_with_capability`.
+- **Task State Machine**:
+  - `Queued`: Task submitted but not started.
+  - `Running`: Task dispatched to a local or remote executor.
+  - `Completed`: Task finished successfully with a result.
+  - `Failed`: Task encountered an error.
+  - `Timeout`: Task exceeded its duration limit (monitored by client).
+- **Resilience**:
+  - **Timeouts**: Clients monitor remote tasks and transition them to `Timeout` if no response is received.
+  - **Retries**: Timed-out tasks are automatically incremented (`retry_count`) and re-queued for dispatch to available peers.
+
 ## 5. Security
 
 - **No Secrets in Code**: Never hardcode secrets, API keys, or private keys. Load them from environment variables or a secure vault.
@@ -172,24 +185,6 @@ pub async fn process_task(task: Task) -> anyhow::Result<TaskResult> {
 <!-- Test commit -->
 ## 6. Current Development Context
 
-**Last Updated:** Sat Jan 17 2026
+**Last Updated:** Sat Jan 24 2026
 
-**Active Story:** Story 3.3: Implement Network Layer (In Progress)
 
-**Recent Achievements:**
-- Validated Story 3.2 (Identity Module) as ready for review.
-- Confirmed MVP architecture: TCP + Noise + mDNS + Request-Response (No Gossipsub).
-- Initialized libp2p Swarm with TCP, Noise, and Yamux.
-- Implemented basic Request-Response protocol structure.
-- Implemented mDNS Discovery logic (handling `mdns::Event::Discovered`) in `P2PAgent`.
-- Implemented `send_message` using Request-Response behavior in `P2PAgent`.
-
-**Current Focus:**
-- **Completion:** Finalize Story 3.3 by ensuring all tasks are marked as complete.
-- **Next Steps:** Begin planning for Story 3.4: Integration Testing.
-
-**Key Files:**
-- `src/network/p2p_agent.rs`: Main agent logic (Includes mDNS and Request-Response).
-- `src/network/behavior.rs`: Network behavior definition.
-- `src/network/protocol.rs`: Request/Response codec.
-- `examples/mvp_demo.rs`: MVP entry point.

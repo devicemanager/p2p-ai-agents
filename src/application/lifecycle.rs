@@ -117,6 +117,40 @@ impl LifecycleManager {
         info!("Initializing application");
         match self.application.initialize().await {
             Ok(_) => {
+                // Ensure default agent is created if none exists
+                let agents = self.application.agents().await;
+                if agents.is_empty() {
+                    info!("No agents configured, creating default agent...");
+
+                    // Create minimal agent config
+                    let agent_config = crate::agent::AgentConfig {
+                        name: "default-agent".to_string(),
+                        capabilities: vec![
+                            crate::agent::task::TaskType::TextProcessing,
+                            crate::agent::task::TaskType::VectorComputation,
+                        ],
+                        models: vec![],
+                    };
+
+                    // Create default agent
+                    match crate::agent::DefaultAgent::new(agent_config).await {
+                        Ok(default_agent) => {
+                            // Extract the inner Arc<Agent>
+                            let inner_agent = default_agent.internal_agent().clone();
+
+                            // Add to application
+                            if let Err(e) = self.application.add_agent(inner_agent).await {
+                                warn!("Failed to add default agent: {}", e);
+                            } else {
+                                info!("Default agent created and added to application");
+                            }
+                        }
+                        Err(e) => {
+                            warn!("Failed to create default agent: {}", e);
+                        }
+                    }
+                }
+
                 if let Some(diagnostics) = &self.diagnostics {
                     diagnostics.component_success("initialization").await;
                 }

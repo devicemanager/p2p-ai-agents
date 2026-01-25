@@ -428,6 +428,25 @@ impl Storage for StorageManager {
         .map_err(|e| StorageError::Other(e.to_string()))
     }
 
+    async fn list(&self) -> Result<Vec<String>, StorageError> {
+        let backends = self
+            .select_backends()
+            .await
+            .map_err(|e| StorageError::Other(e.to_string()))?;
+
+        // Just use the first available backend from selection for listing
+        if let Some(backend_name) = backends.first() {
+            let storage_backends = self.backends.read().await;
+            if let Some(backend) = storage_backends.get(backend_name) {
+                return backend.list().await;
+            }
+        }
+
+        Err(StorageError::Other(
+            "No backend available for listing".to_string(),
+        ))
+    }
+
     async fn shutdown(&self) -> Result<(), StorageError> {
         let backends = self.backends.write().await;
         let mut last_error = None;

@@ -22,6 +22,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let worker = DefaultAgent::new(AgentConfig {
         capabilities: vec![],
         name: "worker".to_string(),
+        models: vec![],
     })
     .await?;
     worker.start().await?;
@@ -29,6 +30,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let submitter = DefaultAgent::new(AgentConfig {
         capabilities: vec![],
         name: "submitter".to_string(),
+        models: vec![],
     })
     .await?;
     submitter.start().await?;
@@ -89,6 +91,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let rogue = DefaultAgent::new(AgentConfig {
         capabilities: vec![],
         name: "rogue".to_string(),
+        models: vec![],
     })
     .await?;
     rogue.start().await?;
