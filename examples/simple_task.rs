@@ -21,6 +21,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let config = AgentConfig {
         capabilities: vec![],
         name: "task-processor".to_string(),
+        models: vec![],
         // id, network_port, resource_limits moved or removed
     };
 
@@ -234,6 +235,7 @@ mod tests {
         let config = AgentConfig {
             capabilities: vec![],
             name: "test-task-agent".to_string(),
+            models: vec![],
         };
 
         // Limits omitted
@@ -270,6 +272,7 @@ mod tests {
         let config = AgentConfig {
             capabilities: vec![],
             name: "test-task-agent-priority".to_string(),
+            models: vec![],
         };
 
         let agent = DefaultAgent::new(config).await?;

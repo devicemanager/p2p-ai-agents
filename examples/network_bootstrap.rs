@@ -58,6 +58,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         let config = AgentConfig {
             capabilities: vec![],
             name: "bootstrap-node".to_string(),
+            models: vec![],
         };
 
         // let service_registry = Arc::new(ServiceRegistry::new());
@@ -152,6 +153,7 @@ mod tests {
             let config = AgentConfig {
                 capabilities: vec![],
                 name: "test-bootstrap".to_string(),
+                models: vec![],
             };
 
             let agent = DefaultAgent::new(config).await?;

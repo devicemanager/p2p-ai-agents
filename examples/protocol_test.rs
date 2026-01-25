@@ -21,6 +21,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let config = AgentConfig {
         capabilities: vec![],
         name: "receiver-agent".to_string(),
+        models: vec![],
     };
     let agent = DefaultAgent::new(config).await?;
     agent.start().await?;

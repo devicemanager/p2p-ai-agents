@@ -2,8 +2,9 @@
 //! Provides types and helpers for network management, metrics, resources, health, and security.
 
 use libp2p::{
-    futures::StreamExt, gossipsub, identify, identity, mdns, multiaddr::Protocol, noise,
-    swarm::SwarmEvent, tcp, yamux, Multiaddr as Libp2pMultiaddr, PeerId as Libp2pPeerId,
+    futures::StreamExt, gossipsub, identify, identity, kad, mdns, multiaddr::Protocol, noise,
+    request_response, swarm::SwarmEvent, tcp, yamux, Multiaddr as Libp2pMultiaddr,
+    PeerId as Libp2pPeerId,
 };
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -89,6 +90,18 @@ pub type NetworkResult<T> = std::result::Result<T, NetworkError>;
 /// Unique identifier for a peer
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct PeerId(pub String);
+
+impl std::fmt::Display for PeerId {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
+impl From<PeerId> for String {
+    fn from(id: PeerId) -> Self {
+        id.0
+    }
+}
 
 impl PeerId {
     /// Convert this PeerId to a libp2p PeerId
@@ -213,6 +226,16 @@ enum NetworkCommand {
     SendMessage {
         peer_id: Libp2pPeerId,
         message: Vec<u8>,
+    },
+    /// Command to send a direct request
+    SendRequest {
+        peer_id: Libp2pPeerId,
+        request: Vec<u8>,
+    },
+    #[allow(dead_code)]
+    Bootstrap {
+        peer_id: Libp2pPeerId,
+        addr: Libp2pMultiaddr,
     },
     Shutdown,
 }
@@ -448,6 +471,24 @@ impl NetworkManager {
                             info!("Listening on {:?}", address);
                             listen_addresses_clone.lock().await.push(address);
                         }
+                        SwarmEvent::Behaviour(AgentBehaviorEvent::Kademlia(kad::Event::RoutingUpdated {
+                             peer, ..
+                        })) => {
+                            debug!("Kademlia routing updated for peer {:?}", peer);
+                        }
+                        SwarmEvent::Behaviour(AgentBehaviorEvent::Kademlia(kad::Event::OutboundQueryProgressed {
+                             id: _,
+                             result: kad::QueryResult::Bootstrap(Ok(kad::BootstrapOk { peer, num_remaining })),
+                             ..
+                        })) => {
+                             debug!("Kademlia bootstrap progressed: {:?} (remaining: {:?})", peer, num_remaining);
+                        }
+                        SwarmEvent::Behaviour(AgentBehaviorEvent::Kademlia(kad::Event::OutboundQueryProgressed {
+                             result: kad::QueryResult::Bootstrap(Err(e)),
+                             ..
+                        })) => {
+                             error!("Kademlia bootstrap error: {:?}", e);
+                        }
                         SwarmEvent::Behaviour(AgentBehaviorEvent::Gossipsub(gossipsub::Event::Message {
                             propagation_source: peer_id,
                             message_id: id,
@@ -516,10 +557,44 @@ impl NetworkManager {
                                 reputation: 50,
                                 capabilities: PeerCapabilities {
                                     supported_tasks,
+                                    supported_models: vec![], // Identify protocol doesn't support model advertisement in this MVP yet
                                 },
                                 status: ConnectionStatus::Connected,
                             };
                             peer_cache_clone.upsert_peer(peer_info).await;
+                        }
+                        SwarmEvent::Behaviour(AgentBehaviorEvent::RequestResponse(request_response::Event::Message {
+                            message: request_response::Message::Request { request, channel, .. },
+                            peer: _,
+                        })) => {
+                            debug!("Got direct request: {:?}", request);
+                            // Handle request - we need to send it to the agent, and ideally send a response back.
+                            // For now, let's pass it up to the agent message loop.
+                            if let Some(callback) = &message_callback {
+                                // We might need to handle responses later.
+                                // Currently our callback just takes Vec<u8> (Message content)
+                                // We don't have a way to reply to this specific request via the channel in this MVP structure
+                                // without modifying the callback signature.
+                                // For now, we just assume the request is a standard Message.
+                                let _ = callback.send(request.message.clone()).await;
+
+                                // Send a simple acknowledgement back
+                                let response = crate::network::protocol::AgentResponse {
+                                    message: "ACK".as_bytes().to_vec(),
+                                };
+                                let _ = swarm.behaviour_mut().request_response.send_response(channel, response);
+                            }
+                        }
+                        SwarmEvent::Behaviour(AgentBehaviorEvent::RequestResponse(request_response::Event::Message {
+                            message: request_response::Message::Response { response, .. },
+                            peer: _,
+                        })) => {
+                            debug!("Got direct response: {:?}", response);
+                            // Currently we don't have a way to route responses back to the specific caller request.
+                            // But if the response contains a TaskResponse, the Agent message loop will handle it.
+                            if let Some(callback) = &message_callback {
+                                let _ = callback.send(response.message).await;
+                            }
                         }
                         SwarmEvent::Behaviour(behavior_event) => {
                              // Handle other behavior events
@@ -580,6 +655,19 @@ impl NetworkManager {
                                  error!("Failed to publish message: {:?}", e);
                              }
                         }
+                        Some(NetworkCommand::SendRequest { peer_id, request }) => {
+                            let request_data = crate::network::protocol::AgentRequest {
+                                message: request,
+                            };
+                            swarm.behaviour_mut().request_response.send_request(&peer_id, request_data);
+                        }
+                        Some(NetworkCommand::Bootstrap { peer_id, addr }) => {
+                             info!("Bootstrapping Kademlia to {:?}", peer_id);
+                             swarm.behaviour_mut().kademlia.add_address(&peer_id, addr);
+                             if let Err(e) = swarm.behaviour_mut().kademlia.bootstrap() {
+                                 error!("Kademlia bootstrap failed: {:?}", e);
+                             }
+                        }
                         Some(NetworkCommand::Shutdown) => {
                             break;
                         }
@@ -605,6 +693,25 @@ impl NetworkManager {
 
         self.is_running = false;
         Ok(())
+    }
+
+    /// Bootstrap Kademlia to a peer.
+    pub async fn bootstrap(&self, peer_id: &str, addr: Multiaddr) -> NetworkResult<()> {
+        let libp2p_peer_id =
+            Libp2pPeerId::from_str(peer_id).map_err(|e| NetworkError::Libp2p(e.to_string()))?;
+        let libp2p_addr = addr.to_libp2p()?;
+
+        if let Some(tx) = &self.command_sender {
+            tx.send(NetworkCommand::Bootstrap {
+                peer_id: libp2p_peer_id,
+                addr: libp2p_addr,
+            })
+            .await
+            .map_err(|_| NetworkError::NotRunning)?;
+            Ok(())
+        } else {
+            Err(NetworkError::NotRunning)
+        }
     }
 
     /// Perform a graceful shutdown of the network manager.
@@ -675,6 +782,24 @@ impl NetworkManager {
                 .await;
         } else {
             error!("Cannot send message: Network not running (command_sender missing)");
+        }
+    }
+
+    /// Send a direct request to a specific peer.
+    pub async fn send_request(&self, peer_id: &str, request: Vec<u8>) -> NetworkResult<()> {
+        let libp2p_peer_id =
+            Libp2pPeerId::from_str(peer_id).map_err(|e| NetworkError::Libp2p(e.to_string()))?;
+
+        if let Some(tx) = &self.command_sender {
+            tx.send(NetworkCommand::SendRequest {
+                peer_id: libp2p_peer_id,
+                request,
+            })
+            .await
+            .map_err(|_| NetworkError::NotRunning)?;
+            Ok(())
+        } else {
+            Err(NetworkError::NotRunning)
         }
     }
 

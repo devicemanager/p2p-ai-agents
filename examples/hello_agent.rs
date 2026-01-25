@@ -17,6 +17,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let config = AgentConfig {
         capabilities: vec![],
         name: "hello-agent".to_string(),
+        models: vec![],
         // Note: AgentConfig structure has changed, removing unused fields for now
         // id, network_port, and resource_limits are not currently part of AgentConfig
     };
@@ -64,6 +65,7 @@ mod tests {
         let config = AgentConfig {
             capabilities: vec![],
             name: "test-agent".to_string(),
+            models: vec![],
         };
 
         let agent = DefaultAgent::new(config).await?;
@@ -86,6 +88,7 @@ mod tests {
         let config = AgentConfig {
             capabilities: vec![],
             name: "lifecycle-agent".to_string(),
+            models: vec![],
         };
 
         let agent = DefaultAgent::new(config).await?;
