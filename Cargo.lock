@@ -6739,6 +6739,7 @@ dependencies = [
  "dotenv",
  "ed25519-dalek",
  "futures",
+ "futures-util",
  "hex",
  "hf-hub",
  "hyper 0.14.32",

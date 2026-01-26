@@ -11,9 +11,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
-use tokio::sync::{RwLock, broadcast};
-use tokio::time::timeout;
-use futures::{SinkExt, StreamExt};
+use tokio::sync::{broadcast, RwLock};
 
 /// Configuration for Supabase storage
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -75,27 +73,38 @@ impl SupabaseConfig {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum RealtimeEvent {
     /// Insert event for new records
-    Insert { 
-        table: String, 
+    Insert {
+        /// Table name where the insert occurred
+        table: String,
+        /// The inserted record data
         record: serde_json::Value,
+        /// Timestamp of the commit
         commit_timestamp: String,
     },
     /// Update event for modified records
-    Update { 
-        table: String, 
+    Update {
+        /// Table name where the update occurred
+        table: String,
+        /// The previous record data
         old_record: serde_json::Value,
+        /// The new record data
         record: serde_json::Value,
+        /// Timestamp of the commit
         commit_timestamp: String,
     },
     /// Delete event for removed records
-    Delete { 
-        table: String, 
+    Delete {
+        /// Table name where the delete occurred
+        table: String,
+        /// The deleted record data
         old_record: serde_json::Value,
+        /// Timestamp of the commit
         commit_timestamp: String,
     },
 }
 
 /// Real-time client for Supabase subscriptions
+#[allow(dead_code)]
 pub struct RealtimeClient {
     url: String,
     api_key: String,
@@ -115,15 +124,18 @@ impl RealtimeClient {
     }
 
     /// Subscribe to table changes
-    pub async fn subscribe(&self, table: &str) -> Result<broadcast::Receiver<RealtimeEvent>, Box<dyn std::error::Error + Send + Sync>> {
+    pub async fn subscribe(
+        &self,
+        table: &str,
+    ) -> Result<broadcast::Receiver<RealtimeEvent>, Box<dyn std::error::Error + Send + Sync>> {
         let (tx, rx) = broadcast::channel(1000);
         let mut subs = self.subscriptions.write().await;
         subs.insert(table.to_string(), tx);
-        
+
         // In a real implementation, this would establish WebSocket connection
         // For now, we simulate the subscription setup
         println!("Subscribed to real-time changes for table: {}", table);
-        
+
         Ok(rx)
     }
 
@@ -138,8 +150,11 @@ impl RealtimeClient {
 /// Batch operation result
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BatchResult {
+    /// List of successfully processed keys
     pub successful: Vec<String>,
+    /// List of failed operations with error messages
     pub failed: Vec<(String, String)>,
+    /// Duration of the batch operation in milliseconds
     pub duration_ms: u64,
 }
 
@@ -296,7 +311,7 @@ impl SupabaseStorage {
         }
 
         let duration_ms = start.elapsed().as_millis() as u64;
-        
+
         Ok(BatchResult {
             successful,
             failed,
@@ -311,18 +326,18 @@ impl SupabaseStorage {
         _consistency: ConsistencyLevel,
     ) -> Result<HashMap<String, Option<Vec<u8>>>, StorageError> {
         let mut results = HashMap::new();
-        
+
         for key in keys {
             match self.get(&key, _consistency).await {
                 Ok(value) => {
                     results.insert(key, value);
-                },
+                }
                 Err(e) => {
                     return Err(e);
                 }
             }
         }
-        
+
         Ok(results)
     }
 
@@ -345,7 +360,9 @@ impl SupabaseStorage {
     }
 
     /// Test connection with retry logic
-    pub async fn test_connection_with_retry(&self) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    pub async fn test_connection_with_retry(
+        &self,
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         let mut attempts = 0;
         let max_attempts = self.config.max_retries;
 
@@ -355,9 +372,13 @@ impl SupabaseStorage {
                 Err(e) => {
                     attempts += 1;
                     if attempts >= max_attempts {
-                        return Err(format!("Failed to connect after {} attempts: {}", max_attempts, e).into());
+                        return Err(format!(
+                            "Failed to connect after {} attempts: {}",
+                            max_attempts, e
+                        )
+                        .into());
                     }
-                    
+
                     // Exponential backoff
                     let delay = Duration::from_millis(100 * (2_u64.pow(attempts - 1)));
                     tokio::time::sleep(delay).await;
@@ -369,7 +390,7 @@ impl SupabaseStorage {
     /// Get storage metrics and statistics
     pub async fn get_storage_metrics(&self) -> HashMap<String, String> {
         let mut metrics = HashMap::new();
-        
+
         // List keys and count
         if let Ok(keys) = self.list_keys().await {
             metrics.insert("total_objects".to_string(), keys.len().to_string());
@@ -378,12 +399,19 @@ impl SupabaseStorage {
             metrics.insert("total_objects".to_string(), "0".to_string());
             metrics.insert("total_bytes".to_string(), "0".to_string());
         }
-        
+
         metrics.insert("bucket_name".to_string(), self.config.bucket_name.clone());
         metrics.insert("url".to_string(), self.config.url.clone());
-        metrics.insert("realtime_enabled".to_string(), 
-            if self.realtime_client.is_some() { "true" } else { "false" }.to_string());
-        
+        metrics.insert(
+            "realtime_enabled".to_string(),
+            if self.realtime_client.is_some() {
+                "true"
+            } else {
+                "false"
+            }
+            .to_string(),
+        );
+
         metrics
     }
 
@@ -391,7 +419,7 @@ impl SupabaseStorage {
     pub async fn initialize_schema(&self) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         // Ensure bucket exists for file storage
         self.ensure_bucket().await?;
-        
+
         // In a full implementation, this would also create necessary database tables
         // For now, we just ensure the storage bucket is ready
         println!("Supabase storage schema initialized successfully");
@@ -422,10 +450,10 @@ impl SupabaseStorage {
             match source_storage.get(&key, ConsistencyLevel::Strong).await {
                 Ok(Some(value)) => {
                     items.insert(key, value);
-                },
+                }
                 Ok(None) => {
                     // Key doesn't exist, skip
-                },
+                }
                 Err(e) => {
                     return Err(e);
                 }
@@ -761,7 +789,7 @@ mod tests {
 
         let result = storage.batch_put(items, ConsistencyLevel::Strong).await;
         assert!(result.is_ok());
-        
+
         let batch_result = result.unwrap();
         assert_eq!(batch_result.successful.len(), 3);
         assert_eq!(batch_result.failed.len(), 0);
@@ -773,16 +801,26 @@ mod tests {
         let storage = SupabaseStorage::new(config).unwrap();
 
         // First put some data
-        storage.put("test1", b"value1".to_vec(), ConsistencyLevel::Strong).await.unwrap();
-        storage.put("test2", b"value2".to_vec(), ConsistencyLevel::Strong).await.unwrap();
+        storage
+            .put("test1", b"value1".to_vec(), ConsistencyLevel::Strong)
+            .await
+            .unwrap();
+        storage
+            .put("test2", b"value2".to_vec(), ConsistencyLevel::Strong)
+            .await
+            .unwrap();
 
-        let keys = vec!["test1".to_string(), "test2".to_string(), "nonexistent".to_string()];
+        let keys = vec![
+            "test1".to_string(),
+            "test2".to_string(),
+            "nonexistent".to_string(),
+        ];
         let result = storage.batch_get(keys, ConsistencyLevel::Strong).await;
         assert!(result.is_ok());
 
         let results = result.unwrap();
-        assert_eq!(results.get("test1").unwrap(), Some(&b"value1".to_vec()));
-        assert_eq!(results.get("test2").unwrap(), Some(&b"value2".to_vec()));
+        assert_eq!(results.get("test1").unwrap(), &Some(b"value1".to_vec()));
+        assert_eq!(results.get("test2").unwrap(), &Some(b"value2".to_vec()));
         assert_eq!(results.get("nonexistent").unwrap(), &None);
     }
 
@@ -796,7 +834,7 @@ mod tests {
         };
 
         let storage = SupabaseStorage::new(config).unwrap();
-        
+
         // Test subscription
         let receiver = storage.subscribe_changes().await;
         assert!(receiver.is_some());
@@ -844,16 +882,24 @@ mod tests {
     async fn test_migration_from_local_storage() {
         let temp_dir = TempDir::new().unwrap();
         let local_storage = LocalStorage::new(temp_dir.path()).unwrap();
-        
+
         // Add some data to local storage
-        local_storage.put("migrate1", b"data1".to_vec(), ConsistencyLevel::Strong).await.unwrap();
-        local_storage.put("migrate2", b"data2".to_vec(), ConsistencyLevel::Strong).await.unwrap();
+        local_storage
+            .put("migrate1", b"data1".to_vec(), ConsistencyLevel::Strong)
+            .await
+            .unwrap();
+        local_storage
+            .put("migrate2", b"data2".to_vec(), ConsistencyLevel::Strong)
+            .await
+            .unwrap();
 
         let config = SupabaseConfig::default();
         let supabase_storage = SupabaseStorage::new(config).unwrap();
 
         let keys = vec!["migrate1".to_string(), "migrate2".to_string()];
-        let result = supabase_storage.migrate_from_storage(&local_storage, Some(keys)).await;
+        let result = supabase_storage
+            .migrate_from_storage(&local_storage, Some(keys))
+            .await;
         assert!(result.is_ok());
 
         let batch_result = result.unwrap();
@@ -956,9 +1002,11 @@ mod tests {
         };
 
         let storage = SupabaseStorage::new(config).unwrap();
-        
+
         // Test operations with invalid URL should fallback to in-memory storage
-        let result = storage.put("test", b"data".to_vec(), ConsistencyLevel::Strong).await;
+        let result = storage
+            .put("test", b"data".to_vec(), ConsistencyLevel::Strong)
+            .await;
         assert!(result.is_ok()); // Should succeed due to fallback
 
         let result = storage.get("test", ConsistencyLevel::Strong).await;
@@ -972,27 +1020,55 @@ mod tests {
         let storage = SupabaseStorage::new(config).unwrap();
 
         // Test basic CRUD operations
-        storage.put("user:1", b"profile_data".to_vec(), ConsistencyLevel::Strong).await.unwrap();
-        
-        let retrieved = storage.get("user:1", ConsistencyLevel::Strong).await.unwrap();
+        storage
+            .put("user:1", b"profile_data".to_vec(), ConsistencyLevel::Strong)
+            .await
+            .unwrap();
+
+        let retrieved = storage
+            .get("user:1", ConsistencyLevel::Strong)
+            .await
+            .unwrap();
         assert_eq!(retrieved, Some(b"profile_data".to_vec()));
 
         // Test overwrite
-        storage.put("user:1", b"updated_profile".to_vec(), ConsistencyLevel::Strong).await.unwrap();
-        
-        let updated = storage.get("user:1", ConsistencyLevel::Strong).await.unwrap();
+        storage
+            .put(
+                "user:1",
+                b"updated_profile".to_vec(),
+                ConsistencyLevel::Strong,
+            )
+            .await
+            .unwrap();
+
+        let updated = storage
+            .get("user:1", ConsistencyLevel::Strong)
+            .await
+            .unwrap();
         assert_eq!(updated, Some(b"updated_profile".to_vec()));
 
         // Test delete
-        storage.delete("user:1", ConsistencyLevel::Strong).await.unwrap();
-        
-        let deleted = storage.get("user:1", ConsistencyLevel::Strong).await.unwrap();
+        storage
+            .delete("user:1", ConsistencyLevel::Strong)
+            .await
+            .unwrap();
+
+        let deleted = storage
+            .get("user:1", ConsistencyLevel::Strong)
+            .await
+            .unwrap();
         assert_eq!(deleted, None);
 
         // Test list keys
-        storage.put("key1", b"value1".to_vec(), ConsistencyLevel::Strong).await.unwrap();
-        storage.put("key2", b"value2".to_vec(), ConsistencyLevel::Strong).await.unwrap();
-        
+        storage
+            .put("key1", b"value1".to_vec(), ConsistencyLevel::Strong)
+            .await
+            .unwrap();
+        storage
+            .put("key2", b"value2".to_vec(), ConsistencyLevel::Strong)
+            .await
+            .unwrap();
+
         let keys = storage.list_keys().await.unwrap();
         assert!(keys.contains(&"key1".to_string()));
         assert!(keys.contains(&"key2".to_string()));

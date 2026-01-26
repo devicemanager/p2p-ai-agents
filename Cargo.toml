@@ -116,8 +116,6 @@ opt-level = 0
 debug = true
 
 [features]
-default = ["network", "reqwest"]  # MVP requires network layer
-full = ["network", "storage", "cli", "metrics-prometheus"]
 default = ["network"]  # MVP requires network layer
 full = ["network", "storage", "cli", "metrics-prometheus", "ai"]
 network = ["libp2p", "bytes"]

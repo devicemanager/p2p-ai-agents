@@ -6,9 +6,15 @@ use std::time::Duration;
 use tokio::time::sleep;
 use tracing::{error, info, instrument};
 
+#[cfg(feature = "reqwest")]
+use reqwest::Client;
+
 /// A task executor that can run AI models via OpenRouter or fallback to mock execution.
 pub struct TaskExecutor {
-    client: reqwest::Client,
+    #[cfg(feature = "reqwest")]
+    client: Client,
+    #[cfg(not(feature = "reqwest"))]
+    client: (),
     api_key: Option<String>,
     model: String,
 }
@@ -29,7 +35,10 @@ impl TaskExecutor {
             .unwrap_or_else(|_| "google/gemini-2.0-flash-exp:free".to_string());
 
         Self {
-            client: reqwest::Client::new(),
+            #[cfg(feature = "reqwest")]
+            client: Client::new(),
+            #[cfg(not(feature = "reqwest"))]
+            client: (),
             api_key,
             model,
         }
@@ -73,56 +82,66 @@ impl TaskExecutor {
             ]
         });
 
-        let response = self
-            .client
-            .post("https://openrouter.ai/api/v1/chat/completions")
-            .header("Authorization", format!("Bearer {}", api_key))
-            .header("Content-Type", "application/json")
-            // Optional: Identify the app to OpenRouter
-            .header(
-                "HTTP-Referer",
-                "https://github.com/p2p-ai-agents/p2p-ai-agents",
-            )
-            .header("X-Title", "P2P AI Agents")
-            .json(&request_body)
-            .send()
-            .await;
+        #[cfg(feature = "reqwest")]
+        {
+            let response = self
+                .client
+                .post("https://openrouter.ai/api/v1/chat/completions")
+                .header("Authorization", format!("Bearer {}", api_key))
+                .header("Content-Type", "application/json")
+                // Optional: Identify the app to OpenRouter
+                .header(
+                    "HTTP-Referer",
+                    "https://github.com/p2p-ai-agents/p2p-ai-agents",
+                )
+                .header("X-Title", "P2P AI Agents")
+                .json(&request_body)
+                .send()
+                .await;
 
-        match response {
-            Ok(resp) => {
-                if resp.status().is_success() {
-                    match resp.json::<serde_json::Value>().await {
-                        Ok(json) => {
-                            // Try standard OpenRouter/OpenAI format
-                            if let Some(content) = json["choices"][0]["message"]["content"].as_str()
-                            {
-                                return content.to_string();
-                            }
-                            // Fallback for some models/providers that might structure differently (unlikely but safe)
-                            else if let Some(content) = json["message"]["content"].as_str() {
-                                return content.to_string();
-                            } else {
-                                error!(
+            match response {
+                Ok(resp) => {
+                    if resp.status().is_success() {
+                        match resp.json::<serde_json::Value>().await {
+                            Ok(json) => {
+                                // Try standard OpenRouter/OpenAI format
+                                if let Some(content) =
+                                    json["choices"][0]["message"]["content"].as_str()
+                                {
+                                    return content.to_string();
+                                }
+                                // Fallback for some models/providers that might structure differently (unlikely but safe)
+                                else if let Some(content) = json["message"]["content"].as_str() {
+                                    return content.to_string();
+                                } else {
+                                    error!(
                                     "Failed to parse content from OpenRouter response. JSON: {:?}",
                                     json
                                 );
+                                }
                             }
+                            Err(e) => error!("Failed to parse JSON response: {}", e),
                         }
-                        Err(e) => error!("Failed to parse JSON response: {}", e),
-                    }
-                } else {
-                    error!("OpenRouter API returned error: status {}", resp.status());
-                    if let Ok(text) = resp.text().await {
-                        error!("Error body: {}", text);
+                    } else {
+                        error!("OpenRouter API returned error: status {}", resp.status());
+                        if let Ok(text) = resp.text().await {
+                            error!("Error body: {}", text);
+                        }
                     }
                 }
+                Err(e) => error!("Failed to send request to OpenRouter: {}", e),
             }
-            Err(e) => error!("Failed to send request to OpenRouter: {}", e),
+
+            // Fallback to mock if LLM fails
+            info!("Falling back to mock execution due to API failure");
+            self.execute_mock(prompt).await
         }
 
-        // Fallback to mock if LLM fails
-        info!("Falling back to mock execution due to API failure");
-        self.execute_mock(prompt).await
+        #[cfg(not(feature = "reqwest"))]
+        {
+            info!("reqwest feature not available, falling back to mock execution");
+            self.execute_mock(prompt).await
+        }
     }
 
     async fn execute_mock(&self, prompt: &str) -> String {
