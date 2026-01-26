@@ -1,6 +1,6 @@
 # Task Management Index
 
-*Last updated: 2026-01-03 05:06:08*
+*Last updated: 2026-01-26 11:02:06*
 
 ## Overview
 
@@ -8,20 +8,20 @@ This directory contains all implementation tasks for the P2P AI Agents project, 
 
 ## Task Statistics
 
-- **Total Tasks**: 383
-- **Completed**: 24 (6.3%)
-- **In Progress**: 4
-- **TODO**: 355
+- **Total Tasks**: 378
+- **Completed**: 23 (6.1%)
+- **In Progress**: 1
+- **TODO**: 354
 
 ## Task Directories
 
-### 📋 [TODO Tasks](./todo/) (355 tasks)
+### 📋 [TODO Tasks](./todo/) (354 tasks)
 Tasks that are planned but not yet started.
 
-### 🚧 [In Progress Tasks](./in-progress/) (4 tasks)
+### 🚧 [In Progress Tasks](./in-progress/) (1 tasks)
 Tasks that are currently being worked on.
 
-### ✅ [Completed Tasks](./completed/) (24 tasks)
+### ✅ [Completed Tasks](./completed/) (23 tasks)
 Tasks that have been finished and verified.
 
 ## Task Management
@@ -239,7 +239,6 @@ Each task follows a standardized Markdown format with:
 - [Video processing](./todo/core-implementation-core-implementation-video-proc.md)
 - [Vulnerability scanning](./todo/core-implementation-core-implementation-vulnerabil.md)
 - [WebSocket API](./todo/core-implementation-core-implementation-websocket-.md)
-- [Task: Implement Supabase Storage Adapter](./todo/implement-supabase-storage-adapter.md)
 - [Access control mechanisms](./todo/network-network-access-control-mechani.md)
 - [Access control](./todo/network-network-access-control.md)
 - [access-control.md](./todo/network-network-access-controlmd.md)
@@ -423,17 +422,13 @@ Each task follows a standardized Markdown format with:
 
 ### In Progress Tasks
 
-- [Access control](./in-progress/core-implementation-core-implementation-access-con.md)
-- [Base agent trait and types](./in-progress/core-implementation-core-implementation-base-agent.md)
-- [Task manager implementation](./in-progress/core-implementation-core-implementation-task-manag.md)
-- [Authentication mechanisms](./in-progress/network-network-authentication-mechani.md)
+- [Task: Implement Supabase Storage Adapter](./in-progress/implement-supabase-storage-adapter.md)
 
 ### Completed Tasks
 
 - [Task: Add Code Format Documentation](./completed/add-code-format-docs.md)
 - [Task: Add Supabase Storage Documentation](./completed/add-supabase-storage-docs.md)
 - [Task: Add Unit Test for TaskId](./completed/add-taskid-unit-tests.md)
-- [Key Management Lifecycle Design](./completed/arch-001-key-management-lifecycle.md)
 - [Sybil Resistance Mechanism Design](./completed/arch-002-sybil-resistance.md)
 - [Storage Consistency Model Design](./completed/arch-003-storage-consistency.md)
 - [Event Bus Performance Architecture](./completed/arch-004-event-bus-performance.md)

@@ -72,6 +72,7 @@ lazy_static = { version = "1.4", optional = true }
 postgrest = { version = "1.5", optional = true }
 reqwest = { version = "0.11", features = ["json", "rustls-tls"], optional = true }
 url = { version = "2.5", optional = true }
+futures-util = { version = "0.3", optional = true }
 
 # Redis (optional)
 redis = { version = "0.27", features = ["tokio-comp", "connection-manager", "aio"], optional = true }
@@ -122,7 +123,7 @@ full = ["network", "storage", "cli", "metrics-prometheus", "ai"]
 network = ["libp2p", "bytes"]
 ai = ["candle-core", "candle-nn", "tokenizers", "hf-hub", "dep:reqwest"]
 storage = []
-storage-supabase = ["postgrest", "reqwest", "url"]
+storage-supabase = ["postgrest", "reqwest", "url", "futures-util"]
 storage-redis = ["redis"]
 metrics-prometheus = ["prometheus", "hyper", "lazy_static"]
 cli = []
